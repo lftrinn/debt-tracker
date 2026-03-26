@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Debt Tracker — Quang</title>
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0a0a0f;--surface:#111118;--surface2:#1a1a24;--border:#2a2a3a;--accent:#e8ff47;--accent2:#ff6b4a;--accent3:#4aefb8;--text:#f0f0f5;--muted:#6b6b85;--danger:#ff4a6b;--mono:'Space Mono',monospace;--sans:'Syne',sans-serif;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse at 20% 20%,rgba(232,255,71,.04) 0%,transparent 50%),radial-gradient(ellipse at 80% 80%,rgba(74,239,184,.03) 0%,transparent 50%);pointer-events:none;z-index:0;}
+  .wrap{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:20px 16px 80px;}
+
+  /* Setup */
+  .setup-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;position:relative;z-index:1;}
+  .setup-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px 24px;width:100%;max-width:420px;position:relative;}
+  .setup-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:20px 20px 0 0;background:linear-gradient(90deg,var(--accent2),var(--accent),var(--accent3));}
+  .s-title-big{font-size:20px;font-weight:800;margin-bottom:4px;}
+  .s-sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:18px;line-height:1.7;}
+  .s-tabs{display:flex;gap:3px;background:var(--surface2);border-radius:9px;padding:3px;margin-bottom:18px;}
+  .s-tab{flex:1;background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:11px;font-weight:600;padding:7px 4px;border-radius:7px;cursor:pointer;transition:all .2s;}
+  .s-tab.active{background:var(--surface);color:var(--text);}
+  .inp-s{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:10px 12px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none;transition:border-color .2s;margin-bottom:9px;}
+  .inp-s::placeholder{color:var(--muted);}
+  .inp-s:focus{border-color:var(--accent);}
+  textarea.inp-s{height:130px;resize:vertical;font-size:10px;line-height:1.5;}
+  .btn-p{width:100%;background:var(--accent);color:var(--bg);border:none;border-radius:9px;padding:12px;font-family:var(--sans);font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.05em;transition:all .2s;}
+  .btn-p:hover{opacity:.9;transform:translateY(-1px);}
+  .btn-p:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+  .hint{font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.6;margin-bottom:12px;}
+  .hint b{color:var(--accent);}
+  .err{font-family:var(--mono);font-size:10px;color:var(--accent2);margin-top:8px;padding:8px 12px;background:rgba(255,107,74,.08);border-radius:8px;border:1px solid rgba(255,107,74,.2);}
+  .divider{border:none;border-top:1px solid var(--border);margin:16px 0;}
+
+  /* Sync */
+  .sync-bar{display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:14px;font-family:var(--mono);font-size:10px;color:var(--muted);}
+  .sync-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+  .sync-dot.syncing{background:var(--accent);animation:pulse 1s infinite;}
+  .sync-dot.synced{background:var(--accent3);}
+  .sync-dot.error{background:var(--accent2);}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+  /* Header */
+  .hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+  .hdr-title{font-weight:800;font-size:12px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);}
+  .hdr-r{display:flex;align-items:center;gap:8px;}
+  .hdr-date{font-family:var(--mono);font-size:10px;color:var(--muted);}
+  .btn-ico{background:none;border:1px solid var(--border);border-radius:7px;color:var(--muted);font-size:13px;padding:4px 7px;cursor:pointer;transition:all .2s;}
+  .btn-ico:hover{color:var(--text);}
+
+  /* Alert */
+  .alert{display:flex;align-items:center;gap:8px;padding:9px 13px;border-radius:9px;margin-bottom:12px;font-size:11px;font-family:var(--mono);}
+  .alert.over{background:rgba(255,74,107,.1);border:1px solid rgba(255,74,107,.3);color:var(--accent2);}
+  .alert.ok{background:rgba(74,239,184,.07);border:1px solid rgba(74,239,184,.2);color:var(--accent3);}
+  .alert.warn{background:rgba(232,255,71,.07);border:1px solid rgba(232,255,71,.2);color:var(--accent);}
+
+  /* Cash hero */
+  .cash-hero{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:12px;position:relative;overflow:hidden;display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .cash-hero::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent3),var(--accent),transparent);}
+  .ch-label{font-family:var(--mono);font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;}
+  .ch-val{font-family:var(--mono);font-size:22px;font-weight:700;line-height:1;}
+  .ch-val.green{color:var(--accent3);} .ch-val.yellow{color:var(--accent);} .ch-val.red{color:var(--accent2);}
+  .ch-sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:4px;}
+
+  /* Debt overview */
+  .debt-ov{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:12px;position:relative;overflow:hidden;}
+  .debt-ov::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent2),transparent);}
+  .do-label{font-family:var(--mono);font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;}
+  .do-total{font-family:var(--mono);font-size:32px;font-weight:700;color:var(--accent2);line-height:1;letter-spacing:-1px;}
+  .do-total span{font-size:15px;opacity:.7;}
+  .do-cards{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:13px;}
+  .do-card{background:var(--surface2);border-radius:10px;padding:11px;border:1px solid var(--border);}
+  .do-card-name{font-size:10px;font-weight:600;color:var(--muted);margin-bottom:5px;}
+  .do-card-bal{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--accent2);}
+  .do-card-info{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px;}
+  .do-prog{height:3px;background:var(--border);border-radius:99px;margin-top:7px;overflow:hidden;}
+  .do-prog-fill{height:100%;background:var(--accent2);border-radius:99px;}
+
+  /* Progress */
+  .prog-sec{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:15px 20px;margin-bottom:12px;}
+  .prog-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;}
+  .prog-label{font-size:12px;font-weight:600;}
+  .prog-pct{font-family:var(--mono);font-size:11px;color:var(--accent3);}
+  .prog-bar{height:5px;background:var(--surface2);border-radius:99px;overflow:hidden;margin-bottom:7px;}
+  .prog-fill{height:100%;background:linear-gradient(90deg,var(--accent3),var(--accent));border-radius:99px;transition:width .6s cubic-bezier(.4,0,.2,1);}
+  .prog-meta{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--muted);}
+
+  /* Upcoming */
+  .upcoming{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:15px 20px;margin-bottom:12px;}
+  .up-list{margin-top:11px;display:flex;flex-direction:column;gap:6px;}
+  .up-item{display:flex;align-items:center;gap:10px;padding:9px 11px;background:var(--surface2);border-radius:9px;border-left:2px solid var(--border);}
+  .up-item.urgent{border-left-color:var(--accent2);}
+  .up-item.soon{border-left-color:var(--accent);}
+  .up-item.ok{border-left-color:var(--accent3);}
+  .up-date-col{width:34px;flex-shrink:0;text-align:center;}
+  .up-day{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text);display:block;line-height:1;}
+  .up-mo{font-family:var(--mono);font-size:9px;color:var(--muted);}
+  .up-name{flex:1;font-size:12px;font-weight:600;}
+  .up-sub{font-size:10px;color:var(--muted);}
+  .up-amt{font-family:var(--mono);font-size:12px;font-weight:700;flex-shrink:0;}
+
+  /* Tabs */
+  .tab-nav{display:flex;gap:3px;margin-bottom:14px;background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:3px;}
+  .tab-btn{flex:1;background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:10px;font-weight:600;padding:7px 2px;border-radius:8px;cursor:pointer;transition:all .2s;}
+  .tab-btn.active{background:var(--surface2);color:var(--text);}
+
+  /* Card */
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:15px 20px;margin-bottom:12px;}
+  .card.green-b{border-color:rgba(74,239,184,.2);}
+  .c-title{font-size:12px;font-weight:600;}
+  .c-hdr{display:flex;align-items:center;justify-content:space-between;}
+  .badge{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:99px;background:var(--surface2);color:var(--muted);}
+
+  /* Form */
+  .add-form{display:flex;flex-direction:column;gap:8px;margin-top:11px;}
+  .form-row{display:flex;gap:7px;}
+  .inp{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:10px 11px;color:var(--text);font-family:var(--sans);font-size:12px;outline:none;transition:border-color .2s;}
+  .inp::placeholder{color:var(--muted);}
+  .inp:focus{border-color:var(--accent);}
+  .cat-sel{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:10px 8px;color:var(--text);font-family:var(--sans);font-size:12px;outline:none;cursor:pointer;}
+  .btn-add{background:var(--accent);color:var(--bg);border:none;border-radius:9px;padding:11px;font-family:var(--sans);font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.05em;transition:all .2s;}
+  .btn-add:hover{opacity:.9;transform:translateY(-1px);}
+  .btn-add:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+
+  /* List */
+  .exp-list{margin-top:11px;display:flex;flex-direction:column;gap:6px;}
+  .exp-item{display:flex;align-items:center;gap:10px;padding:10px 11px;background:var(--surface2);border-radius:9px;border:1px solid transparent;animation:si .2s ease;transition:border-color .2s;}
+  .exp-item:hover{border-color:var(--border);}
+  @keyframes si{from{opacity:0;transform:translateY(-5px);}to{opacity:1;transform:translateY(0);}}
+  .exp-ico{font-size:16px;width:26px;text-align:center;flex-shrink:0;}
+  .exp-info{flex:1;min-width:0;}
+  .exp-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .exp-meta{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px;}
+  .exp-amt{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent2);flex-shrink:0;}
+  .btn-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:3px;border-radius:5px;transition:all .2s;}
+  .btn-del:hover{color:var(--danger);background:rgba(255,74,107,.1);}
+  .empty{text-align:center;padding:18px;color:var(--muted);font-size:11px;font-family:var(--mono);}
+
+  /* Timeline */
+  .tl{margin-top:14px;display:flex;flex-direction:column;}
+  .tl-item{display:flex;gap:12px;padding-bottom:13px;}
+  .tl-item:last-child{padding-bottom:0;}
+  .tl-left{display:flex;flex-direction:column;align-items:center;width:30px;flex-shrink:0;}
+  .tl-dot{width:9px;height:9px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;}
+  .tl-dot.done{background:var(--accent3);border-color:var(--accent3);}
+  .tl-dot.active{background:var(--accent);border-color:var(--accent);}
+  .tl-dot.future{background:var(--surface2);}
+  .tl-line{width:2px;flex:1;background:var(--border);margin-top:3px;}
+  .tl-item:last-child .tl-line{display:none;}
+  .tl-mo{font-family:var(--mono);font-size:9px;color:var(--muted);}
+  .tl-ev{font-size:12px;font-weight:600;margin-top:1px;}
+  .tl-debt{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px;}
+
+  /* Settings */
+  .row-g{display:flex;gap:7px;align-items:center;margin-top:9px;}
+  .inp-sm{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none;transition:border-color .2s;}
+  .inp-sm:focus{border-color:var(--accent);}
+  .btn-sm{background:var(--accent);color:var(--bg);border:none;border-radius:8px;padding:7px 12px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;transition:opacity .2s;white-space:nowrap;}
+  .btn-sm:hover{opacity:.85;}
+  .lim-bar-w{display:flex;align-items:center;gap:8px;margin:9px 0 5px;}
+  .lim-bar{flex:1;height:5px;background:var(--surface2);border-radius:99px;overflow:hidden;}
+  .lim-fill{height:100%;border-radius:99px;transition:width .4s;}
+  .lim-fill.safe{background:var(--accent3);} .lim-fill.warn{background:var(--accent);} .lim-fill.over{background:var(--accent2);}
+  .small-n{font-family:var(--mono);font-size:10px;color:var(--muted);}
+  .chart-wrap{margin-top:12px;height:155px;position:relative;}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- SETUP -->
+  <div v-if="!isConfigured" class="setup-screen">
+    <div class="setup-card">
+      <div class="s-title-big">💳 Debt Tracker</div>
+      <div class="s-sub">Kết nối JSONBin.io để sync dữ liệu giữa các thiết bị.</div>
+
+      <div class="s-tabs">
+        <button class="s-tab" :class="{active:sMode==='import'}" @click="sMode='import'">Import JSON</button>
+        <button class="s-tab" :class="{active:sMode==='existing'}" @click="sMode='existing'">Đã có Bin</button>
+        <button class="s-tab" :class="{active:sMode==='new'}" @click="sMode='new'">Mới hoàn toàn</button>
+      </div>
+
+      <div v-if="sMode==='import'">
+        <div class="hint">Paste JSON tài chính vào đây — app sẽ upload lên JSONBin và dùng làm dữ liệu ban đầu.</div>
+        <input class="inp-s" v-model="iKey" type="password" placeholder="API Key ($2b$...)" />
+        <textarea class="inp-s" v-model="iJson" placeholder='Paste JSON tài chính ở đây...'></textarea>
+        <button class="btn-p" @click="setup('import')" :disabled="!iKey||!iJson||loading">{{ loading?'Đang import...':'IMPORT & BẮT ĐẦU →' }}</button>
+      </div>
+
+      <div v-if="sMode==='existing'">
+        <div class="hint">Kết nối lại trên thiết bị mới — chỉ cần API Key và Bin ID.</div>
+        <input class="inp-s" v-model="iKey" type="password" placeholder="API Key ($2b$...)" />
+        <input class="inp-s" v-model="iBinId" placeholder="Bin ID" />
+        <button class="btn-p" @click="setup('existing')" :disabled="!iKey||!iBinId||loading">{{ loading?'Đang kết nối...':'KẾT NỐI →' }}</button>
+      </div>
+
+      <div v-if="sMode==='new'">
+        <div class="hint">Tạo Bin trống. Sau đó vào Cài đặt để điền thông tin nợ.</div>
+        <input class="inp-s" v-model="iKey" type="password" placeholder="API Key ($2b$...)" />
+        <input class="inp-s" v-model.number="iDebt" type="number" placeholder="Tổng nợ (VNĐ)" />
+        <input class="inp-s" v-model.number="iLimit" type="number" placeholder="Hạn mức chi ngày (VNĐ)" />
+        <button class="btn-p" @click="setup('new')" :disabled="!iKey||loading">{{ loading?'Đang tạo...':'TẠO & BẮT ĐẦU →' }}</button>
+      </div>
+
+      <div v-if="sErr" class="err">{{ sErr }}</div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div v-else class="wrap">
+    <div class="hdr">
+      <div class="hdr-title">💳 Debt Tracker</div>
+      <div class="hdr-r">
+        <div class="hdr-date">{{ today }}</div>
+        <button class="btn-ico" @click="logout" title="Đăng xuất">⏏</button>
+      </div>
+    </div>
+
+    <div class="sync-bar">
+      <div class="sync-dot" :class="syncSt"></div>
+      <span>{{ syncMsg }}</span>
+    </div>
+
+    <div v-if="isOver" class="alert over">⚠ Vượt hạn mức +{{ fV(todaySpent - dayLimit) }}</div>
+    <div v-else-if="dayLimit>0" class="alert ok">✓ Còn {{ fV(dayLimit - todaySpent) }} hôm nay · hạn mức {{ fV(dayLimit) }}</div>
+
+    <!-- Cash hero -->
+    <div class="cash-hero">
+      <div>
+        <div class="ch-label">// Tiền mặt khả dụng</div>
+        <div class="ch-val" :class="availCash<200000?'red':availCash<500000?'yellow':'green'">{{ fS(availCash) }}</div>
+        <div class="ch-sub">{{ dToSalary }} ngày đến lương</div>
+      </div>
+      <div>
+        <div class="ch-label">// Chi hôm nay</div>
+        <div class="ch-val" :class="isOver?'red':'yellow'">{{ fS(todaySpent) }}</div>
+        <div class="ch-sub">Tháng này: {{ fS(monthSpent) }}</div>
+      </div>
+    </div>
+
+    <!-- Debt overview -->
+    <div class="debt-ov">
+      <div class="do-label">// Tổng nợ còn lại</div>
+      <div class="do-total"><span>₫</span>{{ fN(totalDebt) }}</div>
+      <div class="do-cards">
+        <div class="do-card" v-for="c in debtCards" :key="c.id">
+          <div class="do-card-name">{{ c.name }}</div>
+          <div class="do-card-bal">₫{{ fS(c.balance) }}</div>
+          <div class="do-card-info">{{ c.rate }}%/năm · min ₫{{ fS(c.min) }}</div>
+          <div class="do-prog"><div class="do-prog-fill" :style="{width:(c.balance/c.limit*100)+'%'}"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="prog-sec">
+      <div class="prog-hdr">
+        <span class="prog-label">Tiến độ thoát nợ</span>
+        <span class="prog-pct">{{ repayPct }}% · xong T11/2026</span>
+      </div>
+      <div class="prog-bar"><div class="prog-fill" :style="{width:repayPct+'%'}"></div></div>
+      <div class="prog-meta"><span>₫{{ fS(origDebt) }}</span><span>₫0</span></div>
+    </div>
+
+    <!-- Upcoming -->
+    <div class="upcoming">
+      <div class="c-hdr">
+        <span class="c-title">Thanh toán sắp đến</span>
+        <span class="badge">tháng 4/2026</span>
+      </div>
+      <div class="up-list">
+        <div v-for="p in upcoming" :key="p.name" class="up-item" :class="p.urg">
+          <div class="up-date-col">
+            <span class="up-day">{{ p.day }}</span>
+            <span class="up-mo">/{{ p.mo }}</span>
+          </div>
+          <div style="flex:1">
+            <div class="up-name">{{ p.name }}</div>
+            <div v-if="p.sub" class="up-sub">{{ p.sub }}</div>
+          </div>
+          <div class="up-amt">{{ fS(p.amt) }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tab-nav">
+      <button class="tab-btn" :class="{active:tab==='add'}" @click="tab='add'">+ Thêm</button>
+      <button class="tab-btn" :class="{active:tab==='list'}" @click="tab='list'">Chi tiêu</button>
+      <button class="tab-btn" :class="{active:tab==='chart'}" @click="tab='chart'">Biểu đồ</button>
+      <button class="tab-btn" :class="{active:tab==='tl'}" @click="tab='tl'">Timeline</button>
+      <button class="tab-btn" :class="{active:tab==='cfg'}" @click="tab='cfg'">Cài đặt</button>
+    </div>
+
+    <!-- Add -->
+    <div v-if="tab==='add'" class="card">
+      <div class="c-title">Ghi khoản chi</div>
+      <div class="add-form">
+        <input class="inp" v-model="nDesc" placeholder="Mô tả (vd: Cơm tối, Cà phê...)" />
+        <div class="form-row">
+          <input class="inp" v-model.number="nAmt" type="number" placeholder="Số tiền (VNĐ)" />
+          <select class="cat-sel" v-model="nCat">
+            <option value="🍜">🍜 Ăn</option><option value="☕">☕ Cafe</option>
+            <option value="🛒">🛒 Mua</option><option value="🚌">🚌 Đi lại</option>
+            <option value="💊">💊 Y tế</option><option value="🎮">🎮 Giải trí</option>
+            <option value="💡">💡 HĐ</option><option value="📦">📦 Khác</option>
+          </select>
+        </div>
+        <button class="btn-add" @click="addExp" :disabled="syncing">{{ syncing?'Đang lưu...':'THÊM →' }}</button>
+      </div>
+    </div>
+
+    <!-- List -->
+    <div v-if="tab==='list'" class="card">
+      <div class="c-hdr">
+        <span class="c-title">Lịch sử chi tiêu</span>
+        <span class="badge">{{ expenses.length }}</span>
+      </div>
+      <div class="exp-list">
+        <div v-if="!expenses.length" class="empty">Chưa có khoản chi nào</div>
+        <div v-for="e in sortedExp" :key="e.id" class="exp-item">
+          <div class="exp-ico">{{ e.cat }}</div>
+          <div class="exp-info">
+            <div class="exp-name">{{ e.desc }}</div>
+            <div class="exp-meta">{{ fDate(e.date) }}</div>
+          </div>
+          <div class="exp-amt">-₫{{ fN(e.amount) }}</div>
+          <button class="btn-del" @click="delExp(e.id)">✕</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart -->
+    <div v-if="tab==='chart'" class="card">
+      <div class="c-title">Chi tiêu 7 ngày qua</div>
+      <div class="chart-wrap"><canvas ref="chartRef"></canvas></div>
+    </div>
+
+    <!-- Timeline -->
+    <div v-if="tab==='tl'" class="card">
+      <div class="c-title">Lộ trình thoát nợ</div>
+      <div class="tl" style="margin-top:14px">
+        <div v-for="m in milestones" :key="m.month" class="tl-item">
+          <div class="tl-left">
+            <div class="tl-dot" :class="m.st"></div>
+            <div class="tl-line"></div>
+          </div>
+          <div style="padding-top:0;flex:1">
+            <div class="tl-mo">{{ m.month }}</div>
+            <div class="tl-ev" :style="m.st==='active'?{color:'var(--accent)'}:m.month==='2026-11'?{color:'var(--accent3)'}:{}">{{ m.ev }}</div>
+            <div class="tl-debt" v-if="m.debt!=null">Tổng nợ: ₫{{ fS(m.debt) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div v-if="tab==='cfg'">
+      <div class="card">
+        <div class="c-title">Hạn mức chi hàng ngày</div>
+        <div class="lim-bar-w">
+          <div class="lim-bar"><div class="lim-fill" :class="limSt" :style="{width:Math.min(limPct,100)+'%'}"></div></div>
+          <span class="small-n">{{ limPct }}%</span>
+        </div>
+        <div class="small-n" style="margin-bottom:9px">₫{{ fN(todaySpent) }} / ₫{{ fN(dayLimit) }}</div>
+        <div class="row-g">
+          <input class="inp-sm" v-model.number="nLimit" type="number" :placeholder="String(dayLimit)" />
+          <button class="btn-sm" @click="updLimit">Lưu</button>
+        </div>
+      </div>
+
+      <div class="card green-b">
+        <div class="c-title">💚 Ghi nhận trả nợ</div>
+        <div class="row-g">
+          <input class="inp-sm" v-model.number="payAmt" type="number" placeholder="Số tiền đã trả..." />
+          <button class="btn-sm" style="background:var(--accent3)" @click="recPay">Trả nợ</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="c-title">Cập nhật tiền mặt hiện có</div>
+        <div class="row-g">
+          <input class="inp-sm" v-model.number="nCash" type="number" :placeholder="String(d.current_cash?.balance||0)" />
+          <button class="btn-sm" @click="updCash">Lưu</button>
+        </div>
+        <div class="small-n" style="margin-top:8px">500k đã reserved cho mừng cưới 28/3</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const { createApp, ref, computed, watch, nextTick } = Vue;
+const BASE = 'https://api.jsonbin.io/v3';
+
+createApp({
+  setup() {
+    const apiKey = ref(localStorage.getItem('dt_k')||'');
+    const binId  = ref(localStorage.getItem('dt_b')||'');
+    const isConfigured = ref(!!(apiKey.value && binId.value));
+
+    const sMode=ref('import'), iKey=ref(''), iBinId=ref(''), iDebt=ref(null), iLimit=ref(null), iJson=ref('');
+    const sErr=ref(''), loading=ref(false);
+
+    const d = ref({ expenses:[], extra_paid:0, custom_daily_limit:0, current_cash:{balance:865000,reserved:500000,as_of:'2026-03-27'}, debts:{credit_cards:[{id:'visa1',name:'Visa 1',credit_limit:37000000,balance:34946713,interest_rate_annual:0.328,minimum_payment:2663422},{id:'visa2',name:'Visa 2',credit_limit:53000000,balance:49299000,interest_rate_annual:0.358,minimum_payment:4107271}],small_loans:[]}, income:{monthly_net:22923000,pay_date:5}, rules:{daily_limit:{until_salary:70000,after_salary:100000}}, payoff_timeline:{projected_debt_by_month:[]}, fixed_expenses:{} });
+
+    const tab=ref('add'), syncSt=ref('synced'), syncMsg=ref('Đã đồng bộ'), syncing=ref(false);
+    const nDesc=ref(''), nAmt=ref(null), nCat=ref('🍜'), nLimit=ref(null), payAmt=ref(null), nCash=ref(null);
+    const chartRef=ref(null);
+    let chartInst=null;
+
+    const H = () => ({'Content-Type':'application/json','X-Master-Key':apiKey.value});
+
+    async function readBin() {
+      const r=await fetch(`${BASE}/b/${binId.value}/latest`,{headers:H()});
+      if(!r.ok) throw new Error('Lỗi đọc dữ liệu');
+      return (await r.json()).record;
+    }
+    async function writeBin(data) {
+      const r=await fetch(`${BASE}/b/${binId.value}`,{method:'PUT',headers:H(),body:JSON.stringify(data)});
+      if(!r.ok) throw new Error('Lỗi ghi dữ liệu');
+    }
+    async function createBin(data, key) {
+      const r=await fetch(`${BASE}/b`,{method:'POST',headers:{'Content-Type':'application/json','X-Master-Key':key,'X-Bin-Name':'debt-tracker-quang','X-Bin-Private':'true'},body:JSON.stringify(data)});
+      if(!r.ok){const e=await r.json();throw new Error(e.message||'API Key không hợp lệ');}
+      return (await r.json()).metadata.id;
+    }
+
+    async function push() {
+      syncing.value=true; syncSt.value='syncing'; syncMsg.value='Đang đồng bộ...';
+      try{await writeBin(d.value);syncSt.value='synced';syncMsg.value='Đã đồng bộ lúc '+new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});}
+      catch{syncSt.value='error';syncMsg.value='Lỗi đồng bộ';}
+      finally{syncing.value=false;}
+    }
+    async function pull() {
+      syncSt.value='syncing';syncMsg.value='Đang tải...';
+      try{d.value=await readBin();syncSt.value='synced';syncMsg.value='Đã đồng bộ lúc '+new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});}
+      catch{syncSt.value='error';syncMsg.value='Không tải được';}
+    }
+
+    async function setup(mode) {
+      loading.value=true; sErr.value='';
+      try {
+        let data;
+        if(mode==='import'){
+          try{data=JSON.parse(iJson.value);}catch{throw new Error('JSON không hợp lệ');}
+          if(!data.expenses) data.expenses=[];
+          if(data.extra_paid==null) data.extra_paid=0;
+          if(data.custom_daily_limit==null) data.custom_daily_limit=0;
+        } else if(mode==='new'){
+          data={expenses:[],extra_paid:0,custom_daily_limit:iLimit.value||0,debts:{summary:{total:iDebt.value||0},credit_cards:[],small_loans:[]},income:{monthly_net:22923000,pay_date:5},rules:{daily_limit:{until_salary:70000,after_salary:100000}},current_cash:{balance:0,reserved:0},payoff_timeline:{projected_debt_by_month:[]}};
+        } else {
+          apiKey.value=iKey.value; binId.value=iBinId.value;
+          localStorage.setItem('dt_k',apiKey.value); localStorage.setItem('dt_b',binId.value);
+          isConfigured.value=true; await pull(); return;
+        }
+        const id=await createBin(data,iKey.value);
+        apiKey.value=iKey.value; binId.value=id;
+        localStorage.setItem('dt_k',apiKey.value); localStorage.setItem('dt_b',binId.value);
+        d.value=data; isConfigured.value=true;
+      } catch(e){sErr.value=e.message||'Lỗi kết nối';}
+      finally{loading.value=false;}
+    }
+
+    function logout(){
+      if(!confirm('Đăng xuất? Dữ liệu vẫn còn trên JSONBin.')) return;
+      localStorage.removeItem('dt_k'); localStorage.removeItem('dt_b');
+      apiKey.value=''; binId.value=''; isConfigured.value=false;
+    }
+
+    // Computed
+    const expenses = computed(()=>d.value.expenses||[]);
+    const tStr = ()=>new Date().toISOString().slice(0,10);
+    const isTM = dt=>dt.startsWith(new Date().toISOString().slice(0,7));
+    const isT  = dt=>dt===tStr();
+
+    const today=computed(()=>new Date().toLocaleDateString('vi-VN',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'}));
+
+    const dToSalary=computed(()=>{
+      const now=new Date(), pd=d.value.income?.pay_date||5;
+      let t=new Date(now.getFullYear(),now.getMonth(),pd);
+      if(t<=now) t=new Date(now.getFullYear(),now.getMonth()+1,pd);
+      return Math.ceil((t-now)/(86400000));
+    });
+
+    const afterSalary=computed(()=>new Date().getDate()>=(d.value.income?.pay_date||5));
+
+    const dayLimit=computed(()=>{
+      if(d.value.custom_daily_limit>0) return d.value.custom_daily_limit;
+      const dl=d.value.rules?.daily_limit;
+      return afterSalary.value?(dl?.after_salary||100000):(dl?.until_salary||70000);
+    });
+
+    const availCash=computed(()=>{
+      const c=d.value.current_cash; if(!c) return 0;
+      return (c.balance||0)-(c.reserved||0)-todaySpent.value;
+    });
+
+    const todaySpent=computed(()=>expenses.value.filter(e=>isT(e.date)).reduce((s,e)=>s+e.amount,0));
+    const monthSpent=computed(()=>expenses.value.filter(e=>isTM(e.date)).reduce((s,e)=>s+e.amount,0));
+    const isOver=computed(()=>dayLimit.value>0&&todaySpent.value>dayLimit.value);
+    const limPct=computed(()=>!dayLimit.value?0:Math.round(todaySpent.value/dayLimit.value*100));
+    const limSt=computed(()=>limPct.value>=100?'over':limPct.value>=75?'warn':'safe');
+
+    const debtCards=computed(()=>(d.value.debts?.credit_cards||[]).map(c=>({id:c.id,name:c.name.replace(' — Techcombank','').replace(' — ',''),balance:c.balance,limit:c.credit_limit,rate:Math.round(c.interest_rate_annual*100),min:c.minimum_payment})));
+
+    const totalDebt=computed(()=>{
+      const cc=(d.value.debts?.credit_cards||[]).reduce((s,c)=>s+c.balance,0);
+      const sl=(d.value.debts?.small_loans||[]).reduce((s,l)=>s+(l.remaining_balance||0),0);
+      return Math.max(0,cc+sl-(d.value.extra_paid||0));
+    });
+    const origDebt=computed(()=>d.value.debts?.summary?.total||91721251);
+    const repayPct=computed(()=>Math.min(100,Math.max(0,Math.round((1-totalDebt.value/origDebt.value)*100))));
+
+    const upcoming=computed(()=>[
+      {day:'06',mo:'04',name:'Visa 1 — minimum',sub:'Trước 17:00 ⚠',amt:2663422,urg:dDiff('2026-04-06')<5?'urgent':'soon'},
+      {day:'12',mo:'04',name:'HD Saison kỳ 7/9',amt:1083702,urg:'soon'},
+      {day:'13',mo:'04',name:'Visa 2 — minimum',sub:'Trước 17:00 ⚠',amt:4107271,urg:dDiff('2026-04-13')<5?'urgent':'soon'},
+      {day:'14',mo:'04',name:'Spay 1 — kỳ cuối',amt:1105462,urg:'ok'},
+      {day:'27',mo:'04',name:'Spay 2 kỳ 2/3',amt:703151,urg:'ok'},
+      {day:'28',mo:'04',name:'Tiền mừng cưới đồng nghiệp',amt:500000,urg:'ok'},
+    ]);
+
+    function dDiff(s){const now=new Date();const t=new Date(s);return Math.ceil((t-now)/86400000);}
+
+    const milestones=computed(()=>{
+      const now=new Date().toISOString().slice(0,7);
+      return [
+        {month:'2026-04',ev:'Spay 1 hết 🎉',debt:82913000},
+        {month:'2026-05',ev:'Spay 2 hết + học phí T5',debt:78986000},
+        {month:'2026-06',ev:'HD Saison hết 🎉',debt:68536000},
+        {month:'2026-07',ev:'SPayLater hết 🎉',debt:56793000},
+        {month:'2026-08',ev:'Góp ẩn Visa 2 xong',debt:43963000},
+        {month:'2026-09',ev:'Visa 2 = 0 — tấn công Visa 1 🔥',debt:23433000},
+        {month:'2026-10',ev:'Visa 1 còn ~10M',debt:9849000},
+        {month:'2026-11',ev:'🏆 THOÁT NỢ HOÀN TOÀN',debt:0},
+        {month:'2026-12',ev:'Bắt đầu tích lũy',debt:null},
+        {month:'2027-01',ev:'Quỹ khẩn cấp 3 tháng (~28M)',debt:null},
+      ].map(m=>({...m,st:m.month<now?'done':m.month===now?'active':'future'}));
+    });
+
+    const sortedExp=computed(()=>[...expenses.value].sort((a,b)=>b.date.localeCompare(a.date)));
+
+    // Actions
+    async function addExp(){
+      if(!nAmt.value||nAmt.value<=0) return;
+      const e={id:Date.now(),desc:nDesc.value||'Chi tiêu',amount:nAmt.value,cat:nCat.value,date:tStr()};
+      d.value={...d.value,expenses:[e,...(d.value.expenses||[])]};
+      nDesc.value=''; nAmt.value=null; tab.value='list';
+      await push();
+    }
+    async function delExp(id){
+      d.value={...d.value,expenses:d.value.expenses.filter(e=>e.id!==id)};
+      await push();
+    }
+    async function updLimit(){
+      if(nLimit.value>0){d.value.custom_daily_limit=nLimit.value;nLimit.value=null;await push();}
+    }
+    async function recPay(){
+      if(payAmt.value>0){d.value.extra_paid=(d.value.extra_paid||0)+payAmt.value;payAmt.value=null;await push();}
+    }
+    async function updCash(){
+      if(nCash.value>0){d.value={...d.value,current_cash:{...d.value.current_cash,balance:nCash.value,as_of:tStr()}};nCash.value=null;await push();}
+    }
+
+    // Format
+    const fN=n=>(n||0).toLocaleString('vi-VN');
+    const fS=n=>{const v=Math.abs(n||0);return v>=1000000?(v/1000000).toFixed(1)+'M':v>=1000?(v/1000).toFixed(0)+'K':String(v);};
+    const fV=n=>'₫'+fN(Math.abs(n));
+    const fDate=d=>new Date(d).toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+    // Chart
+    function buildChart(){
+      if(!chartRef.value) return;
+      const days=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-(6-i));return d.toISOString().slice(0,10);});
+      const labels=days.map(d=>new Date(d).toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit'}));
+      const data=days.map(d=>expenses.value.filter(e=>e.date===d).reduce((s,e)=>s+e.amount,0));
+      if(chartInst) chartInst.destroy();
+      chartInst=new Chart(chartRef.value,{type:'bar',data:{labels,datasets:[{data,backgroundColor:data.map((_,i)=>i===6?'rgba(232,255,71,.7)':'rgba(232,255,71,.25)'),borderColor:'rgba(232,255,71,.8)',borderWidth:1,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#6b6b85',font:{family:'Space Mono',size:9}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#6b6b85',font:{family:'Space Mono',size:9},callback:v=>v>=1000?(v/1000)+'K':v}}}}});
+    }
+
+    watch(tab,v=>{if(v==='chart') nextTick(buildChart);});
+    watch(isConfigured,v=>{if(v) pull();});
+    if(isConfigured.value) pull();
+
+    return {
+      isConfigured,sMode,iKey,iBinId,iDebt,iLimit,iJson,sErr,loading,
+      tab,d,expenses,syncSt,syncMsg,syncing,chartRef,today,
+      dToSalary,availCash,dayLimit,todaySpent,monthSpent,isOver,limPct,limSt,
+      debtCards,totalDebt,origDebt,repayPct,upcoming,milestones,sortedExp,
+      nDesc,nAmt,nCat,nLimit,payAmt,nCash,
+      fN,fS,fV,fDate,
+      addExp,delExp,updLimit,recPay,updCash,setup,logout,
+    };
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
