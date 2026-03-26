@@ -111,7 +111,10 @@
   .up-item.urgent{border-left-color:var(--accent2);}
   .up-item.soon{border-left-color:var(--accent);}
   .up-item.ok{border-left-color:var(--accent3);}
-  .up-date-col{width:34px;flex-shrink:0;text-align:center;}
+  .up-item.paid{opacity:.6;}
+  .btn-paid{background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:12px;width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
+  .btn-paid:hover{border-color:var(--accent3);color:var(--accent3);}
+  .btn-paid:disabled{opacity:.3;cursor:not-allowed;border-color:var(--border);color:var(--muted);}
   .up-day{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--text);display:block;line-height:1;}
   .up-mo{font-family:var(--mono);font-size:9px;color:var(--muted);}
   .up-name{flex:1;font-size:12px;font-weight:600;}
@@ -318,16 +321,24 @@
         <span class="badge">{{ upcomingLabel }}</span>
       </div>
       <div class="up-list">
-        <div v-for="p in upcoming" :key="p.name" class="up-item" :class="p.urg">
+        <div v-for="p in upcoming" :key="p._key" class="up-item" :class="p.paid?'paid':p.urg">
           <div class="up-date-col">
-            <span class="up-day">{{ p.day }}</span>
+            <span class="up-day" :style="p.paid?{color:'var(--muted)'}:{}">{{ p.day }}</span>
             <span class="up-mo">/{{ p.mo }}</span>
           </div>
           <div style="flex:1;min-width:0">
-            <div class="up-name">{{ p.name }}</div>
-            <div v-if="p.sub" class="up-sub">{{ p.sub }}</div>
+            <div class="up-name" :style="p.paid?{color:'var(--muted)',textDecoration:'line-through'}:{}">{{ p.name }}</div>
+            <div v-if="p.sub&&!p.paid" class="up-sub">{{ p.sub }}</div>
+            <div v-if="p.paid" class="up-sub" style="color:var(--accent3)">✓ Đã thanh toán</div>
           </div>
-          <div class="up-amt">{{ fS(p.amt) }}</div>
+          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+            <div class="up-amt" :style="p.paid?{color:'var(--muted)'}:{}">{{ fS(p.amt) }}</div>
+            <button class="btn-paid" :class="{done:p.paid}" @click="togglePaid(p._key, p.amt)"
+              :disabled="!p.paid && availCash < p.amt"
+              :title="!p.paid && availCash < p.amt ? 'Không đủ tiền (thiếu ₫'+fS(p.amt - availCash)+')' : p.paid?'Hoàn tác':'Đánh dấu đã thanh toán'">
+              {{ p.paid ? '↩' : '✓' }}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -465,6 +476,28 @@
       </div>
 
       <div class="card">
+        <div class="c-title">📌 Khoản chi một lần</div>
+        <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
+          <input class="inp-sm" v-model="oneTimeName" placeholder="Tên khoản chi (vd: Đám cưới đồng nghiệp...)" style="font-family:var(--sans);font-size:12px" />
+          <div class="row-g">
+            <input class="inp-sm" v-model="oneTimeDate" type="date" style="font-family:var(--mono);font-size:11px" />
+            <input class="inp-sm" v-model.number="oneTimeAmt" type="number" inputmode="numeric" placeholder="Số tiền" />
+          </div>
+          <button class="btn-sm" style="width:100%" @click="addOneTime" :disabled="!oneTimeName||!oneTimeDate||!oneTimeAmt">Thêm →</button>
+        </div>
+        <div v-if="oneTimeList.length" style="margin-top:12px;display:flex;flex-direction:column;gap:0">
+          <div v-for="ev in oneTimeList" :key="ev.id" class="rule-item" style="justify-content:space-between">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:600">{{ ev.name }}</div>
+              <div class="small-n">{{ fDate(ev.date) }}</div>
+            </div>
+            <div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent2);margin-right:10px">₫{{ fS(ev.amount) }}</div>
+            <button class="btn-del" @click="delOneTime(ev.id)">✕</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
         <div class="c-title">Quy tắc</div>
         <div v-for="r in (d.rules?.must_not||[])" :key="r" class="rule-item">
           <div class="rule-dot"></div><span>{{ r }}</span>
@@ -499,6 +532,7 @@ createApp({
     const nDesc=ref(''), nAmt=ref(null), nCat=ref('🍜'), nLimit=ref(null);
     const payAmt=ref(null), payTarget=ref('');
     const addCashAmt=ref(null), cashNote=ref(''), nCash=ref(null);
+    const oneTimeName=ref(''), oneTimeDate=ref(''), oneTimeAmt=ref(null);
     const chartRef=ref(null), debtChartRef=ref(null), pieChartRef=ref(null);
     let chartInst=null, debtChartInst=null, pieChartInst=null;
 
@@ -650,8 +684,8 @@ createApp({
 
     const upcoming=computed(()=>{
       const plans=d.value.monthly_plans||{};
+      const paid=new Set(d.value.paid_obligations||[]);
       const now=new Date();
-      // Collect obligations from current + next 2 months
       const months=[0,1,2].map(i=>{
         const dt=new Date(now.getFullYear(),now.getMonth()+i,1);
         return dt.toISOString().slice(0,7);
@@ -661,27 +695,45 @@ createApp({
         const plan=plans[mo];
         if(!plan?.obligations) return;
         plan.obligations.forEach(ob=>{
-          // monthly:true = no specific date, skip for upcoming list
           if(ob.monthly) return;
           const dateStr=ob.date||ob['date '];
           if(!dateStr) return;
           const diff=dDiff(dateStr);
-          // only show upcoming (not more than 45 days past)
           if(diff<-2) return;
           const d2=new Date(dateStr);
+          const key=dateStr+':'+ob.name;
           items.push({
+            _key:key,
             day:String(d2.getDate()).padStart(2,'0'),
             mo:String(d2.getMonth()+1).padStart(2,'0'),
             name:ob.name,
-            sub: ob.category==='debt_minimum'?'Thanh toán tối thiểu':null,
+            sub:ob.category==='debt_minimum'?'Thanh toán tối thiểu':null,
             amt:ob.amount,
-            urg: diff<0?'urgent': diff<=5?'urgent': diff<=10?'soon':'ok',
+            paid:paid.has(key),
+            urg:paid.has(key)?'ok': diff<0?'urgent': diff<=5?'urgent': diff<=10?'soon':'ok',
             _date:dateStr,
           });
         });
       });
-      // Sort by date, show next 8
-      return items.sort((a,b)=>a._date.localeCompare(b._date)).slice(0,8);
+      // Thêm khoản chi một lần
+      (d.value.one_time_expenses||[]).forEach(ev=>{
+        const diff=dDiff(ev.date);
+        if(diff<-2) return;
+        const d2=new Date(ev.date);
+        const key=ev.date+':'+ev.name;
+        items.push({
+          _key:key,
+          day:String(d2.getDate()).padStart(2,'0'),
+          mo:String(d2.getMonth()+1).padStart(2,'0'),
+          name:ev.name,
+          sub:'Khoản chi một lần 📌',
+          amt:ev.amount,
+          paid:paid.has(key),
+          urg:paid.has(key)?'ok': diff<=5?'urgent': diff<=10?'soon':'ok',
+          _date:ev.date,
+        });
+      });
+      return items.sort((a,b)=>a._date.localeCompare(b._date)).slice(0,10);
     });
 
     const milestones=computed(()=>{
@@ -741,7 +793,34 @@ createApp({
       payAmt.value=null; payTarget.value='';
       await push();
     }
-    async function addCash(){
+    const oneTimeList=computed(()=>(d.value.one_time_expenses||[]).sort((a,b)=>a.date.localeCompare(b.date)));
+
+    async function addOneTime(){
+      if(!oneTimeName.value||!oneTimeDate.value||!oneTimeAmt.value) return;
+      const ev={id:Date.now(),name:oneTimeName.value,date:oneTimeDate.value,amount:oneTimeAmt.value};
+      d.value={...d.value,one_time_expenses:[...(d.value.one_time_expenses||[]),ev]};
+      oneTimeName.value=''; oneTimeDate.value=''; oneTimeAmt.value=null;
+      await push();
+    }
+    async function delOneTime(id){
+      d.value={...d.value,one_time_expenses:(d.value.one_time_expenses||[]).filter(e=>e.id!==id)};
+      await push();
+    }
+      const paid=new Set(d.value.paid_obligations||[]);
+      const nd={...d.value};
+      if(paid.has(key)){
+        // hoàn tác — cộng lại tiền
+        paid.delete(key);
+        nd.current_cash={...nd.current_cash, balance:(nd.current_cash?.balance||0)+amt};
+      } else {
+        // đánh dấu đã trả — trừ tiền
+        paid.add(key);
+        nd.current_cash={...nd.current_cash, balance:Math.max(0,(nd.current_cash?.balance||0)-amt)};
+      }
+      nd.paid_obligations=[...paid];
+      d.value=nd;
+      await push();
+    }
       if(!addCashAmt.value||addCashAmt.value<=0) return;
       d.value={...d.value,current_cash:{...d.value.current_cash,balance:(d.value.current_cash?.balance||0)+addCashAmt.value,as_of:tStr()}};
       addCashAmt.value=null; cashNote.value='';
@@ -794,8 +873,9 @@ createApp({
       dToSalary,availCash,dayLimit,todaySpent,monthSpent,isOver,limPct,limSt,
       debtCards,smallLoans,totalDebt,origDebt,repayPct,debtBreakdown,upcoming,upcomingLabel,milestones,sortedExp,
       nDesc,nAmt,nCat,nLimit,payAmt,payTarget,addCashAmt,cashNote,nCash,
+      oneTimeName,oneTimeDate,oneTimeAmt,oneTimeList,
       fN,fS,fV,fDate,
-      addExp,delExp,updLimit,recPay,addCash,updCash,setup,logout,reconnect,
+      addExp,delExp,updLimit,recPay,addCash,updCash,togglePaid,addOneTime,delOneTime,setup,logout,reconnect,
     };
   }
 }).mount('#app');
