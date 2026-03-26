@@ -7,18 +7,33 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230a0a0f'/><rect x='10' y='28' width='80' height='52' rx='10' fill='%23e8ff47'/><rect x='10' y='42' width='80' height='14' fill='%230a0a0f'/><rect x='18' y='62' width='24' height='8' rx='3' fill='%230a0a0f' opacity='.6'/><circle cx='72' cy='34' r='8' fill='%23ff6b4a' opacity='.9'/><circle cx='82' cy='34' r='8' fill='%234aefb8' opacity='.7'/></svg>">
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=Be+Vietnam+Pro:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#0a0a0f;--surface:#111118;--surface2:#1a1a24;--border:#2a2a3a;--accent:#e8ff47;--accent2:#ff6b4a;--accent3:#4aefb8;--text:#f0f0f5;--muted:#6b6b85;--danger:#ff4a6b;--mono:'Space Mono',monospace;--sans:'Syne',sans-serif;}
+  :root{--bg:#0a0a0f;--surface:#111118;--surface2:#1a1a24;--border:#2a2a3a;--accent:#e8ff47;--accent2:#ff6b4a;--accent3:#4aefb8;--text:#f0f0f5;--muted:#6b6b85;--danger:#ff4a6b;--mono:'IBM Plex Mono',monospace;--sans:'Be Vietnam Pro',sans-serif;}
   *{margin:0;padding:0;box-sizing:border-box;}
   body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden;}
-  body::-webkit-scrollbar{display:none;}
-  body{-ms-overflow-style:none;scrollbar-width:none;}
+  *{-ms-overflow-style:none;scrollbar-width:none;}
+  *::-webkit-scrollbar{display:none;}
   body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse at 20% 20%,rgba(232,255,71,.04) 0%,transparent 50%),radial-gradient(ellipse at 80% 80%,rgba(74,239,184,.03) 0%,transparent 50%);pointer-events:none;z-index:0;}
-  .wrap{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:0 16px 80px;}
-  .sticky-hdr{position:sticky;top:0;z-index:100;padding:20px 0 14px;margin-bottom:2px;border-bottom:1px solid var(--border);background:var(--bg);}
+  .wrap{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:16px 16px 80px;}
+  .sticky-hdr{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--border);}
+  .hdr{display:flex;align-items:center;justify-content:space-between;max-width:480px;margin:0 auto;padding:14px 16px;}
 
-  /* Setup */
+  /* Loading screen */
+  .loading-screen{position:fixed;inset:0;background:var(--bg);z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+  .loading-logo{font-size:32px;margin-bottom:4px;}
+  .loading-title{font-weight:800;font-size:16px;letter-spacing:.05em;}
+  .loading-msg{font-family:var(--mono);font-size:11px;color:var(--muted);}
+  .loading-bar{width:120px;height:2px;background:var(--border);border-radius:99px;overflow:hidden;}
+  .loading-fill{height:100%;background:var(--accent);border-radius:99px;animation:loadbar 1.2s ease-in-out infinite;}
+  @keyframes loadbar{0%{width:0;margin-left:0;}50%{width:80px;margin-left:20px;}100%{width:0;margin-left:120px;}}
+
+  /* Error popup */
+  .popup-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:998;display:flex;align-items:flex-end;justify-content:center;padding:0 0 40px;}
+  .popup-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:24px 22px;width:100%;max-width:420px;margin:0 16px;position:relative;}
+  .popup-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:20px 20px 0 0;background:linear-gradient(90deg,var(--accent2),var(--accent));}
+  .popup-title{font-size:15px;font-weight:800;margin-bottom:6px;}
+  .popup-sub{font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.7;margin-bottom:16px;}
   .setup-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;position:relative;z-index:1;}
   .setup-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px 24px;width:100%;max-width:420px;position:relative;}
   .setup-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:20px 20px 0 0;background:linear-gradient(90deg,var(--accent2),var(--accent),var(--accent3));}
@@ -47,7 +62,6 @@
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
 
   /* Header */
-  .hdr{display:flex;align-items:center;justify-content:space-between;}
   .hdr-title{font-weight:800;font-size:12px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);}
   .hdr-r{display:flex;align-items:center;gap:8px;}
   .hdr-date{font-family:var(--mono);font-size:10px;color:var(--muted);}
@@ -184,8 +198,29 @@
 <body>
 <div id="app">
 
-  <!-- SETUP -->
-  <div v-if="!isConfigured" class="setup-screen">
+  <!-- LOADING -->
+  <div v-if="appState==='loading'" class="loading-screen">
+    <div class="loading-logo">💳</div>
+    <div class="loading-title">Debt Tracker</div>
+    <div class="loading-bar"><div class="loading-fill"></div></div>
+    <div class="loading-msg">{{ syncMsg }}</div>
+  </div>
+
+  <!-- ERROR POPUP (có dữ liệu cũ, chỉ hiện popup nhỏ) -->
+  <div v-if="appState==='error'" class="popup-overlay" @click.self="appState='ready'">
+    <div class="popup-card">
+      <div class="popup-title">⚠ Không thể kết nối</div>
+      <div class="popup-sub">Không tải được dữ liệu từ JSONBin. Kiểm tra kết nối mạng hoặc nhập lại thông tin.</div>
+      <input class="inp-s" v-model="iKey" type="password" placeholder="API Key ($2b$...)" />
+      <input class="inp-s" v-model="iBinId" placeholder="Bin ID" />
+      <button class="btn-p" @click="reconnect" :disabled="!iKey||!iBinId||loading">{{ loading?'Đang kết nối...':'KẾT NỐI LẠI →' }}</button>
+      <div v-if="sErr" class="err">{{ sErr }}</div>
+      <button @click="appState='ready'" style="width:100%;background:none;border:none;color:var(--muted);font-family:var(--mono);font-size:11px;margin-top:12px;cursor:pointer;padding:4px">Dùng dữ liệu cũ tạm thời</button>
+    </div>
+  </div>
+
+  <!-- SETUP (chưa có credentials) -->
+  <div v-if="appState==='setup'" class="setup-screen">
     <div class="setup-card">
       <div class="s-title-big">💳 Debt Tracker</div>
       <div class="s-sub">Kết nối JSONBin.io để sync dữ liệu giữa các thiết bị.</div>
@@ -218,16 +253,17 @@
   </div>
 
   <!-- MAIN -->
-  <div v-else class="wrap">
+  <div v-if="appState==='ready'||appState==='error'">
     <div class="sticky-hdr">
-    <div class="hdr">
-      <div class="hdr-title">💳 Debt Tracker</div>
-      <div class="hdr-r">
-        <div class="hdr-date">{{ today }}</div>
-        <button class="btn-ico" @click="logout" title="Đăng xuất">⏏</button>
+      <div class="hdr">
+        <div class="hdr-title">💳 Debt Tracker</div>
+        <div class="hdr-r">
+          <div class="hdr-date">{{ today }}</div>
+          <button class="btn-ico" @click="logout" title="Đăng xuất">⏏</button>
+        </div>
       </div>
     </div>
-    </div>
+    <div class="wrap">
 
     <div class="sync-bar">
       <div class="sync-dot" :class="syncSt"></div>
@@ -429,7 +465,8 @@
         <span class="small-n">{{ syncMsg }}</span>
       </div>
     </div>
-  </div>
+    </div><!-- end wrap -->
+  </div><!-- end outer -->
 </div>
 
 <script>
@@ -444,6 +481,7 @@ createApp({
 
     const sMode=ref('import'), iKey=ref(''), iBinId=ref(''), iDebt=ref(null), iLimit=ref(null), iJson=ref('');
     const sErr=ref(''), loading=ref(false);
+    const appState=ref(isConfigured.value?'loading':'setup'); // 'loading'|'ready'|'error'|'setup'
 
     const d = ref({ expenses:[], extra_paid:0, custom_daily_limit:0, current_cash:{balance:865000,reserved:500000,as_of:'2026-03-27'}, debts:{credit_cards:[{id:'visa1',name:'Visa 1',credit_limit:37000000,balance:34946713,interest_rate_annual:0.328,minimum_payment:2663422},{id:'visa2',name:'Visa 2',credit_limit:53000000,balance:49299000,interest_rate_annual:0.358,minimum_payment:4107271}],small_loans:[]}, income:{monthly_net:22923000,pay_date:5}, rules:{daily_limit:{until_salary:70000,after_salary:100000},must_not:[]}, payoff_timeline:{projected_debt_by_month:[]}, fixed_expenses:{} });
 
@@ -476,9 +514,28 @@ createApp({
       finally{syncing.value=false;}
     }
     async function pull() {
-      syncSt.value='syncing';syncMsg.value='Đang tải...';
-      try{d.value=await readBin();syncSt.value='synced';syncMsg.value='Đã đồng bộ lúc '+new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});}
-      catch{syncSt.value='error';syncMsg.value='Không tải được';}
+      syncSt.value='syncing'; syncMsg.value='Đang tải dữ liệu...';
+      try {
+        d.value=await readBin();
+        syncSt.value='synced';
+        syncMsg.value='Đã đồng bộ lúc '+new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});
+        appState.value='ready';
+      } catch {
+        syncSt.value='error'; syncMsg.value='Không tải được';
+        // If we have stale data show error popup, else back to setup
+        appState.value = d.value.debts ? 'error' : 'setup';
+      }
+    }
+
+    async function reconnect() {
+      if(!iKey.value||!iBinId.value) return;
+      loading.value=true; sErr.value='';
+      try {
+        apiKey.value=iKey.value; binId.value=iBinId.value;
+        localStorage.setItem('dt_k',apiKey.value); localStorage.setItem('dt_b',binId.value);
+        await pull();
+      } catch(e) { sErr.value=e.message||'Lỗi kết nối'; appState.value='error'; }
+      finally { loading.value=false; }
     }
 
     async function setup(mode) {
@@ -500,7 +557,7 @@ createApp({
         const id=await createBin(data,iKey.value);
         apiKey.value=iKey.value; binId.value=id;
         localStorage.setItem('dt_k',apiKey.value); localStorage.setItem('dt_b',binId.value);
-        d.value=data; isConfigured.value=true;
+        d.value=data; isConfigured.value=true; appState.value='ready';
       } catch(e){sErr.value=e.message||'Lỗi kết nối';}
       finally{loading.value=false;}
     }
@@ -508,7 +565,7 @@ createApp({
     function logout(){
       if(!confirm('Đăng xuất? Dữ liệu vẫn còn trên JSONBin.')) return;
       localStorage.removeItem('dt_k'); localStorage.removeItem('dt_b');
-      apiKey.value=''; binId.value=''; isConfigured.value=false;
+      apiKey.value=''; binId.value=''; isConfigured.value=false; appState.value='setup';
     }
 
     const expenses = computed(()=>d.value.expenses||[]);
@@ -694,17 +751,16 @@ createApp({
     watch(tab,v=>{
       if(v==='chart') nextTick(()=>{buildSpendChart();buildDebtChart();buildPieChart();});
     });
-    watch(isConfigured,v=>{if(v) pull();});
     if(isConfigured.value) pull();
 
     return {
-      isConfigured,sMode,iKey,iBinId,iDebt,iLimit,iJson,sErr,loading,
+      isConfigured,appState,sMode,iKey,iBinId,iDebt,iLimit,iJson,sErr,loading,
       tab,d,expenses,syncSt,syncMsg,syncing,chartRef,debtChartRef,pieChartRef,today,
       dToSalary,availCash,dayLimit,todaySpent,monthSpent,isOver,limPct,limSt,
       debtCards,totalDebt,origDebt,repayPct,debtBreakdown,upcoming,upcomingLabel,milestones,sortedExp,
       nDesc,nAmt,nCat,nLimit,payAmt,nCash,
       fN,fS,fV,fDate,
-      addExp,delExp,updLimit,recPay,updCash,setup,logout,
+      addExp,delExp,updLimit,recPay,updCash,setup,logout,reconnect,
     };
   }
 }).mount('#app');
