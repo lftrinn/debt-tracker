@@ -267,7 +267,8 @@
         <div class="hdr-title">💳 Debt Tracker</div>
         <div class="hdr-r">
           <div class="hdr-date">{{ today }}</div>
-          <button class="btn-ico" @click="logout" title="Đăng xuất">⏏</button>
+          <button class="btn-ico" @click="hardReload" title="Cập nhật phiên bản mới">↻</button>
+        <button class="btn-ico" @click="logout" title="Đăng xuất">⏏</button>
         </div>
       </div>
     </div>
@@ -341,7 +342,7 @@
               <div class="up-amt" :style="p.paid?{color:'var(--muted)'}:{}">{{ fS(p.amt) }}</div>
               <div v-if="!p.paid && availCash < p.amt" style="font-family:var(--mono);font-size:9px;color:var(--accent2);line-height:1">thiếu {{ fS(p.amt - availCash) }}</div>
             </div>
-            <button class="btn-paid" :class="{done:p.paid}" @click="togglePaid(p._key, p.amt)"
+            <button class="btn-paid" :class="{done:p.paid}" @click="togglePaid(p._key, p.amt, p.name)"
               :disabled="!p.paid && availCash < p.amt">
               {{ p.paid ? '↩' : '✓' }}
             </button>
@@ -563,7 +564,7 @@ createApp({
 
     async function push() {
       syncing.value=true; syncSt.value='syncing'; syncMsg.value='Đang đồng bộ...';
-      try{await writeBin(d.value);syncSt.value='synced';syncMsg.value='Đã đồng bộ lúc '+new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});animKey.value++;}
+      try{await writeBin(d.value);syncSt.value='synced';syncMsg.value='Đã đồng bộ lúc '+new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});}
       catch{syncSt.value='error';syncMsg.value='Lỗi đồng bộ';}
       finally{syncing.value=false;}
     }
@@ -616,7 +617,12 @@ createApp({
       finally{loading.value=false;}
     }
 
-    function logout(){
+    function hardReload(){
+      // Giữ nguyên credentials, chỉ reload để lấy phiên bản mới
+      const url=new URL(window.location.href);
+      url.searchParams.set('v', Date.now());
+      window.location.replace(url.toString());
+    }
       if(!confirm('Đăng xuất? Dữ liệu vẫn còn trên JSONBin.')) return;
       localStorage.removeItem('dt_k'); localStorage.removeItem('dt_b');
       apiKey.value=''; binId.value=''; isConfigured.value=false; appState.value='setup';
@@ -659,9 +665,9 @@ createApp({
     const smallLoans=computed(()=>(d.value.debts?.small_loans||[]).filter(l=>(l.remaining_balance||0)>0));
 
     const totalDebt=computed(()=>{
-      const cc=(d.value.debts?.credit_cards||[]).reduce((s,c)=>s+c.balance,0);
+      const cc=(d.value.debts?.credit_cards||[]).reduce((s,c)=>s+(c.balance||0),0);
       const sl=(d.value.debts?.small_loans||[]).reduce((s,l)=>s+(l.remaining_balance||0),0);
-      return Math.max(0,cc+sl-(d.value.extra_paid||0));
+      return Math.max(0,cc+sl);
     });
     const origDebt=computed(()=>d.value.debts?.summary?.total||91721251);
     const repayPct=computed(()=>Math.min(100,Math.max(0,Math.round((1-totalDebt.value/origDebt.value)*100))));
@@ -796,7 +802,6 @@ createApp({
           l.id===id ? {...l,remaining_balance:Math.max(0,(l.remaining_balance||0)-amt)} : l
         )};
       }
-      nd.extra_paid=(nd.extra_paid||0)+amt;
       d.value=nd;
       payAmt.value=null; payTarget.value='';
       await push();
@@ -814,17 +819,62 @@ createApp({
       d.value={...d.value,one_time_expenses:(d.value.one_time_expenses||[]).filter(e=>e.id!==id)};
       await push();
     }
-    async function togglePaid(key, amt){
+    // Match obligation name → debt id for auto-update
+    function findDebtId(name) {
+      const n = name.toLowerCase();
+      const cards = d.value.debts?.credit_cards||[];
+      for (const c of cards) {
+        const cn = c.name.toLowerCase();
+        if (n.includes('visa 1') || (cn.includes('visa 1') && n.includes('visa'))) {
+          if (n.includes('visa 1') || n.includes('867011')) return {type:'cc', id:c.id};
+        }
+        if (n.includes('visa 2') || (cn.includes('visa 2') && n.includes('visa'))) {
+          if (n.includes('visa 2') || n.includes('867028')) return {type:'cc', id:c.id};
+        }
+      }
+      const loans = d.value.debts?.small_loans||[];
+      for (const l of loans) {
+        const ln = l.name.toLowerCase().split(' ').slice(0,2).join(' ');
+        if (n.includes(ln) || ln.split(' ').every(w=>w.length>2&&n.includes(w))) {
+          return {type:'sl', id:l.id};
+        }
+      }
+      return null;
+    }
+
+    async function togglePaid(key, amt, obName){
       const paid=new Set(d.value.paid_obligations||[]);
-      const nd={...d.value};
+      const nd={...d.value,debts:{...d.value.debts,
+        credit_cards:[...(d.value.debts?.credit_cards||[])],
+        small_loans:[...(d.value.debts?.small_loans||[])],
+      }};
+      const debtRef = obName ? findDebtId(obName) : null;
       if(paid.has(key)){
-        // hoàn tác — cộng lại tiền
+        // hoàn tác — cộng lại tiền và nợ
         paid.delete(key);
         nd.current_cash={...nd.current_cash, balance:(nd.current_cash?.balance||0)+amt};
+        if(debtRef){
+          if(debtRef.type==='cc'){
+            nd.debts.credit_cards=nd.debts.credit_cards.map(c=>
+              c.id===debtRef.id ? {...c,balance:(c.balance||0)+amt} : c);
+          } else {
+            nd.debts.small_loans=nd.debts.small_loans.map(l=>
+              l.id===debtRef.id ? {...l,remaining_balance:(l.remaining_balance||0)+amt} : l);
+          }
+        }
       } else {
-        // đánh dấu đã trả — trừ tiền
+        // đánh dấu đã trả — trừ tiền và nợ
         paid.add(key);
         nd.current_cash={...nd.current_cash, balance:Math.max(0,(nd.current_cash?.balance||0)-amt)};
+        if(debtRef){
+          if(debtRef.type==='cc'){
+            nd.debts.credit_cards=nd.debts.credit_cards.map(c=>
+              c.id===debtRef.id ? {...c,balance:Math.max(0,(c.balance||0)-amt)} : c);
+          } else {
+            nd.debts.small_loans=nd.debts.small_loans.map(l=>
+              l.id===debtRef.id ? {...l,remaining_balance:Math.max(0,(l.remaining_balance||0)-amt)} : l);
+          }
+        }
       }
       nd.paid_obligations=[...paid];
       d.value=nd;
@@ -888,7 +938,7 @@ createApp({
       nDesc,nAmt,nCat,nLimit,payAmt,payTarget,addCashAmt,cashNote,nCash,
       oneTimeName,oneTimeDate,oneTimeAmt,oneTimeList,
       fN,fS,fV,fDate,
-      addExp,delExp,updLimit,recPay,addCash,updCash,togglePaid,addOneTime,delOneTime,setup,logout,reconnect,
+      addExp,delExp,updLimit,recPay,addCash,updCash,togglePaid,addOneTime,delOneTime,hardReload,setup,logout,reconnect,
     };
   }
 }).mount('#app');
