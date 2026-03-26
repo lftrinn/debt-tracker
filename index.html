@@ -188,11 +188,18 @@
   .tl-debt{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px;}
 
   /* Settings */
-  .row-g{display:flex;gap:7px;align-items:center;margin-top:9px;}
-  .inp-sm{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none;transition:border-color .2s;}
+  .row-g{display:flex;gap:7px;align-items:stretch;margin-top:9px;}
+  .inp-sm{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0 10px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none;transition:border-color .2s;height:36px;display:flex;align-items:center;box-sizing:border-box;}
   .inp-sm:focus{border-color:var(--accent);}
-  .btn-sm{background:var(--accent);color:var(--bg);border:none;border-radius:8px;padding:7px 12px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;transition:opacity .2s;white-space:nowrap;}
+  .btn-sm{background:var(--accent);color:var(--bg);border:none;border-radius:8px;padding:0 12px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;transition:opacity .2s;white-space:nowrap;height:36px;}
   .btn-sm:hover{opacity:.85;}
+  /* Date input Safari fix */
+  .date-wrap{position:relative;flex:1;}
+  .date-wrap input[type=date]{width:100%;height:36px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:0 10px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none;-webkit-appearance:none;appearance:none;box-sizing:border-box;}
+  .date-wrap input[type=date]:focus{border-color:var(--accent);}
+  .date-wrap input[type=date]::-webkit-date-and-time-value{text-align:left;}
+  .date-placeholder{position:absolute;left:10px;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:11px;color:var(--muted);pointer-events:none;transition:opacity .15s;}
+  .date-placeholder.hidden{opacity:0;}
   .lim-bar-w{display:flex;align-items:center;gap:8px;margin:9px 0 5px;}
   .lim-bar{flex:1;height:5px;background:var(--surface2);border-radius:99px;overflow:hidden;}
   .lim-fill{height:100%;border-radius:99px;transition:width .4s;}
@@ -317,7 +324,7 @@
         <span class="prog-pct">{{ repayPct }}% · xong T11/2026</span>
       </div>
       <div class="prog-bar"><div class="prog-fill prog-fill-anim" :style="{width:repayPct+'%'}"></div></div>
-      <div class="prog-meta"><span>₫{{ fS(origDebt) }}</span><span>₫0</span></div>
+      <div class="prog-meta"><span>Gốc: ₫{{ fS(origDebt) }}</span><span>Còn: ₫{{ fS(totalDebt) }}</span></div>
     </div>
 
     <!-- Upcoming -->
@@ -487,9 +494,12 @@
         <div class="c-title">📌 Khoản chi một lần</div>
         <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
           <input class="inp-sm" v-model="oneTimeName" placeholder="Tên khoản chi (vd: Đám cưới đồng nghiệp...)" style="font-family:var(--sans);font-size:12px" />
-          <div class="row-g">
-            <input class="inp-sm" v-model="oneTimeDate" type="date" style="flex:1;font-family:var(--mono);font-size:11px;color-scheme:dark" />
-            <input class="inp-sm" v-model.number="oneTimeAmt" type="number" inputmode="numeric" placeholder="Số tiền" style="flex:1" />
+          <div class="row-g" style="margin-top:0">
+            <div class="date-wrap">
+              <input type="date" v-model="oneTimeDate" style="color-scheme:dark" />
+              <span class="date-placeholder" :class="{hidden:oneTimeDate}">dd/mm/yyyy</span>
+            </div>
+            <input class="inp-sm" v-model.number="oneTimeAmt" type="number" inputmode="numeric" placeholder="Số tiền" />
           </div>
           <button class="btn-sm" style="width:100%" @click="addOneTime" :disabled="!oneTimeName||!oneTimeDate||!oneTimeAmt">Thêm →</button>
         </div>
