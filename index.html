@@ -35,8 +35,8 @@
   .popup-title{font-size:15px;font-weight:800;margin-bottom:6px;}
   .popup-sub{font-family:var(--mono);font-size:10px;color:var(--muted);line-height:1.7;margin-bottom:16px;}
   .setup-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;position:relative;z-index:1;}
-  .setup-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px 24px;width:100%;max-width:420px;position:relative;}
-  .setup-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:20px 20px 0 0;background:linear-gradient(90deg,var(--accent2),var(--accent),var(--accent3));}
+  .setup-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px 24px;width:100%;max-width:420px;position:relative;overflow:hidden;}
+  .setup-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent2),var(--accent),var(--accent3));}
   .s-title-big{font-size:20px;font-weight:800;margin-bottom:4px;}
   .s-sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-bottom:18px;line-height:1.7;}
   .s-tabs{display:flex;gap:3px;background:var(--surface2);border-radius:9px;padding:3px;margin-bottom:18px;}
@@ -60,6 +60,8 @@
   .sync-dot.synced{background:var(--accent3);}
   .sync-dot.error{background:var(--accent2);}
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+  @keyframes countup{from{opacity:.3;transform:translateY(5px);}to{opacity:1;transform:translateY(0);}}
+  .num-flash{animation:countup .3s cubic-bezier(.4,0,.2,1);}
 
   /* Header */
   .hdr-title{font-weight:800;font-size:12px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);}
@@ -280,12 +282,12 @@
     <div class="cash-hero">
       <div>
         <div class="ch-label">// Tiền mặt</div>
-        <div class="ch-val" :class="availCash<200000?'red':availCash<500000?'yellow':'green'">{{ fS(availCash) }}</div>
+        <div :class="['ch-val','num-flash',availCash<200000?'red':availCash<500000?'yellow':'green']" :key="'cash'+animKey">{{ fS(availCash) }}</div>
         <div class="ch-sub">{{ dToSalary }} ngày đến lương</div>
       </div>
       <div>
         <div class="ch-label">// Chi hôm nay</div>
-        <div class="ch-val" :class="isOver?'red':'yellow'">{{ fS(todaySpent) }}</div>
+        <div :class="['ch-val','num-flash',isOver?'red':'yellow']" :key="'spent'+animKey">{{ fS(todaySpent) }}</div>
         <div class="ch-sub">Tháng này: {{ fS(monthSpent) }}</div>
       </div>
     </div>
@@ -293,7 +295,7 @@
     <!-- Debt overview -->
     <div class="debt-ov">
       <div class="do-label">// Tổng nợ còn lại</div>
-      <div class="do-total"><span>₫</span>{{ fN(totalDebt) }}</div>
+      <div class="do-total num-flash" :key="'debt'+animKey"><span>₫</span>{{ fN(totalDebt) }}</div>
       <div class="do-cards">
         <div class="do-card" v-for="c in debtCards" :key="c.id">
           <div class="do-card-name">{{ c.name }}</div>
@@ -331,11 +333,11 @@
             <div v-if="p.sub&&!p.paid" class="up-sub">{{ p.sub }}</div>
             <div v-if="p.paid" class="up-sub" style="color:var(--accent3)">✓ Đã thanh toán</div>
           </div>
-          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0">
             <div class="up-amt" :style="p.paid?{color:'var(--muted)'}:{}">{{ fS(p.amt) }}</div>
+            <div v-if="!p.paid && availCash < p.amt" style="font-family:var(--mono);font-size:9px;color:var(--accent2)">thiếu {{ fS(p.amt - availCash) }}</div>
             <button class="btn-paid" :class="{done:p.paid}" @click="togglePaid(p._key, p.amt)"
-              :disabled="!p.paid && availCash < p.amt"
-              :title="!p.paid && availCash < p.amt ? 'Không đủ tiền (thiếu ₫'+fS(p.amt - availCash)+')' : p.paid?'Hoàn tác':'Đánh dấu đã thanh toán'">
+              :disabled="!p.paid && availCash < p.amt">
               {{ p.paid ? '↩' : '✓' }}
             </button>
           </div>
@@ -480,8 +482,8 @@
         <div style="margin-top:10px;display:flex;flex-direction:column;gap:8px">
           <input class="inp-sm" v-model="oneTimeName" placeholder="Tên khoản chi (vd: Đám cưới đồng nghiệp...)" style="font-family:var(--sans);font-size:12px" />
           <div class="row-g">
-            <input class="inp-sm" v-model="oneTimeDate" type="date" style="font-family:var(--mono);font-size:11px" />
-            <input class="inp-sm" v-model.number="oneTimeAmt" type="number" inputmode="numeric" placeholder="Số tiền" />
+            <input class="inp-sm" v-model="oneTimeDate" type="date" style="flex:1;font-family:var(--mono);font-size:11px;color-scheme:dark" />
+            <input class="inp-sm" v-model.number="oneTimeAmt" type="number" inputmode="numeric" placeholder="Số tiền" style="flex:1" />
           </div>
           <button class="btn-sm" style="width:100%" @click="addOneTime" :disabled="!oneTimeName||!oneTimeDate||!oneTimeAmt">Thêm →</button>
         </div>
@@ -529,6 +531,7 @@ createApp({
     const d = ref({ expenses:[], extra_paid:0, custom_daily_limit:0, current_cash:{balance:865000,reserved:500000,as_of:'2026-03-27'}, debts:{credit_cards:[{id:'visa1',name:'Visa 1',credit_limit:37000000,balance:34946713,interest_rate_annual:0.328,minimum_payment:2663422},{id:'visa2',name:'Visa 2',credit_limit:53000000,balance:49299000,interest_rate_annual:0.358,minimum_payment:4107271}],small_loans:[]}, income:{monthly_net:22923000,pay_date:5}, rules:{daily_limit:{until_salary:70000,after_salary:100000},must_not:[]}, payoff_timeline:{projected_debt_by_month:[]}, fixed_expenses:{} });
 
     const tab=ref('add'), syncSt=ref('synced'), syncMsg=ref('Đã đồng bộ'), syncing=ref(false);
+    const animKey=ref(0); // bumps to retrigger CSS animation
     const nDesc=ref(''), nAmt=ref(null), nCat=ref('🍜'), nLimit=ref(null);
     const payAmt=ref(null), payTarget=ref('');
     const addCashAmt=ref(null), cashNote=ref(''), nCash=ref(null);
@@ -555,7 +558,7 @@ createApp({
 
     async function push() {
       syncing.value=true; syncSt.value='syncing'; syncMsg.value='Đang đồng bộ...';
-      try{await writeBin(d.value);syncSt.value='synced';syncMsg.value='Đã đồng bộ lúc '+new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});}
+      try{await writeBin(d.value);syncSt.value='synced';syncMsg.value='Đã đồng bộ lúc '+new Date().toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});animKey.value++;}
       catch{syncSt.value='error';syncMsg.value='Lỗi đồng bộ';}
       finally{syncing.value=false;}
     }
@@ -871,7 +874,7 @@ createApp({
 
     return {
       isConfigured,appState,sMode,iKey,iBinId,iDebt,iLimit,iJson,sErr,loading,
-      tab,d,expenses,syncSt,syncMsg,syncing,chartRef,debtChartRef,pieChartRef,today,
+      tab,d,expenses,syncSt,syncMsg,syncing,animKey,chartRef,debtChartRef,pieChartRef,today,
       dToSalary,availCash,dayLimit,todaySpent,monthSpent,isOver,limPct,limSt,
       debtCards,smallLoans,totalDebt,origDebt,repayPct,debtBreakdown,upcoming,upcomingLabel,milestones,sortedExp,
       nDesc,nAmt,nCat,nLimit,payAmt,payTarget,addCashAmt,cashNote,nCash,
