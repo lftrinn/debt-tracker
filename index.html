@@ -806,6 +806,7 @@ createApp({
       d.value={...d.value,one_time_expenses:(d.value.one_time_expenses||[]).filter(e=>e.id!==id)};
       await push();
     }
+    async function togglePaid(key, amt){
       const paid=new Set(d.value.paid_obligations||[]);
       const nd={...d.value};
       if(paid.has(key)){
