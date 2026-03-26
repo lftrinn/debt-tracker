@@ -12,8 +12,11 @@
   :root{--bg:#0a0a0f;--surface:#111118;--surface2:#1a1a24;--border:#2a2a3a;--accent:#e8ff47;--accent2:#ff6b4a;--accent3:#4aefb8;--text:#f0f0f5;--muted:#6b6b85;--danger:#ff4a6b;--mono:'Space Mono',monospace;--sans:'Syne',sans-serif;}
   *{margin:0;padding:0;box-sizing:border-box;}
   body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden;}
+  body::-webkit-scrollbar{display:none;}
+  body{-ms-overflow-style:none;scrollbar-width:none;}
   body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(ellipse at 20% 20%,rgba(232,255,71,.04) 0%,transparent 50%),radial-gradient(ellipse at 80% 80%,rgba(74,239,184,.03) 0%,transparent 50%);pointer-events:none;z-index:0;}
-  .wrap{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:20px 16px 80px;}
+  .wrap{position:relative;z-index:1;max-width:480px;margin:0 auto;padding:0 16px 80px;}
+  .sticky-hdr{position:sticky;top:0;z-index:100;padding:20px 0 14px;margin-bottom:2px;border-bottom:1px solid var(--border);background:var(--bg);}
 
   /* Setup */
   .setup-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;position:relative;z-index:1;}
@@ -44,7 +47,7 @@
   @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
 
   /* Header */
-  .hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+  .hdr{display:flex;align-items:center;justify-content:space-between;}
   .hdr-title{font-weight:800;font-size:12px;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);}
   .hdr-r{display:flex;align-items:center;gap:8px;}
   .hdr-date{font-family:var(--mono);font-size:10px;color:var(--muted);}
@@ -216,12 +219,14 @@
 
   <!-- MAIN -->
   <div v-else class="wrap">
+    <div class="sticky-hdr">
     <div class="hdr">
       <div class="hdr-title">💳 Debt Tracker</div>
       <div class="hdr-r">
         <div class="hdr-date">{{ today }}</div>
         <button class="btn-ico" @click="logout" title="Đăng xuất">⏏</button>
       </div>
+    </div>
     </div>
 
     <div class="sync-bar">
@@ -565,6 +570,8 @@ createApp({
         }));
       return [...cc,...sl];
     });
+
+    function dDiff(s){return Math.ceil((new Date(s)-new Date())/86400000);}
 
     const upcomingLabel=computed(()=>{
       const now=new Date();
