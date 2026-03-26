@@ -623,6 +623,8 @@ createApp({
       url.searchParams.set('v', Date.now());
       window.location.replace(url.toString());
     }
+
+    function logout(){
       if(!confirm('Đăng xuất? Dữ liệu vẫn còn trên JSONBin.')) return;
       localStorage.removeItem('dt_k'); localStorage.removeItem('dt_b');
       apiKey.value=''; binId.value=''; isConfigured.value=false; appState.value='setup';
