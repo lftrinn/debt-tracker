@@ -821,6 +821,7 @@ createApp({
       d.value=nd;
       await push();
     }
+    async function addCash(){
       if(!addCashAmt.value||addCashAmt.value<=0) return;
       d.value={...d.value,current_cash:{...d.value.current_cash,balance:(d.value.current_cash?.balance||0)+addCashAmt.value,as_of:tStr()}};
       addCashAmt.value=null; cashNote.value='';
