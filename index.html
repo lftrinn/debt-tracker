@@ -274,7 +274,7 @@
     <div class="upcoming">
       <div class="c-hdr">
         <span class="c-title">Thanh toán sắp đến</span>
-        <span class="badge">tháng 4/2026</span>
+        <span class="badge">{{ upcomingLabel }}</span>
       </div>
       <div class="up-list">
         <div v-for="p in upcoming" :key="p.name" class="up-item" :class="p.urg">
@@ -566,31 +566,67 @@ createApp({
       return [...cc,...sl];
     });
 
-    const upcoming=computed(()=>[
-      {day:'06',mo:'04',name:'Visa 1 — minimum',sub:'Trước 17:00 ⚠',amt:2663422,urg:dDiff('2026-04-06')<5?'urgent':'soon'},
-      {day:'12',mo:'04',name:'HD Saison kỳ 7/9',amt:1083702,urg:'soon'},
-      {day:'13',mo:'04',name:'Visa 2 — minimum',sub:'Trước 17:00 ⚠',amt:4107271,urg:dDiff('2026-04-13')<5?'urgent':'soon'},
-      {day:'14',mo:'04',name:'Spay 1 — kỳ cuối',amt:1105462,urg:'ok'},
-      {day:'27',mo:'04',name:'Spay 2 kỳ 2/3',amt:703151,urg:'ok'},
-      {day:'28',mo:'04',name:'Mừng cưới đồng nghiệp',amt:500000,urg:'ok'},
-    ]);
+    const upcomingLabel=computed(()=>{
+      const now=new Date();
+      return 'T'+String(now.getMonth()+1)+'/'+now.getFullYear();
+    });
 
-    function dDiff(s){return Math.ceil((new Date(s)-new Date())/86400000);}
+    const upcoming=computed(()=>{
+      const plans=d.value.monthly_plans||{};
+      const now=new Date();
+      // Collect obligations from current + next 2 months
+      const months=[0,1,2].map(i=>{
+        const dt=new Date(now.getFullYear(),now.getMonth()+i,1);
+        return dt.toISOString().slice(0,7);
+      });
+      const items=[];
+      months.forEach(mo=>{
+        const plan=plans[mo];
+        if(!plan?.obligations) return;
+        plan.obligations.forEach(ob=>{
+          // monthly:true = no specific date, skip for upcoming list
+          if(ob.monthly) return;
+          const dateStr=ob.date||ob['date '];
+          if(!dateStr) return;
+          const diff=dDiff(dateStr);
+          // only show upcoming (not more than 45 days past)
+          if(diff<-2) return;
+          const d2=new Date(dateStr);
+          items.push({
+            day:String(d2.getDate()).padStart(2,'0'),
+            mo:String(d2.getMonth()+1).padStart(2,'0'),
+            name:ob.name,
+            sub: ob.category==='debt_minimum'?'Thanh toán tối thiểu':null,
+            amt:ob.amount,
+            urg: diff<0?'urgent': diff<=5?'urgent': diff<=10?'soon':'ok',
+            _date:dateStr,
+          });
+        });
+      });
+      // Sort by date, show next 8
+      return items.sort((a,b)=>a._date.localeCompare(b._date)).slice(0,8);
+    });
 
     const milestones=computed(()=>{
       const now=new Date().toISOString().slice(0,7);
-      return [
-        {month:'2026-04',ev:'Spay 1 hết 🎉',debt:82913000},
-        {month:'2026-05',ev:'Spay 2 hết + học phí T5',debt:78986000},
-        {month:'2026-06',ev:'HD Saison hết 🎉',debt:68536000},
-        {month:'2026-07',ev:'SPayLater hết 🎉',debt:56793000},
-        {month:'2026-08',ev:'Góp ẩn Visa 2 xong',debt:43963000},
-        {month:'2026-09',ev:'Visa 2 = 0 — tấn công Visa 1 🔥',debt:23433000},
-        {month:'2026-10',ev:'Visa 1 còn ~10M',debt:9849000},
-        {month:'2026-11',ev:'🏆 THOÁT NỢ HOÀN TOÀN',debt:0},
-        {month:'2026-12',ev:'Bắt đầu tích lũy',debt:null},
-        {month:'2027-01',ev:'Quỹ khẩn cấp 3 tháng (~28M)',debt:null},
-      ].map(m=>({...m,st:m.month<now?'done':m.month===now?'active':'future'}));
+      const raw=d.value.payoff_timeline?.milestones||[];
+      const debtMap={};
+      (d.value.payoff_timeline?.projected_debt_by_month||[]).forEach(p=>{debtMap[p.month]=p.total_debt;});
+      if(raw.length){
+        return raw.map(m=>({
+          month:m.month,
+          ev:m.event||(m.month==='2026-11'?'🏆 THOÁT NỢ HOÀN TOÀN':m.month),
+          debt:debtMap[m.month]??null,
+          st:m.month<now?'done':m.month===now?'active':'future',
+        }));
+      }
+      // fallback: build from projected_debt_by_month only
+      return (d.value.payoff_timeline?.projected_debt_by_month||[]).map(p=>({
+        month:p.month,
+        ev:p.total_debt===0?'🏆 Thoát nợ hoàn toàn':'Nợ: ₫'+fS(p.total_debt),
+        debt:p.total_debt,
+        st:p.month<now?'done':p.month===now?'active':'future',
+      }));
     });
 
     const sortedExp=computed(()=>[...expenses.value].sort((a,b)=>b.date.localeCompare(a.date)));
@@ -658,7 +694,7 @@ createApp({
       isConfigured,sMode,iKey,iBinId,iDebt,iLimit,iJson,sErr,loading,
       tab,d,expenses,syncSt,syncMsg,syncing,chartRef,debtChartRef,pieChartRef,today,
       dToSalary,availCash,dayLimit,todaySpent,monthSpent,isOver,limPct,limSt,
-      debtCards,totalDebt,origDebt,repayPct,debtBreakdown,upcoming,milestones,sortedExp,
+      debtCards,totalDebt,origDebt,repayPct,debtBreakdown,upcoming,upcomingLabel,milestones,sortedExp,
       nDesc,nAmt,nCat,nLimit,payAmt,nCash,
       fN,fS,fV,fDate,
       addExp,delExp,updLimit,recPay,updCash,setup,logout,
