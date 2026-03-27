@@ -117,6 +117,16 @@
   .up-item.soon{border-left-color:var(--accent);}
   .up-item.ok{border-left-color:var(--accent3);}
   .up-item.paid{opacity:.6;}
+  .up-item.editing{border-left-color:var(--accent);background:var(--surface);flex-direction:column;align-items:stretch;gap:8px;}
+  .edit-form{display:flex;flex-direction:column;gap:7px;}
+  .edit-row{display:flex;gap:7px;align-items:center;}
+  .inp-edit{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:7px 9px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none;transition:border-color .2s;-webkit-appearance:none;min-height:34px;box-sizing:border-box;}
+  .inp-edit:focus{border-color:var(--accent);}
+  .btn-edit-save{background:var(--accent);color:var(--bg);border:none;border-radius:7px;padding:7px 12px;font-family:var(--sans);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;}
+  .btn-edit-cancel{background:none;border:1px solid var(--border);border-radius:7px;padding:7px 10px;color:var(--muted);font-family:var(--sans);font-size:11px;cursor:pointer;white-space:nowrap;}
+  .btn-edit-del{background:none;border:1px solid rgba(255,74,107,.3);border-radius:7px;padding:7px 10px;color:var(--accent2);font-family:var(--sans);font-size:11px;cursor:pointer;}
+  .btn-tiny-edit{background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:3px 5px;border-radius:5px;flex-shrink:0;}
+  .btn-tiny-edit:hover{color:var(--text);}
   .btn-paid{background:none;border:1px solid var(--border);border-radius:6px;color:var(--muted);font-size:12px;width:26px;height:26px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
   .btn-paid:hover{border-color:var(--accent3);color:var(--accent3);}
   .btn-paid:disabled{opacity:.3;cursor:not-allowed;border-color:var(--border);color:var(--muted);}
@@ -345,26 +355,54 @@
         <span class="badge">{{ upcomingLabel }}</span>
       </div>
       <div class="up-list">
-        <div v-for="p in upcoming" :key="p._key" class="up-item" :class="p.paid?'paid':p.urg">
-          <div class="up-date-col">
-            <span class="up-day" :style="p.paid?{color:'var(--muted)'}:{}">{{ p.day }}</span>
-            <span class="up-mo">/{{ p.mo }}</span>
-          </div>
-          <div style="flex:1;min-width:0">
-            <div class="up-name" :style="p.paid?{color:'var(--muted)',textDecoration:'line-through'}:{}">{{ p.name }}</div>
-            <div v-if="p.sub&&!p.paid" class="up-sub" style="margin-top:2px">{{ p.sub }}</div>
-            <div v-if="p.paid" class="up-sub" style="color:var(--accent3);margin-top:2px">✓ Đã thanh toán</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;margin-left:8px">
-            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
-              <div class="up-amt" :style="p.paid?{color:'var(--muted)'}:{}">{{ fS(p.amt) }}</div>
-              <div v-if="!p.paid && availCash < p.amt" style="font-family:var(--mono);font-size:9px;color:var(--accent2);line-height:1">thiếu {{ fS(p.amt - availCash) }}</div>
+        <div v-for="p in upcoming" :key="p._key"
+          class="up-item"
+          :class="editingKey===p._key ? 'editing' : p.paid ? 'paid' : p.urg">
+
+          <!-- EDIT MODE -->
+          <template v-if="editingKey===p._key">
+            <div style="font-size:11px;font-weight:700;color:var(--accent);margin-bottom:2px">Chỉnh sửa khoản thanh toán</div>
+            <div class="edit-form">
+              <input class="inp-edit" v-model="editBuf.name" placeholder="Tên khoản" />
+              <div class="edit-row">
+                <div class="date-wrap" style="flex:1">
+                  <input type="date" v-model="editBuf.date" style="color-scheme:dark;width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:7px 9px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none;-webkit-appearance:none;min-height:34px;box-sizing:border-box;" />
+                  <span class="date-placeholder" :class="{hidden:editBuf.date}">dd/mm/yyyy</span>
+                </div>
+                <input class="inp-edit" v-model.number="editBuf.amt" type="number" inputmode="numeric" placeholder="Số tiền" style="flex:1" />
+              </div>
+              <div class="edit-row">
+                <button class="btn-edit-save" @click="saveEdit(p)">Lưu</button>
+                <button class="btn-edit-cancel" @click="editingKey=null">Huỷ</button>
+                <button v-if="p.source==='one_time'" class="btn-edit-del" @click="deleteUpcoming(p)">Xoá</button>
+              </div>
             </div>
-            <button class="btn-paid" :class="{done:p.paid}" @click="togglePaid(p._key, p.amt, p.name)"
-              :disabled="!p.paid && availCash < p.amt">
-              {{ p.paid ? '↩' : '✓' }}
-            </button>
-          </div>
+          </template>
+
+          <!-- VIEW MODE -->
+          <template v-else>
+            <div class="up-date-col">
+              <span class="up-day" :style="p.paid?{color:'var(--muted)'}:{}">{{ p.day }}</span>
+              <span class="up-mo">/{{ p.mo }}</span>
+            </div>
+            <div style="flex:1;min-width:0">
+              <div class="up-name" :style="p.paid?{color:'var(--muted)',textDecoration:'line-through'}:{}">{{ p.name }}</div>
+              <div v-if="p.sub&&!p.paid" class="up-sub" style="margin-top:2px">{{ p.sub }}</div>
+              <div v-if="p.paid" class="up-sub" style="color:var(--accent3);margin-top:2px">✓ Đã thanh toán</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">
+              <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+                <div class="up-amt" :style="p.paid?{color:'var(--muted)'}:{}">{{ fS(p.amt) }}</div>
+                <div v-if="!p.paid && availCash < p.amt" style="font-family:var(--mono);font-size:9px;color:var(--accent2);line-height:1">thiếu {{ fS(p.amt - availCash) }}</div>
+              </div>
+              <button class="btn-tiny-edit" @click="startEdit(p)" title="Chỉnh sửa">✎</button>
+              <button class="btn-paid" :class="{done:p.paid}" @click="togglePaid(p._key, p.amt, p.name)"
+                :disabled="!p.paid && availCash < p.amt">
+                {{ p.paid ? '↩' : '✓' }}
+              </button>
+            </div>
+          </template>
+
         </div>
       </div>
     </div>
@@ -592,6 +630,7 @@ createApp({
     const addCashAmt=ref(null), cashNote=ref(''), nCash=ref(null);
     const oneTimeName=ref(''), oneTimeDate=ref(''), oneTimeAmt=ref(null);
     const ccUpdate=ref({});
+    const editingKey=ref(null), editBuf=ref({name:'',date:'',amt:null});
     const chartRef=ref(null), debtChartRef=ref(null), pieChartRef=ref(null);
     let chartInst=null, debtChartInst=null, pieChartInst=null;
 
@@ -778,6 +817,8 @@ createApp({
             paid:paid.has(key),
             urg:paid.has(key)?'ok': diff<0?'urgent': diff<=5?'urgent': diff<=10?'soon':'ok',
             _date:dateStr,
+            source:'monthly_plan',
+            _mo:mo,
           });
         });
       });
@@ -797,6 +838,8 @@ createApp({
           paid:paid.has(key),
           urg:paid.has(key)?'ok': diff<=5?'urgent': diff<=10?'soon':'ok',
           _date:ev.date,
+          source:'one_time',
+          _id:ev.id,
         });
       });
       return items.sort((a,b)=>a._date.localeCompare(b._date)).slice(0,10);
@@ -860,7 +903,50 @@ createApp({
     }
     const oneTimeList=computed(()=>(d.value.one_time_expenses||[]).sort((a,b)=>a.date.localeCompare(b.date)));
 
-    async function updateCard(cardId){
+    function startEdit(p){
+      editingKey.value=p._key;
+      editBuf.value={name:p.name, date:p._date, amt:p.amt, _p:p};
+    }
+
+    async function saveEdit(p){
+      const buf=editBuf.value;
+      if(!buf.name||!buf.date||!buf.amt) return;
+      const nd={...d.value};
+      if(p.source==='one_time'){
+        nd.one_time_expenses=(nd.one_time_expenses||[]).map(e=>
+          e.id===p._id ? {...e,name:buf.name,date:buf.date,amount:buf.amt} : e
+        );
+      } else {
+        // update inside monthly_plans
+        const mo=p._mo;
+        if(nd.monthly_plans?.[mo]?.obligations){
+          nd.monthly_plans={...nd.monthly_plans,[mo]:{...nd.monthly_plans[mo],
+            obligations:nd.monthly_plans[mo].obligations.map(ob=>{
+              const k=(ob.date||'')+':'+(ob.name||'');
+              if(k!==p._key) return ob;
+              return {...ob,name:buf.name,date:buf.date,amount:buf.amt};
+            })
+          }};
+        }
+      }
+      // update paid_obligations key if date/name changed
+      const oldKey=p._key, newKey=buf.date+':'+buf.name;
+      if(oldKey!==newKey){
+        const paid=new Set(nd.paid_obligations||[]);
+        if(paid.has(oldKey)){paid.delete(oldKey);paid.add(newKey);}
+        nd.paid_obligations=[...paid];
+      }
+      d.value=nd;
+      editingKey.value=null;
+      await push();
+    }
+
+    async function deleteUpcoming(p){
+      if(p.source!=='one_time') return;
+      d.value={...d.value,one_time_expenses:(d.value.one_time_expenses||[]).filter(e=>e.id!==p._id)};
+      editingKey.value=null;
+      await push();
+    }
       const newBal = ccUpdate.value[cardId+':balance'];
       const newMin = ccUpdate.value[cardId+':min'];
       d.value={...d.value, debts:{...d.value.debts,
@@ -1007,9 +1093,9 @@ createApp({
       dToSalary,availCash,dayLimit,todaySpent,monthSpent,isOver,limPct,limSt,
       debtCards,smallLoans,totalDebt,origDebt,repayPct,debtBreakdown,upcoming,upcomingLabel,milestones,sortedExp,
       nDesc,nAmt,nCat,nLimit,payAmt,payTarget,addCashAmt,cashNote,nCash,
-      oneTimeName,oneTimeDate,oneTimeAmt,oneTimeList,ccUpdate,
+      oneTimeName,oneTimeDate,oneTimeAmt,oneTimeList,ccUpdate,editingKey,editBuf,
       fN,fS,fV,fDate,
-      addExp,delExp,updLimit,recPay,addCash,updCash,togglePaid,addOneTime,delOneTime,updateCard,hardReload,setup,logout,reconnect,
+      addExp,delExp,updLimit,recPay,addCash,updCash,togglePaid,addOneTime,delOneTime,updateCard,startEdit,saveEdit,deleteUpcoming,hardReload,setup,logout,reconnect,
     };
   }
 }).mount('#app');
