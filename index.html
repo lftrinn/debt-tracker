@@ -879,6 +879,7 @@ createApp({
       delete ccUpdate.value[cardId+':min'];
       await push();
     }
+    async function addOneTime(){
       if(!oneTimeName.value||!oneTimeDate.value||!oneTimeAmt.value) return;
       const ev={id:Date.now(),name:oneTimeName.value,date:oneTimeDate.value,amount:oneTimeAmt.value};
       d.value={...d.value,one_time_expenses:[...(d.value.one_time_expenses||[]),ev]};
