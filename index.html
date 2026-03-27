@@ -625,6 +625,16 @@
       <div style="text-align:center;padding:8px 0 4px">
         <span class="small-n">{{ syncMsg }}</span>
       </div>
+
+      <div class="card" style="border-color:rgba(232,255,71,.15)">
+        <div class="c-title">🔄 Cập nhật dữ liệu từ JSON mới</div>
+        <div class="hint" style="margin-top:8px;margin-bottom:10px">Paste JSON mới vào đây để ghi đè lên Bin hiện tại. Lịch sử chi tiêu và khoản thu sẽ được giữ lại.</div>
+        <textarea class="inp-s" v-model="importJson" placeholder="Paste JSON mới ở đây..." style="height:100px;margin-bottom:0"></textarea>
+        <button class="btn-sm" style="width:100%;margin-top:8px" @click="importNewJson" :disabled="!importJson||syncing">
+          {{ syncing?'Đang cập nhật...':'CẬP NHẬT →' }}
+        </button>
+        <div v-if="importErr" class="err" style="margin-top:8px">{{ importErr }}</div>
+      </div>
     </div>
     </div><!-- end wrap -->
   </div><!-- end outer -->
@@ -655,6 +665,7 @@ createApp({
     const txType=ref('exp');
     const iDesc=ref(''), iAmt=ref(null), iCat=ref('💼');
     const editingKey=ref(null), editBuf=ref({name:'',date:'',amt:null});
+    const importJson=ref(''), importErr=ref('');
     const chartRef=ref(null), debtChartRef=ref(null), pieChartRef=ref(null);
     let chartInst=null, debtChartInst=null, pieChartInst=null;
 
@@ -730,7 +741,28 @@ createApp({
       finally{loading.value=false;}
     }
 
-    function hardReload(){
+    async function importNewJson(){
+      if(!importJson.value) return;
+      importErr.value='';
+      try {
+        const parsed=JSON.parse(importJson.value);
+        // Preserve runtime fields from current data
+        const merged={
+          ...parsed,
+          expenses:   d.value.expenses||[],
+          incomes:    d.value.incomes||[],
+          paid_obligations: d.value.paid_obligations||[],
+          one_time_expenses: d.value.one_time_expenses||[],
+          custom_daily_limit: d.value.custom_daily_limit||0,
+          current_cash: parsed.current_cash||d.value.current_cash,
+        };
+        d.value=merged;
+        importJson.value='';
+        await push();
+      } catch(e){
+        importErr.value=e.message==='Unexpected token'||e.message?.includes('JSON')?'JSON không hợp lệ — kiểm tra lại cú pháp':e.message||'Lỗi không xác định';
+      }
+    }
       // Giữ nguyên credentials, chỉ reload để lấy phiên bản mới
       const url=new URL(window.location.href);
       url.searchParams.set('v', Date.now());
@@ -896,8 +928,6 @@ createApp({
         st:p.month<now?'done':p.month===now?'active':'future',
       }));
     });
-
-    const sortedExp=computed(()=>[...expenses.value].sort((a,b)=>b.date.localeCompare(a.date)));
 
     async function addInc(){
       if(!iAmt.value||iAmt.value<=0||!iDesc.value.trim()) return;
@@ -1144,8 +1174,9 @@ createApp({
       debtCards,smallLoans,totalDebt,origDebt,repayPct,debtBreakdown,upcoming,upcomingLabel,milestones,sortedExp,sortedTx,
       nDesc,nAmt,nCat,nLimit,payAmt,payTarget,addCashAmt,cashNote,nCash,
       oneTimeName,oneTimeDate,oneTimeAmt,oneTimeList,ccUpdate,editingKey,editBuf,
+      importJson,importErr,
       fN,fS,fV,fDate,
-      addExp,delExp,addInc,delInc,updLimit,recPay,addCash,updCash,togglePaid,addOneTime,delOneTime,updateCard,startEdit,saveEdit,deleteUpcoming,hardReload,setup,logout,reconnect,
+      addExp,delExp,addInc,delInc,updLimit,recPay,addCash,updCash,togglePaid,addOneTime,delOneTime,updateCard,startEdit,saveEdit,deleteUpcoming,importNewJson,hardReload,setup,logout,reconnect,
     };
   }
 }).mount('#app');
