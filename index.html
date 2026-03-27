@@ -945,6 +945,7 @@ createApp({
       if(inc) d.value={...d.value,current_cash:{...d.value.current_cash,balance:Math.max(0,(d.value.current_cash?.balance||0)-inc.amount)}};
       await push();
     }
+    async function addExp(){
       if(!nAmt.value||nAmt.value<=0||!nDesc.value.trim()) return;
       const e={id:Date.now(),desc:nDesc.value.trim(),amount:nAmt.value,cat:nCat.value,date:tStr()};
       d.value={...d.value,expenses:[e,...(d.value.expenses||[])]};
