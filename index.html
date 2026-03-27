@@ -763,6 +763,7 @@ createApp({
         importErr.value=e.message==='Unexpected token'||e.message?.includes('JSON')?'JSON không hợp lệ — kiểm tra lại cú pháp':e.message||'Lỗi không xác định';
       }
     }
+    function hardReload(){
       // Giữ nguyên credentials, chỉ reload để lấy phiên bản mới
       const url=new URL(window.location.href);
       url.searchParams.set('v', Date.now());
