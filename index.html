@@ -350,11 +350,11 @@
 
     <!-- Upcoming -->
     <div class="upcoming">
-      <div class="c-hdr">
+      <div class="c-hdr" style="position:sticky;top:0;background:var(--surface);padding:15px 20px;margin:-15px -20px 0;z-index:1;border-radius:16px 16px 0 0;">
         <span class="c-title">Thanh toán sắp đến</span>
         <span class="badge">{{ upcomingLabel }}</span>
       </div>
-      <div class="up-list">
+      <div class="up-list" style="max-height:calc(5 * 58px);overflow-y:auto;margin-top:11px;padding-right:2px;">
         <div v-for="p in upcoming" :key="p._key"
           class="up-item"
           :class="editingKey===p._key ? 'editing' : p.paid ? 'paid' : p.urg">
@@ -579,16 +579,6 @@
             <input class="inp-sm" v-model.number="oneTimeAmt" type="number" inputmode="numeric" placeholder="Số tiền" />
           </div>
           <button class="btn-sm" style="width:100%" @click="addOneTime" :disabled="!oneTimeName||!oneTimeDate||!oneTimeAmt">Thêm →</button>
-        </div>
-        <div v-if="oneTimeList.length" style="margin-top:12px;display:flex;flex-direction:column;gap:0">
-          <div v-for="ev in oneTimeList" :key="ev.id" class="rule-item" style="justify-content:space-between">
-            <div style="flex:1;min-width:0">
-              <div style="font-size:12px;font-weight:600">{{ ev.name }}</div>
-              <div class="small-n">{{ fDate(ev.date) }}</div>
-            </div>
-            <div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--accent2);margin-right:10px">₫{{ fS(ev.amount) }}</div>
-            <button class="btn-del" @click="delOneTime(ev.id)">✕</button>
-          </div>
         </div>
       </div>
 
@@ -947,6 +937,7 @@ createApp({
       editingKey.value=null;
       await push();
     }
+    async function updateCard(cardId){
       const newBal = ccUpdate.value[cardId+':balance'];
       const newMin = ccUpdate.value[cardId+':min'];
       d.value={...d.value, debts:{...d.value.debts,
