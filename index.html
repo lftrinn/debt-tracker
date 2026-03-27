@@ -461,6 +461,34 @@
 
     <!-- Settings -->
     <div v-if="tab==='cfg'">
+
+      <div class="card">
+        <div class="c-title">💳 Cập nhật sao kê thẻ tín dụng</div>
+        <div style="margin-top:10px;display:flex;flex-direction:column;gap:12px">
+          <div v-for="c in d.debts?.credit_cards||[]" :key="c.id" style="padding:12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
+            <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--text)">{{ c.name.replace(' — Techcombank','') }}</div>
+            <div style="display:flex;flex-direction:column;gap:7px">
+              <div class="row-g" style="margin-top:0">
+                <span class="small-n" style="flex-shrink:0;width:80px">Dư nợ mới</span>
+                <input class="inp-sm" type="number" inputmode="numeric"
+                  :placeholder="fN(c.balance)"
+                  v-model.number="ccUpdate[c.id+':balance']" />
+              </div>
+              <div class="row-g" style="margin-top:0">
+                <span class="small-n" style="flex-shrink:0;width:80px">Trả tối thiểu</span>
+                <input class="inp-sm" type="number" inputmode="numeric"
+                  :placeholder="fN(c.minimum_payment)"
+                  v-model.number="ccUpdate[c.id+':min']" />
+              </div>
+              <button class="btn-sm" style="width:100%;margin-top:2px"
+                @click="updateCard(c.id)"
+                :disabled="!ccUpdate[c.id+':balance'] && !ccUpdate[c.id+':min']">
+                Cập nhật →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="card">
         <div class="c-title">Hạn mức chi hàng ngày</div>
         <div class="lim-bar-w">
@@ -563,6 +591,7 @@ createApp({
     const payAmt=ref(null), payTarget=ref('');
     const addCashAmt=ref(null), cashNote=ref(''), nCash=ref(null);
     const oneTimeName=ref(''), oneTimeDate=ref(''), oneTimeAmt=ref(null);
+    const ccUpdate=ref({});
     const chartRef=ref(null), debtChartRef=ref(null), pieChartRef=ref(null);
     let chartInst=null, debtChartInst=null, pieChartInst=null;
 
@@ -831,7 +860,25 @@ createApp({
     }
     const oneTimeList=computed(()=>(d.value.one_time_expenses||[]).sort((a,b)=>a.date.localeCompare(b.date)));
 
-    async function addOneTime(){
+    async function updateCard(cardId){
+      const newBal = ccUpdate.value[cardId+':balance'];
+      const newMin = ccUpdate.value[cardId+':min'];
+      d.value={...d.value, debts:{...d.value.debts,
+        credit_cards: d.value.debts.credit_cards.map(c=>{
+          if(c.id!==cardId) return c;
+          return {
+            ...c,
+            ...(newBal!=null ? {balance: newBal} : {}),
+            ...(newMin!=null ? {minimum_payment: newMin} : {}),
+          };
+        })
+      }};
+      // Clear inputs
+      ccUpdate.value={...ccUpdate.value};
+      delete ccUpdate.value[cardId+':balance'];
+      delete ccUpdate.value[cardId+':min'];
+      await push();
+    }
       if(!oneTimeName.value||!oneTimeDate.value||!oneTimeAmt.value) return;
       const ev={id:Date.now(),name:oneTimeName.value,date:oneTimeDate.value,amount:oneTimeAmt.value};
       d.value={...d.value,one_time_expenses:[...(d.value.one_time_expenses||[]),ev]};
@@ -959,9 +1006,9 @@ createApp({
       dToSalary,availCash,dayLimit,todaySpent,monthSpent,isOver,limPct,limSt,
       debtCards,smallLoans,totalDebt,origDebt,repayPct,debtBreakdown,upcoming,upcomingLabel,milestones,sortedExp,
       nDesc,nAmt,nCat,nLimit,payAmt,payTarget,addCashAmt,cashNote,nCash,
-      oneTimeName,oneTimeDate,oneTimeAmt,oneTimeList,
+      oneTimeName,oneTimeDate,oneTimeAmt,oneTimeList,ccUpdate,
       fN,fS,fV,fDate,
-      addExp,delExp,updLimit,recPay,addCash,updCash,togglePaid,addOneTime,delOneTime,hardReload,setup,logout,reconnect,
+      addExp,delExp,updLimit,recPay,addCash,updCash,togglePaid,addOneTime,delOneTime,updateCard,hardReload,setup,logout,reconnect,
     };
   }
 }).mount('#app');
