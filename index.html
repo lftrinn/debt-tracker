@@ -665,6 +665,7 @@ createApp({
     const txType=ref('exp');
     const iDesc=ref(''), iAmt=ref(null), iCat=ref('💼');
     const editingKey=ref(null), editBuf=ref({name:'',date:'',amt:null});
+    const ccUpdate=ref({});
     const importJson=ref(''), importErr=ref('');
     const chartRef=ref(null), debtChartRef=ref(null), pieChartRef=ref(null);
     let chartInst=null, debtChartInst=null, pieChartInst=null;
