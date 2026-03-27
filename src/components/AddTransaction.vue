@@ -2,8 +2,12 @@
   <div class="card">
     <!-- Chi / Thu toggle -->
     <div style="display:flex;gap:4px;background:var(--surface2);border-radius:9px;padding:3px;margin-bottom:14px;">
-      <button :class="['tab-btn', txType === 'exp' ? 'active' : '']" style="flex:1;font-size:11px" @click="txType = 'exp'">− Chi tiêu</button>
-      <button :class="['tab-btn', txType === 'inc' ? 'active' : '']" style="flex:1;font-size:11px" @click="txType = 'inc'">+ Khoản thu</button>
+      <button :class="['tab-btn', txType === 'exp' ? 'active' : '']" style="flex:1;font-size:11px" @click="txType = 'exp'">
+        <Icon name="minus" :size="12" /> Chi tiêu
+      </button>
+      <button :class="['tab-btn', txType === 'inc' ? 'active' : '']" style="flex:1;font-size:11px" @click="txType = 'inc'">
+        <Icon name="plus" :size="12" /> Khoản thu
+      </button>
     </div>
 
     <!-- CHI -->
@@ -14,18 +18,11 @@
         <div class="form-row">
           <input class="inp" v-model.number="nAmt" type="number" inputmode="numeric" placeholder="Số tiền (VNĐ)" />
           <select class="cat-sel" v-model="nCat">
-            <option value="🍜">🍜 Ăn</option>
-            <option value="☕">☕ Cafe</option>
-            <option value="🛒">🛒 Mua</option>
-            <option value="🚌">🚌 Đi lại</option>
-            <option value="💊">💊 Y tế</option>
-            <option value="🎮">🎮 Giải trí</option>
-            <option value="💡">💡 HĐ</option>
-            <option value="📦">📦 Khác</option>
+            <option v-for="c in expenseCategories" :key="c.key" :value="c.key">{{ c.label }}</option>
           </select>
         </div>
         <button class="btn-add" @click="addExp" :disabled="syncing || !nDesc.trim() || !nAmt">
-          {{ syncing ? 'Đang lưu...' : 'THÊM →' }}
+          {{ syncing ? 'Đang lưu...' : 'THÊM' }} <Icon name="arrow-right" :size="14" />
         </button>
       </div>
     </div>
@@ -38,16 +35,11 @@
         <div class="form-row">
           <input class="inp" v-model.number="iAmt" type="number" inputmode="numeric" placeholder="Số tiền (VNĐ)" />
           <select class="cat-sel" v-model="iCat">
-            <option value="💼">💼 Lương</option>
-            <option value="💻">💻 Freelance</option>
-            <option value="🎁">🎁 Thưởng</option>
-            <option value="↩️">↩️ Hoàn tiền</option>
-            <option value="📈">📈 Đầu tư</option>
-            <option value="💰">💰 Khác</option>
+            <option v-for="c in incomeCategories" :key="c.key" :value="c.key">{{ c.label }}</option>
           </select>
         </div>
         <button class="btn-add" style="background:var(--accent3);color:var(--bg)" @click="addInc" :disabled="syncing || !iDesc.trim() || !iAmt">
-          {{ syncing ? 'Đang lưu...' : 'THÊM →' }}
+          {{ syncing ? 'Đang lưu...' : 'THÊM' }} <Icon name="arrow-right" :size="14" />
         </button>
       </div>
     </div>
@@ -56,6 +48,10 @@
 
 <script setup>
 import { ref } from 'vue'
+import Icon from './Icon.vue'
+import { useCategories } from '../composables/useCategories'
+
+const { expenseCategories, incomeCategories } = useCategories()
 
 const props = defineProps({
   syncing: Boolean,
@@ -66,10 +62,10 @@ const emit = defineEmits(['add-expense', 'add-income'])
 const txType = ref('exp')
 const nDesc = ref('')
 const nAmt = ref(null)
-const nCat = ref('🍜')
+const nCat = ref('an')
 const iDesc = ref('')
 const iAmt = ref(null)
-const iCat = ref('💼')
+const iCat = ref('luong')
 
 function addExp() {
   if (!nAmt.value || nAmt.value <= 0 || !nDesc.value.trim()) return

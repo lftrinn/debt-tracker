@@ -19,15 +19,30 @@
     @setup="handleSetup"
   />
 
+  <!-- TOAST -->
+  <ToastMessage :message="toastMsg" :type="toastType" :trigger="toastTrigger" />
+
+  <!-- DETAIL POPUP -->
+  <DetailPopup
+    :item="popupItem"
+    :availCash="availCash"
+    :hide="!!hz('upcoming.amount')"
+    @close="popupItem = null"
+    @toggle-paid="(k, a, n) => { popupItem = null; togglePaid(k, a, n) }"
+    @save-upcoming="handlePopupSaveUpcoming"
+    @save-tx="handlePopupSaveTx"
+    @delete="handlePopupDelete"
+  />
+
   <!-- MAIN -->
   <div v-if="appState === 'ready' || appState === 'error'">
-    <AppHeader :today="today" :hideAmounts="hideAmounts" @reload="hardReload" @logout="logout" @toggle-hide="toggleHide" />
+    <AppHeader :today="today" :hideAmounts="hideAmounts" :scrolled="syncBarScrolled" :syncStatus="syncSt" :syncMsg="syncMsg" :syncTime="syncTime" :limSt="limSt" :limBlink="limBlink" :overBanner="overBanner" :overMsg="overMsg" @reload="hardReload" @logout="logout" @toggle-hide="toggleHide" @scroll-alert="scrollToAlert" @dismiss-over="dismissOverBanner" />
 
     <div class="wrap">
-      <SyncBar :status="syncSt" :message="syncMsg" />
+      <SyncBar ref="syncBarRef" :status="syncSt" :message="syncMsg" :syncTime="syncTime" :today="today" />
 
-      <div v-if="isOver" class="alert over">⚠ Vượt hạn mức hôm nay +{{ hz('alert') ? '•••' : fV(todaySpent - dayLimit) }}</div>
-      <div v-else-if="dayLimit > 0" class="alert ok">✓ Còn {{ hz('alert') ? '•••' : fV(dayLimit - todaySpent) }} hôm nay · hạn mức {{ hz('alert') ? '•••' : fV(dayLimit) }}</div>
+      <div ref="alertRef" v-if="isOver" class="alert over"><Icon name="alert-triangle" :size="14" /> Vượt hạn mức hôm nay +{{ hz('alert') ? '•••' : fV(todaySpent - dayLimit) }}</div>
+      <div ref="alertRef" v-else-if="dayLimit > 0" class="alert ok"><Icon name="check" :size="14" /> Còn {{ hz('alert') ? '•••' : fV(dayLimit - todaySpent) }} hôm nay · hạn mức {{ hz('alert') ? '•••' : fV(dayLimit) }}</div>
 
 
       <CashHero
@@ -58,15 +73,8 @@
       <UpcomingPayments
         :items="upcoming"
         :label="upcomingLabel"
-        :availCash="availCash"
-        :editingKey="editingKey"
-        :editBuf="editBuf"
         :hide="{ amount: hz('upcoming.amount'), shortage: hz('upcoming.shortage') }"
-        @start-edit="startEdit"
-        @save-edit="saveEdit"
-        @cancel-edit="editingKey = null"
-        @delete="deleteUpcoming"
-        @toggle-paid="togglePaid"
+        @open-detail="openDetail($event, 'upcoming')"
       />
 
       <!-- Tabs -->
@@ -90,7 +98,7 @@
         v-if="tab === 'list'"
         :transactions="sortedTx"
         :hide="hz('transactions')"
-        @delete="deleteTx"
+        @open-detail="openDetail($event, 'tx')"
       />
 
       <ChartsPanel
@@ -118,6 +126,7 @@
         :cashReserved="d.current_cash?.reserved || 0"
         :rules="d.rules?.must_not || []"
         :syncMsg="syncMsg"
+        :syncTime="syncTime"
         :syncing="syncing"
         :importErr="importErr"
         :hide="{ cardInfo: hz('settings.cardInfo'), dailyLim: hz('settings.dailyLim'), dropdown: hz('settings.dropdown'), cashInfo: hz('settings.cashInfo') }"
@@ -135,7 +144,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useApi } from './composables/useApi'
 import { useFormatters } from './composables/useFormatters'
 import { useDebtData } from './composables/useDebtData'
@@ -154,10 +163,13 @@ import TransactionList from './components/TransactionList.vue'
 import ChartsPanel from './components/ChartsPanel.vue'
 import TimelinePanel from './components/TimelinePanel.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
+import ToastMessage from './components/ToastMessage.vue'
+import DetailPopup from './components/DetailPopup.vue'
+import Icon from './components/Icon.vue'
 
 // --- API ---
 const api = useApi()
-const { syncSt, syncMsg, syncing, isConfigured } = api
+const { syncSt, syncMsg, syncTime, syncing, isConfigured } = api
 
 // --- Formatters ---
 const { fN, fS, fV, tStr } = useFormatters()
@@ -169,6 +181,49 @@ const sErr = ref('')
 const tab = ref('add')
 const importErr = ref('')
 const settingsRef = ref(null)
+const toastMsg = ref('')
+const toastType = ref('ok')
+const toastTrigger = ref(0)
+function toast(msg, type = 'ok') { toastMsg.value = msg; toastType.value = type; toastTrigger.value++ }
+const syncBarRef = ref(null)
+const syncBarScrolled = ref(false)
+const alertRef = ref(null)
+const limBlink = ref(false)
+const overBanner = ref(false)
+let syncObserver = null
+let alertObserver = null
+let overTimer = null
+
+function scrollToAlert() {
+  dismissOverBanner()
+  alertRef.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+}
+
+function dismissOverBanner() {
+  overBanner.value = false
+  limBlink.value = false
+  clearTimeout(overTimer)
+}
+
+onMounted(() => {
+  syncObserver = new IntersectionObserver(
+    ([entry]) => { syncBarScrolled.value = !entry.isIntersecting },
+    { threshold: 0 }
+  )
+  const checkEl = () => {
+    const el = syncBarRef.value?.el
+    if (el) { syncObserver.observe(el); return true }
+    return false
+  }
+  if (!checkEl()) {
+    const stop = watch(syncBarRef, () => { if (checkEl()) stop() }, { immediate: false })
+  }
+})
+
+onUnmounted(() => { syncObserver?.disconnect(); alertObserver?.disconnect(); clearTimeout(overTimer) })
+
+const popupItem = ref(null)
+function openDetail(item, variant) { popupItem.value = { ...item, _variant: variant } }
 const hideAmounts = ref(localStorage.getItem('dt_hide') !== '0')
 function toggleHide() {
   hideAmounts.value = !hideAmounts.value
@@ -219,20 +274,64 @@ const {
   debtBreakdown, upcomingLabel, upcoming, milestones, findDebtId,
 } = useDebtData(d)
 
+const overMsg = computed(() =>
+  isOver.value
+    ? `Vượt hạn mức +${hz('alert') ? '•••' : fV(todaySpent.value - dayLimit.value)}`
+    : ''
+)
+
 // --- Animation keys ---
 const cashAnimKey = ref(0)
 const spentAnimKey = ref(0)
 const debtAnimKey = ref(0)
-const editingKey = ref(null)
 const editBuf = ref({ name: '', date: '', amt: null })
 
 watch(availCash, () => { cashAnimKey.value++ })
 watch(todaySpent, () => { spentAnimKey.value++ })
 watch(totalDebt, () => { debtAnimKey.value++ })
 
+// Blink when todaySpent increases while over limit
+watch([todaySpent, limSt], ([spent, st], [oldSpent]) => {
+  if (st === 'over' && (oldSpent === undefined || spent > oldSpent)) {
+    limBlink.value = true
+    overBanner.value = false
+    clearTimeout(overTimer)
+    overTimer = setTimeout(() => {
+      if (limBlink.value) overBanner.value = true
+    }, 5000)
+  }
+  if (st !== 'over') {
+    limBlink.value = false
+    overBanner.value = false
+    clearTimeout(overTimer)
+  }
+})
+
+// Stop blink when alert area is visible
+watch(alertRef, (el) => {
+  alertObserver?.disconnect()
+  if (!el) return
+  alertObserver = new IntersectionObserver(
+    ([entry]) => {
+      if (entry.isIntersecting && limBlink.value) {
+        limBlink.value = false
+        overBanner.value = false
+        clearTimeout(overTimer)
+      }
+    },
+    { threshold: 0.5 }
+  )
+  alertObserver.observe(el)
+}, { immediate: true })
+
 // --- Sync helpers ---
 async function pushData() {
-  await api.push(d.value)
+  try {
+    await api.push(d.value)
+    return true
+  } catch {
+    return false
+  }
 }
 
 async function pullData() {
@@ -241,7 +340,8 @@ async function pullData() {
     appState.value = 'ready'
   } catch {
     syncSt.value = 'error'
-    syncMsg.value = 'Không tải được'
+    syncMsg.value = 'Lỗi'
+    syncTime.value = ''
     appState.value = d.value.debts ? 'error' : 'setup'
   }
 }
@@ -314,14 +414,14 @@ function logout() {
 async function addExp({ desc, amount, cat }) {
   const e = { id: Date.now(), desc, amount, cat, date: tStr() }
   d.value = { ...d.value, expenses: [e, ...(d.value.expenses || [])] }
-  await pushData()
+  ;(await pushData()) ? toast('Đã thêm chi tiêu') : toast('Lỗi lưu chi tiêu', 'err')
 }
 
 async function addInc({ desc, amount, cat }) {
   const e = { id: Date.now(), desc, amount, cat, date: tStr() }
   d.value = { ...d.value, incomes: [e, ...(d.value.incomes || [])] }
   d.value = { ...d.value, current_cash: { ...d.value.current_cash, balance: (d.value.current_cash?.balance || 0) + amount } }
-  await pushData()
+  ;(await pushData()) ? toast('Đã thêm thu nhập') : toast('Lỗi lưu thu nhập', 'err')
 }
 
 async function deleteTx(e) {
@@ -332,13 +432,13 @@ async function deleteTx(e) {
   } else {
     d.value = { ...d.value, expenses: d.value.expenses.filter((i) => i.id !== e.id) }
   }
-  await pushData()
+  ;(await pushData()) ? toast('Đã xoá giao dịch') : toast('Lỗi xoá giao dịch', 'err')
 }
 
 async function updLimit(val) {
   if (val > 0) {
     d.value.custom_daily_limit = val
-    await pushData()
+    ;(await pushData()) ? toast('Đã cập nhật hạn mức') : toast('Lỗi cập nhật hạn mức', 'err')
   }
 }
 
@@ -352,20 +452,20 @@ async function recPay({ target, amount }) {
     nd.debts = { ...nd.debts, small_loans: nd.debts.small_loans.map((l) => l.id === id ? { ...l, remaining_balance: Math.max(0, (l.remaining_balance || 0) - amount) } : l) }
   }
   d.value = nd
-  await pushData()
+  ;(await pushData()) ? toast('Đã ghi nhận trả nợ') : toast('Lỗi ghi nhận trả nợ', 'err')
 }
 
 async function addCash({ amount }) {
   if (!amount || amount <= 0) return
   d.value = { ...d.value, current_cash: { ...d.value.current_cash, balance: (d.value.current_cash?.balance || 0) + amount, as_of: tStr() } }
-  await pushData()
+  ;(await pushData()) ? toast('Đã cập nhật tiền mặt') : toast('Lỗi cập nhật tiền mặt', 'err')
 }
 
 async function addOneTime({ name, date, amount }) {
   if (!name || !date || !amount) return
   const ev = { id: Date.now(), name, date, amount }
   d.value = { ...d.value, one_time_expenses: [...(d.value.one_time_expenses || []), ev] }
-  await pushData()
+  ;(await pushData()) ? toast('Đã thêm khoản chi') : toast('Lỗi thêm khoản chi', 'err')
 }
 
 async function updateCard(cardId) {
@@ -388,15 +488,10 @@ async function updateCard(cardId) {
   }
   delete ccUpdate[cardId + ':balance']
   delete ccUpdate[cardId + ':min']
-  await pushData()
+  ;(await pushData()) ? toast('Đã cập nhật thẻ') : toast('Lỗi cập nhật thẻ', 'err')
 }
 
 // --- Upcoming edit/pay ---
-function startEdit(p) {
-  editingKey.value = p._key
-  editBuf.value = { name: p.name, date: p._date, amt: p.amt, _p: p }
-}
-
 async function saveEdit(p) {
   const buf = editBuf.value
   if (!buf.name || !buf.date || !buf.amt) return
@@ -429,15 +524,13 @@ async function saveEdit(p) {
     nd.paid_obligations = [...paid]
   }
   d.value = nd
-  editingKey.value = null
-  await pushData()
+  ;(await pushData()) ? toast('Đã cập nhật khoản thanh toán') : toast('Lỗi cập nhật', 'err')
 }
 
 async function deleteUpcoming(p) {
   if (p.source !== 'one_time') return
   d.value = { ...d.value, one_time_expenses: (d.value.one_time_expenses || []).filter((e) => e.id !== p._id) }
-  editingKey.value = null
-  await pushData()
+  ;(await pushData()) ? toast('Đã xoá khoản chi') : toast('Lỗi xoá khoản chi', 'err')
 }
 
 async function togglePaid(key, amt, obName) {
@@ -483,7 +576,51 @@ async function togglePaid(key, amt, obName) {
   }
   nd.paid_obligations = [...paid]
   d.value = nd
-  await pushData()
+  const wasPaid = paid.has(key)
+  ;(await pushData()) ? toast(wasPaid ? 'Đã thanh toán' : 'Đã hoàn tác thanh toán') : toast('Lỗi cập nhật', 'err')
+}
+
+// --- Popup handlers ---
+async function handlePopupSaveUpcoming(p) {
+  const buf = p._buf
+  popupItem.value = null
+  // Reuse saveEdit logic
+  editBuf.value = buf
+  await saveEdit(p)
+}
+
+async function handlePopupSaveTx(item) {
+  const buf = item._buf
+  popupItem.value = null
+  // Update transaction in-place
+  if (item.type === 'inc') {
+    const old = (d.value.incomes || []).find((i) => i.id === item.id)
+    const amtDiff = buf.amt - (old?.amount || 0)
+    d.value = {
+      ...d.value,
+      incomes: (d.value.incomes || []).map((i) =>
+        i.id === item.id ? { ...i, desc: buf.name, date: buf.date, amount: buf.amt, cat: buf.cat } : i
+      ),
+      current_cash: { ...d.value.current_cash, balance: (d.value.current_cash?.balance || 0) + amtDiff },
+    }
+  } else {
+    d.value = {
+      ...d.value,
+      expenses: (d.value.expenses || []).map((i) =>
+        i.id === item.id ? { ...i, desc: buf.name, date: buf.date, amount: buf.amt, cat: buf.cat } : i
+      ),
+    }
+  }
+  ;(await pushData()) ? toast('Đã cập nhật giao dịch') : toast('Lỗi cập nhật', 'err')
+}
+
+async function handlePopupDelete(item) {
+  popupItem.value = null
+  if (item._variant === 'upcoming') {
+    await deleteUpcoming(item)
+  } else {
+    await deleteTx(item)
+  }
 }
 
 async function importNewJson(jsonStr) {
@@ -501,7 +638,7 @@ async function importNewJson(jsonStr) {
       current_cash: parsed.current_cash || d.value.current_cash,
     }
     d.value = merged
-    await pushData()
+    ;(await pushData()) ? toast('Đã import dữ liệu') : toast('Lỗi import dữ liệu', 'err')
   } catch (e) {
     importErr.value =
       e.message === 'Unexpected token' || e.message?.includes('JSON')

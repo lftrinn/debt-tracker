@@ -6,8 +6,14 @@
     </div>
     <div class="exp-list">
       <div v-if="!transactions.length" class="empty">Chưa có giao dịch nào</div>
-      <div v-for="e in transactions" :key="e.id" class="exp-item">
-        <div class="exp-ico">{{ e.cat }}</div>
+      <div
+        v-for="e in transactions"
+        :key="e.id"
+        class="exp-item"
+        :class="e.type === 'inc' ? 'exp-item--inc' : 'exp-item--exp'"
+        @click="$emit('open-detail', e)"
+      >
+        <div class="exp-ico"><Icon :name="resolveCat(e.cat).icon" :size="16" /></div>
         <div class="exp-info">
           <div class="exp-name">{{ e.desc }}</div>
           <div class="exp-meta">{{ fDate(e.date) }} · {{ e.type === 'inc' ? 'Khoản thu' : 'Chi tiêu' }}</div>
@@ -22,21 +28,23 @@
           <template v-if="hide"><span class="masked">•••••</span></template>
           <template v-else>{{ e.type === 'inc' ? '+' : '-' }}₫{{ fN(e.amount) }}</template>
         </div>
-        <button class="btn-del" @click="$emit('delete', e)">✕</button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
+import Icon from './Icon.vue'
 import { useFormatters } from '../composables/useFormatters'
+import { useCategories } from '../composables/useCategories'
 
 const { fN, fDate } = useFormatters()
+const { resolveCat } = useCategories()
 
 defineProps({
   transactions: Array,
   hide: Boolean,
 })
 
-defineEmits(['delete'])
+defineEmits(['open-detail'])
 </script>

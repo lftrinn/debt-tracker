@@ -1,13 +1,13 @@
 import { computed } from 'vue'
 import { useFormatters } from './useFormatters'
-
-const SL_COLORS = ['#4aefb8', '#a78bfa', '#38bdf8', '#fb923c']
+import { useColors } from './useColors'
 
 /**
  * Computed debt-related data derived from the main data store
  */
 export function useDebtData(d) {
   const { fS, isT, isTM, dDiff } = useFormatters()
+  const { palette } = useColors()
 
   const expenses = computed(() => d.value.expenses || [])
   const incomes = computed(() => d.value.incomes || [])
@@ -112,14 +112,14 @@ export function useDebtData(d) {
     const cc = (d.value.debts?.credit_cards || []).map((c, i) => ({
       name: c.name.replace(' — Techcombank', ''),
       val: c.balance,
-      color: i === 0 ? '#ff6b4a' : '#e8ff47',
+      color: palette[i % palette.length],
     }))
     const sl = (d.value.debts?.small_loans || [])
       .filter((l) => (l.remaining_balance || 0) > 0)
       .map((l, i) => ({
         name: l.name.length > 24 ? l.name.slice(0, 24) + '…' : l.name,
         val: l.remaining_balance,
-        color: SL_COLORS[i % SL_COLORS.length],
+        color: palette[(cc.length + i) % palette.length],
       }))
     return [...cc, ...sl]
   })

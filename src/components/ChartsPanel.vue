@@ -29,10 +29,12 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { Chart, registerables } from 'chart.js'
 import { useFormatters } from '../composables/useFormatters'
+import { useColors } from '../composables/useColors'
 
 Chart.register(...registerables)
 
 const { fS } = useFormatters()
+const { colors, rgba, chartGrid, chartTick, chartFont } = useColors()
 
 const props = defineProps({
   expenses: Array,
@@ -87,16 +89,16 @@ function buildSpendChart() {
         {
           label: 'Chi',
           data: expData,
-          backgroundColor: 'rgba(255,107,74,.65)',
-          borderColor: 'rgba(255,107,74,.9)',
+          backgroundColor: rgba('accent2', .65),
+          borderColor: rgba('accent2', .9),
           borderWidth: 1,
           borderRadius: 4,
         },
         {
           label: 'Thu',
           data: incData,
-          backgroundColor: 'rgba(74,239,184,.55)',
-          borderColor: 'rgba(74,239,184,.9)',
+          backgroundColor: rgba('accent3', .55),
+          borderColor: rgba('accent3', .9),
           borderWidth: 1,
           borderRadius: 4,
         },
@@ -110,8 +112,8 @@ function buildSpendChart() {
           display: true,
           position: 'top',
           labels: {
-            color: '#6b6b85',
-            font: { family: 'IBM Plex Mono', size: 9 },
+            color: chartTick,
+            font: chartFont,
             boxWidth: 10,
             padding: 10,
           },
@@ -126,14 +128,14 @@ function buildSpendChart() {
       },
       scales: {
         x: {
-          grid: { color: 'rgba(255,255,255,.04)' },
-          ticks: { color: '#6b6b85', font: { family: 'IBM Plex Mono', size: 9 } },
+          grid: { color: chartGrid },
+          ticks: { color: chartTick, font: chartFont },
         },
         y: {
-          grid: { color: 'rgba(255,255,255,.04)' },
+          grid: { color: chartGrid },
           ticks: {
-            color: '#6b6b85',
-            font: { family: 'IBM Plex Mono', size: 9 },
+            color: chartTick,
+            font: chartFont,
             callback: h
               ? (v) => v + '%'
               : (v) => (v >= 1000 ? v / 1000 + 'K' : v),
@@ -164,10 +166,10 @@ function buildDebtChart() {
       datasets: [
         {
           data,
-          borderColor: '#ff6b4a',
-          backgroundColor: 'rgba(255,107,74,.1)',
+          borderColor: colors.accent2,
+          backgroundColor: rgba('accent2', .1),
           borderWidth: 2,
-          pointBackgroundColor: '#ff6b4a',
+          pointBackgroundColor: colors.accent2,
           pointRadius: 3,
           fill: true,
           tension: 0.3,
@@ -189,14 +191,14 @@ function buildDebtChart() {
       },
       scales: {
         x: {
-          grid: { color: 'rgba(255,255,255,.04)' },
-          ticks: { color: '#6b6b85', font: { family: 'IBM Plex Mono', size: 9 } },
+          grid: { color: chartGrid },
+          ticks: { color: chartTick, font: chartFont },
         },
         y: {
-          grid: { color: 'rgba(255,255,255,.04)' },
+          grid: { color: chartGrid },
           ticks: {
-            color: '#6b6b85',
-            font: { family: 'IBM Plex Mono', size: 9 },
+            color: chartTick,
+            font: chartFont,
             callback: h
               ? (v) => v + '%'
               : (v) => v >= 1000000 ? (v / 1000000).toFixed(0) + 'M' : v >= 1000 ? (v / 1000) + 'K' : v,

@@ -8,18 +8,21 @@
     <div class="do-cards">
       <div class="do-card" v-for="c in debtCards" :key="c.id">
         <div class="do-card-name">{{ c.name }}</div>
-        <div class="do-card-bal">
-          <template v-if="hide.cardBal">₫•••••</template>
-          <template v-else>₫{{ fS(c.balance) }}</template>
+        <div class="do-card-row">
+          <div class="do-card-bal">
+            <template v-if="hide.cardBal">₫•••••</template>
+            <template v-else>₫{{ fS(c.balance) }}</template>
+          </div>
+          <div class="do-card-rate">{{ c.rate }}%/năm</div>
         </div>
-        <div class="do-card-info">
-          {{ c.rate }}%/năm · min
-          <template v-if="hide.minPay">₫•••</template>
-          <template v-else>₫{{ fS(c.min) }}</template>
+        <div class="do-card-row">
+          <div class="do-card-info">
+            min <template v-if="hide.minPay">₫•••</template><template v-else>₫{{ fS(c.min) }}</template>
+          </div>
+          <div class="do-card-pct">{{ usedPct(c) }}%</div>
         </div>
         <div class="do-prog">
           <div class="do-prog-fill do-prog-fill-anim" :style="{ width: usedPct(c) + '%' }"></div>
-          <span class="do-prog-pct">{{ usedPct(c) }}%</span>
         </div>
       </div>
     </div>

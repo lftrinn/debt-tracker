@@ -13,7 +13,11 @@ export function useApi() {
 
   const syncSt = ref('synced')
   const syncMsg = ref('Đã đồng bộ')
+  const syncTime = ref('')
   const syncing = ref(false)
+
+  const fmtTime = () =>
+    new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
 
   const H = () => ({
     'Content-Type': 'application/json',
@@ -56,16 +60,17 @@ export function useApi() {
   async function push(data) {
     syncing.value = true
     syncSt.value = 'syncing'
-    syncMsg.value = 'Đang đồng bộ...'
+    syncMsg.value = 'Đang đồng bộ'
+    syncTime.value = ''
     try {
       await writeBin(data)
       syncSt.value = 'synced'
-      syncMsg.value =
-        'Đã đồng bộ lúc ' +
-        new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+      syncMsg.value = 'Đã đồng bộ'
+      syncTime.value = fmtTime()
     } catch {
       syncSt.value = 'error'
-      syncMsg.value = 'Lỗi đồng bộ'
+      syncMsg.value = 'Lỗi'
+      syncTime.value = fmtTime()
     } finally {
       syncing.value = false
     }
@@ -73,12 +78,12 @@ export function useApi() {
 
   async function pull() {
     syncSt.value = 'syncing'
-    syncMsg.value = 'Đang tải dữ liệu...'
+    syncMsg.value = 'Đang tải'
+    syncTime.value = ''
     const data = await readBin()
     syncSt.value = 'synced'
-    syncMsg.value =
-      'Đã đồng bộ lúc ' +
-      new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+    syncMsg.value = 'Đã đồng bộ'
+    syncTime.value = fmtTime()
     return data
   }
 
@@ -104,6 +109,7 @@ export function useApi() {
     isConfigured,
     syncSt,
     syncMsg,
+    syncTime,
     syncing,
     readBin,
     writeBin,

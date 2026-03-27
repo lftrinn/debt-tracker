@@ -1,7 +1,7 @@
 <template>
   <div class="setup-screen">
     <div class="setup-card">
-      <div class="s-title-big">💳 Debt Tracker</div>
+      <div class="s-title-big"><Icon name="credit-card" :size="24" /> Debt Tracker</div>
       <div class="s-sub">Kết nối JSONBin.io để sync dữ liệu giữa các thiết bị.</div>
       <div class="s-tabs">
         <button class="s-tab" :class="{ active: mode === 'import' }" @click="mode = 'import'">Import JSON</button>
@@ -15,7 +15,7 @@
         <input class="inp-s" v-model="key" type="password" placeholder="API Key ($2b$...)" />
         <textarea class="inp-s" v-model="json" placeholder="Paste JSON tài chính ở đây..."></textarea>
         <button class="btn-p" @click="$emit('setup', { mode: 'import', key, json })" :disabled="!key || !json || loading">
-          {{ loading ? 'Đang import...' : 'IMPORT & BẮT ĐẦU →' }}
+          {{ loading ? 'Đang import...' : 'IMPORT & BẮT ĐẦU' }} <Icon v-if="!loading" name="arrow-right" :size="14" />
         </button>
       </div>
 
@@ -25,7 +25,7 @@
         <input class="inp-s" v-model="key" type="password" placeholder="API Key ($2b$...)" />
         <input class="inp-s" v-model="bid" placeholder="Bin ID" />
         <button class="btn-p" @click="$emit('setup', { mode: 'existing', key, binId: bid })" :disabled="!key || !bid || loading">
-          {{ loading ? 'Đang kết nối...' : 'KẾT NỐI →' }}
+          {{ loading ? 'Đang kết nối...' : 'KẾT NỐI' }} <Icon v-if="!loading" name="arrow-right" :size="14" />
         </button>
       </div>
 
@@ -36,7 +36,7 @@
         <input class="inp-s" v-model.number="debt" type="number" placeholder="Tổng nợ (VNĐ)" />
         <input class="inp-s" v-model.number="limit" type="number" placeholder="Hạn mức chi ngày (VNĐ)" />
         <button class="btn-p" @click="$emit('setup', { mode: 'new', key, debt, limit })" :disabled="!key || loading">
-          {{ loading ? 'Đang tạo...' : 'TẠO & BẮT ĐẦU →' }}
+          {{ loading ? 'Đang tạo...' : 'TẠO & BẮT ĐẦU' }} <Icon v-if="!loading" name="arrow-right" :size="14" />
         </button>
       </div>
 
@@ -47,6 +47,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import Icon from './Icon.vue'
 
 defineProps({
   loading: Boolean,
