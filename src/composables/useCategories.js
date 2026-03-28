@@ -12,6 +12,7 @@ export function useCategories() {
     { key: 'giaitri', icon: 'gamepad-2', label: 'Giải trí' },
     { key: 'hd', icon: 'lightbulb', label: 'HĐ' },
     { key: 'khac', icon: 'package', label: 'Khác' },
+    { key: 'thanhToan', icon: 'credit-card', label: 'Thanh toán nợ' },
   ]
 
   const incomeCategories = [

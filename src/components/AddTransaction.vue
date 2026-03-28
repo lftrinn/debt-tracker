@@ -16,7 +16,17 @@
       <div class="add-form">
         <input class="inp" v-model="nDesc" placeholder="Mô tả (vd: Cơm tối, Cà phê...)" />
         <div class="form-row">
-          <input class="inp" v-model.number="nAmt" type="number" inputmode="numeric" placeholder="Số tiền (VNĐ)" />
+          <div class="inp-amount-wrap">
+            <input class="inp inp-amount" v-model.number="nAmt" type="number" inputmode="numeric" placeholder="Số tiền (VNĐ)" />
+            <div v-if="topExpAmounts.length" class="quick-amounts">
+              <button
+                v-for="a in topExpAmounts"
+                :key="a.value"
+                class="quick-amt-btn"
+                @click="nAmt = a.value"
+              >{{ a.label }}</button>
+            </div>
+          </div>
           <select class="cat-sel" v-model="nCat">
             <option v-for="c in expenseCategories" :key="c.key" :value="c.key">{{ c.label }}</option>
           </select>
@@ -33,7 +43,17 @@
       <div class="add-form">
         <input class="inp" v-model="iDesc" placeholder="Mô tả (vd: Lương tháng 4, Freelance...)" />
         <div class="form-row">
-          <input class="inp" v-model.number="iAmt" type="number" inputmode="numeric" placeholder="Số tiền (VNĐ)" />
+          <div class="inp-amount-wrap">
+            <input class="inp inp-amount" v-model.number="iAmt" type="number" inputmode="numeric" placeholder="Số tiền (VNĐ)" />
+            <div v-if="topIncAmounts.length" class="quick-amounts">
+              <button
+                v-for="a in topIncAmounts"
+                :key="a.value"
+                class="quick-amt-btn"
+                @click="iAmt = a.value"
+              >{{ a.label }}</button>
+            </div>
+          </div>
           <select class="cat-sel" v-model="iCat">
             <option v-for="c in incomeCategories" :key="c.key" :value="c.key">{{ c.label }}</option>
           </select>
@@ -47,7 +67,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import Icon from './Icon.vue'
 import { useCategories } from '../composables/useCategories'
 
@@ -55,6 +75,8 @@ const { expenseCategories, incomeCategories } = useCategories()
 
 const props = defineProps({
   syncing: Boolean,
+  expenses: { type: Array, default: () => [] },
+  incomes: { type: Array, default: () => [] },
 })
 
 const emit = defineEmits(['add-expense', 'add-income'])
@@ -66,6 +88,46 @@ const nCat = ref('an')
 const iDesc = ref('')
 const iAmt = ref(null)
 const iCat = ref('luong')
+
+function fmtShort(v) {
+  if (v >= 1000000000) {
+    const n = v / 1000000000
+    return n % 1 === 0 ? n + 'B' : n.toFixed(1).replace(/\.0$/, '') + 'B'
+  }
+  if (v >= 1000000) {
+    const n = v / 1000000
+    return n % 1 === 0 ? n + 'M' : n.toFixed(1).replace(/\.0$/, '') + 'M'
+  }
+  if (v >= 1000) {
+    const n = v / 1000
+    return n % 1 === 0 ? n + 'K' : n.toFixed(1).replace(/\.0$/, '') + 'K'
+  }
+  return String(v)
+}
+
+function getTopAmounts(items) {
+  if (!items.length) return []
+  // Count frequency of each amount
+  const freq = {}
+  items.forEach((e) => {
+    const a = e.amount
+    if (a > 0) freq[a] = (freq[a] || 0) + 1
+  })
+  // Sort by frequency desc, then by most recent
+  const entries = Object.entries(freq).map(([amt, count]) => ({
+    value: Number(amt),
+    count,
+  }))
+  entries.sort((a, b) => b.count - a.count || b.value - a.value)
+  // Take top 3
+  return entries.slice(0, 3).map((e) => ({
+    value: e.value,
+    label: fmtShort(e.value),
+  }))
+}
+
+const topExpAmounts = computed(() => getTopAmounts(props.expenses))
+const topIncAmounts = computed(() => getTopAmounts(props.incomes))
 
 function addExp() {
   if (!nAmt.value || nAmt.value <= 0 || !nDesc.value.trim()) return

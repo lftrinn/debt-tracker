@@ -1,10 +1,21 @@
 <template>
   <div class="card">
     <div class="c-hdr" style="margin-bottom:12px">
-      <span class="c-title">Lịch sử giao dịch</span>
+      <span class="c-title">
+        Lịch sử giao dịch
+        <span class="trend-ico" :class="txTrend">
+          <Icon v-if="txTrend === 'up'" name="trending-up" :size="12" />
+          <Icon v-else-if="txTrend === 'down'" name="trending-down" :size="12" />
+          <Icon v-else name="minus" :size="12" />
+        </span>
+      </span>
       <span class="badge">{{ transactions.length }}</span>
     </div>
-    <div class="exp-list">
+    <div v-if="txTrend !== 'neutral'" class="tx-trend-summary">
+      <template v-if="txTrend === 'up'">Thu +{{ fS(todayIncome) }} · Chi -{{ fS(todaySpent) }}</template>
+      <template v-else>Chi -{{ fS(todaySpent) }} · Thu +{{ fS(todayIncome) }}</template>
+    </div>
+    <div class="exp-list" :class="{ 'exp-list--scroll': transactions.length > 4 }">
       <div v-if="!transactions.length" class="empty">Chưa có giao dịch nào</div>
       <div
         v-for="e in transactions"
@@ -26,7 +37,7 @@
           color: e.type === 'inc' ? 'var(--accent3)' : 'var(--accent2)',
         }">
           <template v-if="hide"><span class="masked">•••••</span></template>
-          <template v-else>{{ e.type === 'inc' ? '+' : '-' }}₫{{ fN(e.amount) }}</template>
+          <template v-else>{{ e.type === 'inc' ? '+' : '-' }}{{ fS(e.amount) }}</template>
         </div>
       </div>
     </div>
@@ -38,12 +49,15 @@ import Icon from './Icon.vue'
 import { useFormatters } from '../composables/useFormatters'
 import { useCategories } from '../composables/useCategories'
 
-const { fN, fDate } = useFormatters()
+const { fN, fS, fDate } = useFormatters()
 const { resolveCat } = useCategories()
 
 defineProps({
   transactions: Array,
   hide: Boolean,
+  txTrend: String,
+  todaySpent: Number,
+  todayIncome: Number,
 })
 
 defineEmits(['open-detail'])

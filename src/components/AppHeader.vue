@@ -12,6 +12,7 @@
             <span class="hdr-date-compact">{{ today }}</span>
             <span class="hdr-sep">·</span>
             <Icon :name="limIcon" :size="12" class="hdr-lim-ico" :class="[limSt, { blink: limBlink }]" @click="$emit('scroll-alert')" />
+            <span v-if="cashDaysLeft !== null && cashDaysLeft < dToSalary" class="hdr-days-badge" @click="$emit('scroll-alert')">{{ cashDaysLeft }}/{{ dToSalary }}</span>
           </div>
         </transition>
       </div>
@@ -54,6 +55,8 @@ const props = defineProps({
   limBlink: Boolean,
   overBanner: Boolean,
   overMsg: String,
+  cashDaysLeft: Number,
+  dToSalary: Number,
 })
 
 const limIcon = computed(() =>

@@ -1,7 +1,14 @@
 <template>
   <div class="cash-hero">
     <div>
-      <div class="ch-label">// Tiền mặt</div>
+      <div class="ch-label">
+        // Tiền mặt
+        <span class="trend-ico" :class="cashTrend">
+          <Icon v-if="cashTrend === 'up'" name="trending-up" :size="12" />
+          <Icon v-else-if="cashTrend === 'down'" name="trending-down" :size="12" />
+          <Icon v-else name="minus" :size="12" />
+        </span>
+      </div>
       <div
         :class="['ch-val', 'num-flash', hide.balance ? '' : availCash < 200000 ? 'red' : availCash < 500000 ? 'yellow' : 'green']"
         :key="'cash' + cashAnimKey"
@@ -26,6 +33,7 @@
 </template>
 
 <script setup>
+import Icon from './Icon.vue'
 import { useFormatters } from '../composables/useFormatters'
 
 const { fS } = useFormatters()
@@ -36,6 +44,7 @@ defineProps({
   todaySpent: Number,
   monthSpent: Number,
   isOver: Boolean,
+  cashTrend: String,
   cashAnimKey: Number,
   spentAnimKey: Number,
   hide: Object,

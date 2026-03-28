@@ -36,21 +36,26 @@
 
   <!-- MAIN -->
   <div v-if="appState === 'ready' || appState === 'error'">
-    <AppHeader :today="today" :hideAmounts="hideAmounts" :scrolled="syncBarScrolled" :syncStatus="syncSt" :syncMsg="syncMsg" :syncTime="syncTime" :limSt="limSt" :limBlink="limBlink" :overBanner="overBanner" :overMsg="overMsg" @reload="hardReload" @logout="logout" @toggle-hide="toggleHide" @scroll-alert="scrollToAlert" @dismiss-over="dismissOverBanner" />
+    <AppHeader :today="today" :hideAmounts="hideAmounts" :scrolled="syncBarScrolled" :syncStatus="syncSt" :syncMsg="syncMsg" :syncTime="syncTime" :limSt="limSt" :limBlink="limBlink" :overBanner="overBanner" :overMsg="overMsg" :cashDaysLeft="cashDaysLeft" :dToSalary="dToSalary" @reload="hardReload" @logout="logout" @toggle-hide="toggleHide" @scroll-alert="scrollToAlert" @dismiss-over="dismissOverBanner" />
 
     <div class="wrap">
       <SyncBar ref="syncBarRef" :status="syncSt" :message="syncMsg" :syncTime="syncTime" :today="today" />
 
-      <div ref="alertRef" v-if="isOver" class="alert over"><Icon name="alert-triangle" :size="14" /> Vượt hạn mức hôm nay +{{ hz('alert') ? '•••' : fV(todaySpent - dayLimit) }}</div>
-      <div ref="alertRef" v-else-if="dayLimit > 0" class="alert ok"><Icon name="check" :size="14" /> Còn {{ hz('alert') ? '•••' : fV(dayLimit - todaySpent) }} hôm nay · hạn mức {{ hz('alert') ? '•••' : fV(dayLimit) }}</div>
+      <div ref="alertRef" v-if="isOver" class="alert over"><Icon name="alert-triangle" :size="14" /> Vượt hạn mức +{{ hz('alert') ? '•••' : fV(todaySpent - dayLimit) }}</div>
+      <div ref="alertRef" v-else-if="dayLimit > 0" class="alert ok">
+        <Icon name="check" :size="14" />
+        <span class="alert-main">Còn {{ hz('alert') ? '•••' : fS(dayLimit - todaySpent) }} · mức {{ hz('alert') ? '•••' : fS(dayLimit) }}/ngày</span>
+        <span v-if="cashDaysLeft !== null && cashDaysLeft < dToSalary" class="alert-badge-warn">{{ hz('alert') ? '•••' : cashDaysLeft }}/{{ dToSalary }} ngày</span>
+      </div>
 
 
       <CashHero
         :availCash="availCash"
         :dToSalary="dToSalary"
-        :todaySpent="todaySpent"
+        :todaySpent="todayOutflow"
         :monthSpent="monthSpent"
         :isOver="isOver"
+        :cashTrend="cashTrend"
         :cashAnimKey="cashAnimKey"
         :spentAnimKey="spentAnimKey"
         :hide="{ balance: hz('cash.balance'), todaySpent: hz('cash.todaySpent'), monthSpent: hz('cash.monthSpent') }"
@@ -59,6 +64,7 @@
       <DebtOverview
         :totalDebt="totalDebt"
         :debtCards="debtCards"
+        :debtTrend="debtTrend"
         :debtAnimKey="debtAnimKey"
         :hide="{ total: hz('debt.total'), cardBal: hz('debt.cardBal'), minPay: hz('debt.minPay') }"
       />
@@ -73,8 +79,10 @@
       <UpcomingPayments
         :items="upcoming"
         :label="upcomingLabel"
+        :availCash="availCash"
         :hide="{ amount: hz('upcoming.amount'), shortage: hz('upcoming.shortage') }"
         @open-detail="openDetail($event, 'upcoming')"
+        @toggle-paid="togglePaid"
       />
 
       <!-- Tabs -->
@@ -90,6 +98,8 @@
       <AddTransaction
         v-if="tab === 'add'"
         :syncing="syncing"
+        :expenses="expenses"
+        :incomes="incomes"
         @add-expense="addExp"
         @add-income="addInc"
       />
@@ -98,6 +108,9 @@
         v-if="tab === 'list'"
         :transactions="sortedTx"
         :hide="hz('transactions')"
+        :txTrend="txTrend"
+        :todaySpent="todayOutflow"
+        :todayIncome="todayIncome"
         @open-detail="openDetail($event, 'tx')"
       />
 
@@ -268,8 +281,9 @@ const d = ref({
 
 // --- Computed debt data ---
 const {
-  expenses, incomes, sortedTx, today, dToSalary, dayLimit,
-  todaySpent, monthSpent, availCash, isOver, limPct, limSt,
+  expenses, incomes, sortedTx, today, dToSalary, dayLimit, cashDaysLeft,
+  todaySpent, todayOutflow, todayIncome, monthSpent, availCash, isOver, limPct, limSt,
+  cashTrend, debtTrend, txTrend,
   debtCards, smallLoans, totalDebt, origDebt, repayPct,
   debtBreakdown, upcomingLabel, upcoming, milestones, findDebtId,
 } = useDebtData(d)
@@ -537,6 +551,7 @@ async function togglePaid(key, amt, obName) {
   const paid = new Set(d.value.paid_obligations || [])
   const nd = {
     ...d.value,
+    expenses: [...(d.value.expenses || [])],
     debts: {
       ...d.value.debts,
       credit_cards: [...(d.value.debts?.credit_cards || [])],
@@ -544,10 +559,15 @@ async function togglePaid(key, amt, obName) {
     },
   }
   const debtRef = obName ? findDebtId(obName) : null
+  // Unique tag to link expense with this obligation
+  const obTag = 'ob:' + key
 
   if (paid.has(key)) {
+    // --- Undo payment ---
     paid.delete(key)
     nd.current_cash = { ...nd.current_cash, balance: (nd.current_cash?.balance || 0) + amt }
+    // Remove linked expense
+    nd.expenses = nd.expenses.filter((e) => e._obTag !== obTag)
     if (debtRef) {
       if (debtRef.type === 'cc') {
         nd.debts.credit_cards = nd.debts.credit_cards.map((c) =>
@@ -560,8 +580,14 @@ async function togglePaid(key, amt, obName) {
       }
     }
   } else {
+    // --- Mark as paid ---
     paid.add(key)
     nd.current_cash = { ...nd.current_cash, balance: Math.max(0, (nd.current_cash?.balance || 0) - amt) }
+    // Add expense record to transaction history
+    nd.expenses = [
+      { id: Date.now(), desc: obName || 'Thanh toán', amount: amt, cat: 'thanhToan', date: tStr(), _obTag: obTag },
+      ...nd.expenses,
+    ]
     if (debtRef) {
       if (debtRef.type === 'cc') {
         nd.debts.credit_cards = nd.debts.credit_cards.map((c) =>

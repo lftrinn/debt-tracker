@@ -1,15 +1,38 @@
 <template>
-  <div>
-    <div class="card">
-      <div class="c-title">Thu / Chi 7 ngày qua</div>
+  <div class="card">
+    <!-- Chart type tabs -->
+    <div class="chart-tabs">
+      <button
+        v-for="t in tabs"
+        :key="t.key"
+        :class="['chart-tab-btn', { active: activeTab === t.key }]"
+        @click="activeTab = t.key"
+      >
+        <Icon :name="t.icon" :size="12" />
+        {{ t.label }}
+      </button>
+    </div>
+
+    <!-- Thu/Chi -->
+    <div v-show="activeTab === 'spend'">
+      <div class="range-tabs">
+        <button
+          v-for="r in ranges"
+          :key="r.key"
+          :class="['range-tab-btn', { active: spendRange === r.key }]"
+          @click="spendRange = r.key"
+        >{{ r.label }}</button>
+      </div>
       <div class="chart-wrap"><canvas ref="chartRef"></canvas></div>
     </div>
-    <div class="card">
-      <div class="c-title">Lộ trình giảm nợ</div>
+
+    <!-- Lộ trình giảm nợ -->
+    <div v-show="activeTab === 'debt'">
       <div class="chart-wrap"><canvas ref="debtChartRef"></canvas></div>
     </div>
-    <div class="card">
-      <div class="c-title">Cơ cấu nợ hiện tại</div>
+
+    <!-- Cơ cấu nợ -->
+    <div v-show="activeTab === 'pie'">
       <div class="pie-wrap"><canvas ref="pieChartRef"></canvas></div>
       <div class="legend">
         <div class="legend-item" v-for="s in debtBreakdown" :key="s.name">
@@ -28,6 +51,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { Chart, registerables } from 'chart.js'
+import Icon from './Icon.vue'
 import { useFormatters } from '../composables/useFormatters'
 import { useColors } from '../composables/useColors'
 
@@ -44,6 +68,21 @@ const props = defineProps({
   hide: Object,
 })
 
+const tabs = [
+  { key: 'spend', label: 'Thu/Chi', icon: 'bar-chart-2' },
+  { key: 'debt', label: 'Giảm nợ', icon: 'trending-down' },
+  { key: 'pie', label: 'Cơ cấu nợ', icon: 'pie-chart' },
+]
+
+const activeTab = ref('spend')
+const spendRange = ref('week')
+
+const ranges = [
+  { key: 'week', label: '7 ngày' },
+  { key: 'month', label: 'Tháng' },
+  { key: 'year', label: 'Năm' },
+]
+
 const chartRef = ref(null)
 const debtChartRef = ref(null)
 const pieChartRef = ref(null)
@@ -58,27 +97,85 @@ function pct(val) {
   return t > 0 ? Math.round(val / t * 100) : 0
 }
 
+function getSpendBuckets() {
+  const range = spendRange.value
+  if (range === 'week') {
+    // 7 ngày gần đây
+    const keys = Array.from({ length: 7 }, (_, i) => {
+      const x = new Date(); x.setDate(x.getDate() - (6 - i))
+      return x.toISOString().slice(0, 10)
+    })
+    const labels = keys.map((x) =>
+      new Date(x).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
+    )
+    return { keys, labels, matchExp: (e, k) => e.date === k, matchInc: (e, k) => e.date === k }
+  }
+  if (range === 'month') {
+    // 30 ngày gần đây, nhóm theo tuần (mỗi tuần = 1 cột)
+    const now = new Date()
+    const keys = [] // array of { start, end, label }
+    for (let w = 3; w >= 0; w--) {
+      const end = new Date(now)
+      end.setDate(end.getDate() - w * 7)
+      const start = new Date(end)
+      start.setDate(start.getDate() - 6)
+      keys.push({
+        s: start.toISOString().slice(0, 10),
+        e: end.toISOString().slice(0, 10),
+      })
+    }
+    const labels = keys.map((k) => {
+      const s = new Date(k.s).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
+      const e = new Date(k.e).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
+      return s + '–' + e
+    })
+    return {
+      keys,
+      labels,
+      matchExp: (e, k) => e.date >= k.s && e.date <= k.e,
+      matchInc: (e, k) => e.date >= k.s && e.date <= k.e,
+    }
+  }
+  // year: 12 tháng gần đây, nhóm theo tháng
+  const now = new Date()
+  const keys = []
+  for (let i = 11; i >= 0; i--) {
+    const dt = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    keys.push(dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0'))
+  }
+  const labels = keys.map((k) => {
+    const [y, m] = k.split('-')
+    return 'T' + parseInt(m) + '/' + y.slice(2)
+  })
+  return {
+    keys,
+    labels,
+    matchExp: (e, k) => e.date && e.date.slice(0, 7) === k,
+    matchInc: (e, k) => e.date && e.date.slice(0, 7) === k,
+  }
+}
+
 function buildSpendChart() {
   if (!chartRef.value) return
   const h = props.hide?.spend
-  const days = Array.from({ length: 7 }, (_, i) => {
-    const x = new Date()
-    x.setDate(x.getDate() - (6 - i))
-    return x.toISOString().slice(0, 10)
-  })
-  const labels = days.map((x) =>
-    new Date(x).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
+  const { keys, labels, matchExp, matchInc } = getSpendBuckets()
+
+  const expRaw = keys.map((k) =>
+    (props.expenses || []).filter((e) => matchExp(e, k)).reduce((s, e) => s + e.amount, 0)
   )
-  const expRaw = days.map((x) =>
-    (props.expenses || []).filter((e) => e.date === x).reduce((s, e) => s + e.amount, 0)
-  )
-  const incRaw = days.map((x) =>
-    (props.incomes || []).filter((e) => e.date === x).reduce((s, e) => s + e.amount, 0)
+  const incRaw = keys.map((k) =>
+    (props.incomes || []).filter((e) => matchInc(e, k)).reduce((s, e) => s + e.amount, 0)
   )
 
   const maxVal = Math.max(...expRaw, ...incRaw, 1)
   const expData = h ? expRaw.map((v) => Math.round(v / maxVal * 100)) : expRaw
   const incData = h ? incRaw.map((v) => Math.round(v / maxVal * 100)) : incRaw
+
+  const yTickCb = h
+    ? (v) => v + '%'
+    : spendRange.value === 'year'
+      ? (v) => v >= 1000000 ? (v / 1000000).toFixed(0) + 'M' : v >= 1000 ? (v / 1000) + 'K' : v
+      : (v) => v >= 1000 ? v / 1000 + 'K' : v
 
   if (chartInst) chartInst.destroy()
   chartInst = new Chart(chartRef.value, {
@@ -129,16 +226,18 @@ function buildSpendChart() {
       scales: {
         x: {
           grid: { color: chartGrid },
-          ticks: { color: chartTick, font: chartFont },
+          ticks: {
+            color: chartTick,
+            font: { ...chartFont, size: spendRange.value === 'month' ? 8 : chartFont.size },
+            maxRotation: spendRange.value === 'year' ? 45 : 0,
+          },
         },
         y: {
           grid: { color: chartGrid },
           ticks: {
             color: chartTick,
             font: chartFont,
-            callback: h
-              ? (v) => v + '%'
-              : (v) => (v >= 1000 ? v / 1000 + 'K' : v),
+            callback: yTickCb,
           },
           ...(h ? { max: 100, min: 0 } : {}),
         },
@@ -256,6 +355,22 @@ function buildAll() {
   buildDebtChart()
   buildPieChart()
 }
+
+// Build current tab chart when tab changes
+watch(activeTab, (tab) => {
+  setTimeout(() => {
+    if (tab === 'spend') buildSpendChart()
+    else if (tab === 'debt') buildDebtChart()
+    else if (tab === 'pie') buildPieChart()
+  }, 50)
+})
+
+// Rebuild spend chart when range changes
+watch(spendRange, () => {
+  if (activeTab.value === 'spend') {
+    setTimeout(buildSpendChart, 50)
+  }
+})
 
 onMounted(buildAll)
 

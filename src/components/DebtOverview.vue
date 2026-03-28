@@ -1,6 +1,13 @@
 <template>
   <div class="debt-ov">
-    <div class="do-label">// Tổng nợ còn lại</div>
+    <div class="do-label">
+      // Tổng nợ còn lại
+      <span class="trend-ico" :class="debtTrend === 'down' ? 'up' : debtTrend === 'up' ? 'down' : 'neutral'">
+        <Icon v-if="debtTrend === 'down'" name="trending-down" :size="12" />
+        <Icon v-else-if="debtTrend === 'up'" name="trending-up" :size="12" />
+        <Icon v-else name="minus" :size="12" />
+      </span>
+    </div>
     <div class="do-total num-flash" :key="'debt' + debtAnimKey">
       <template v-if="hide.total"><span class="masked">₫•••••••••</span></template>
       <template v-else><span>₫</span>{{ fN(totalDebt) }}</template>
@@ -30,6 +37,7 @@
 </template>
 
 <script setup>
+import Icon from './Icon.vue'
 import { useFormatters } from '../composables/useFormatters'
 
 const { fN, fS } = useFormatters()
@@ -41,6 +49,7 @@ function usedPct(c) {
 defineProps({
   totalDebt: Number,
   debtCards: Array,
+  debtTrend: String,
   debtAnimKey: Number,
   hide: Object,
 })

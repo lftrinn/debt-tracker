@@ -36,7 +36,7 @@
             <div class="popup-name">{{ item._variant === 'upcoming' ? item.name : item.desc }}</div>
 
             <!-- Amount -->
-            <div class="popup-amt" :class="item._variant === 'tx' ? (item.type === 'inc' ? 'inc' : 'exp') : ''">
+            <div class="popup-amt" :class="item._variant === 'tx' ? (item.type === 'inc' ? 'inc' : 'exp') : 'exp'">
               <template v-if="hide">•••••</template>
               <template v-else>
                 <template v-if="item._variant === 'tx'">{{ item.type === 'inc' ? '+' : '-' }}₫{{ fN(item.amount || item.amt) }}</template>

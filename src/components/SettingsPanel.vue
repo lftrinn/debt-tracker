@@ -50,8 +50,18 @@
 
     <!-- POPUP -->
     <Transition name="popup">
-      <div v-if="open" class="popup-overlay" @click.self="closePopup">
-        <div class="popup-sheet">
+      <div v-if="open" class="popup-overlay" :style="overlayStyle" @click.self="closePopup">
+        <div
+          class="popup-sheet"
+          ref="sheetRef"
+          :style="sheetStyle"
+          @touchstart="onTouchStart"
+          @touchmove="onTouchMove"
+          @touchend="onTouchEnd"
+        >
+          <!-- Drag handle -->
+          <div class="popup-handle"><div class="popup-handle-bar"></div></div>
+
           <div class="popup-hdr">
             <span class="popup-title">{{ titles[open] }}</span>
             <button class="popup-close" @click="closePopup"><Icon name="x" :size="18" /></button>
@@ -360,10 +370,19 @@ const oneTimeDate = ref('')
 const oneTimeAmt = ref(null)
 const importJson = ref('')
 
-function closePopup() { open.value = null }
+function closePopup() {
+  dismissing.value = false
+  dragY.value = 0
+  open.value = null
+}
 
 watch(open, (v) => {
   document.body.style.overflow = v ? 'hidden' : ''
+  if (v) {
+    dragY.value = 0
+    dragging.value = false
+    dismissing.value = false
+  }
 })
 
 function saveLimit() {
@@ -401,6 +420,109 @@ function addOneTime() {
   oneTimeDate.value = ''
   oneTimeAmt.value = null
   closePopup()
+}
+
+// --- Swipe to dismiss ---
+const sheetRef = ref(null)
+const dragY = ref(0)
+const dragging = ref(false)
+const dismissing = ref(false)
+let startY = 0
+let lastY = 0
+let lastTime = 0
+const DISMISS_POS = 80
+const DISMISS_FLICK = 5
+const VELOCITY_THRESHOLD = 0.15
+
+const sheetHeight = computed(() => sheetRef.value?.offsetHeight || 400)
+const dragProgress = computed(() => Math.min(dragY.value / sheetHeight.value, 1))
+
+const sheetStyle = computed(() => {
+  if (dismissing.value) {
+    return {
+      transform: 'translateY(100%)',
+      transition: 'transform .3s cubic-bezier(.4,0,1,1), opacity .3s ease',
+      opacity: '0',
+    }
+  }
+  if (!dragging.value && dragY.value === 0) return {}
+  const opacity = 1 - dragProgress.value * 0.6
+  return {
+    transform: `translateY(${dragY.value}px)`,
+    opacity: `${opacity}`,
+    transition: dragging.value ? 'none' : 'transform .3s cubic-bezier(.22,1,.36,1), opacity .3s ease',
+  }
+})
+
+const overlayStyle = computed(() => {
+  if (dismissing.value) return { opacity: '0', transition: 'opacity .3s ease' }
+  if (!dragging.value && dragY.value === 0) return {}
+  const opacity = 1 - dragProgress.value
+  return { opacity: `${opacity}`, transition: dragging.value ? 'none' : 'opacity .3s ease' }
+})
+
+function onTouchStart(e) {
+  const el = sheetRef.value
+  if (!el || dismissing.value) return
+  if (el.scrollTop > 0) return
+  startY = e.touches[0].clientY
+  lastY = startY
+  lastTime = Date.now()
+  dragging.value = false
+  dragY.value = 0
+}
+
+function onTouchMove(e) {
+  const el = sheetRef.value
+  if (!el || dismissing.value) return
+  const currentY = e.touches[0].clientY
+  const delta = currentY - startY
+
+  if (el.scrollTop > 0) {
+    startY = currentY
+    lastY = currentY
+    lastTime = Date.now()
+    return
+  }
+
+  if (delta <= 0) {
+    dragY.value = 0
+    dragging.value = false
+    return
+  }
+
+  e.preventDefault()
+  dragging.value = true
+  dragY.value = delta * 0.6
+
+  lastY = currentY
+  lastTime = Date.now()
+}
+
+function onTouchEnd(e) {
+  if (!dragging.value || dismissing.value) return
+  dragging.value = false
+
+  const endY = e.changedTouches[0].clientY
+  const now = Date.now()
+  const dt = now - lastTime || 1
+  const velocity = (endY - lastY) / dt
+
+  const pos = dragY.value
+  const isFlick = velocity > VELOCITY_THRESHOLD && pos >= DISMISS_FLICK
+  const isDrag = pos >= DISMISS_POS
+
+  if (isFlick || isDrag) {
+    dismissing.value = true
+    setTimeout(() => {
+      dismissing.value = false
+      dragY.value = 0
+      open.value = null
+      document.body.style.overflow = ''
+    }, 300)
+  } else {
+    dragY.value = 0
+  }
 }
 
 defineExpose({ ccUpdate })

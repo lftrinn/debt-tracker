@@ -28,36 +28,101 @@ export function useDebtData(d) {
     })
   )
 
+  // Adjust pay date for weekends: Sat → Fri (−1), Sun → Mon (+1)
+  function actualPayDate(year, month, nominalDay) {
+    const dt = new Date(year, month, nominalDay)
+    const dow = dt.getDay()
+    if (dow === 6) dt.setDate(dt.getDate() - 1)
+    if (dow === 0) dt.setDate(dt.getDate() + 1)
+    return dt
+  }
+
   const dToSalary = computed(() => {
     const now = new Date()
     const pd = d.value.income?.pay_date || 5
-    let t = new Date(now.getFullYear(), now.getMonth(), pd)
-    if (t <= now) t = new Date(now.getFullYear(), now.getMonth() + 1, pd)
+    let t = actualPayDate(now.getFullYear(), now.getMonth(), pd)
+    if (t <= now) t = actualPayDate(now.getFullYear(), now.getMonth() + 1, pd)
     return Math.ceil((t - now) / 86400000)
   })
 
-  const afterSalary = computed(
-    () => new Date().getDate() >= (d.value.income?.pay_date || 5)
-  )
+  const afterSalary = computed(() => {
+    const now = new Date()
+    const pd = d.value.income?.pay_date || 5
+    const t = actualPayDate(now.getFullYear(), now.getMonth(), pd)
+    return now >= t
+  })
 
+  // Daily limit from settings (no recalculation)
   const dayLimit = computed(() => {
     if (d.value.custom_daily_limit > 0) return d.value.custom_daily_limit
     const dl = d.value.rules?.daily_limit
     return afterSalary.value ? dl?.after_salary || 100000 : dl?.until_salary || 70000
   })
 
+  // Exclude obligation payments (_obTag) from daily/monthly spending — they are debt payments, not daily expenses
   const todaySpent = computed(() =>
-    expenses.value.filter((e) => isT(e.date)).reduce((s, e) => s + e.amount, 0)
+    expenses.value.filter((e) => isT(e.date) && !e._obTag).reduce((s, e) => s + e.amount, 0)
   )
 
   const monthSpent = computed(() =>
-    expenses.value.filter((e) => isTM(e.date)).reduce((s, e) => s + e.amount, 0)
+    expenses.value.filter((e) => isTM(e.date) && !e._obTag).reduce((s, e) => s + e.amount, 0)
   )
 
+  // Total expenses since current_cash.as_of (inclusive)
+  // Exclude obligation payments (_obTag) — those already deducted from balance directly
+  const spentSinceSnapshot = computed(() => {
+    const asOf = d.value.current_cash?.as_of
+    if (!asOf) return 0
+    return expenses.value
+      .filter((e) => e.date >= asOf && !e._obTag)
+      .reduce((s, e) => s + e.amount, 0)
+  })
+
+  // Total incomes since current_cash.as_of (inclusive, already added to balance on addInc)
+  // Note: addInc already adds to current_cash.balance, so we don't add incomes here
   const availCash = computed(() => {
     const c = d.value.current_cash
     if (!c) return 0
-    return (c.balance || 0) - (c.reserved || 0) - todaySpent.value
+    return (c.balance || 0) - (c.reserved || 0) - spentSinceSnapshot.value
+  })
+
+  // Sum of unpaid obligations between today and next payday
+  const unpaidObsToPayday = computed(() => {
+    const paid = new Set(d.value.paid_obligations || [])
+    const now = new Date()
+    const todayStr = now.toISOString().slice(0, 10)
+    const pd = d.value.income?.pay_date || 5
+    let nextPay = actualPayDate(now.getFullYear(), now.getMonth(), pd)
+    if (nextPay <= now) nextPay = actualPayDate(now.getFullYear(), now.getMonth() + 1, pd)
+    const payStr = nextPay.toISOString().slice(0, 10)
+
+    let total = 0
+    const plans = d.value.monthly_plans || {}
+    Object.values(plans).forEach((plan) => {
+      ;(plan.obligations || []).forEach((ob) => {
+        if (ob.monthly) return
+        const dateStr = ob.date || ob['date ']
+        if (!dateStr) return
+        const key = dateStr + ':' + ob.name
+        if (paid.has(key)) return
+        if (dateStr >= todayStr && dateStr < payStr) total += ob.amount || 0
+      })
+    })
+    ;(d.value.one_time_expenses || []).forEach((ev) => {
+      const key = ev.date + ':' + ev.name
+      if (paid.has(key)) return
+      if (ev.date >= todayStr && ev.date < payStr) total += ev.amount || 0
+    })
+    return total
+  })
+
+  // How many days current cash can last after subtracting upcoming obligations
+  const cashDaysLeft = computed(() => {
+    const lim = dayLimit.value
+    if (lim <= 0) return null
+    const cashAfterObs = availCash.value - unpaidObsToPayday.value
+    if (cashAfterObs <= 0) return 0
+    return Math.floor(cashAfterObs / lim)
   })
 
   const isOver = computed(
@@ -71,6 +136,37 @@ export function useDebtData(d) {
   const limSt = computed(() =>
     limPct.value >= 100 ? 'over' : limPct.value >= 75 ? 'warn' : 'safe'
   )
+
+  // Today's income total
+  const todayIncome = computed(() =>
+    incomes.value.filter((e) => isT(e.date)).reduce((s, e) => s + e.amount, 0)
+  )
+
+  // Total outflow today (including obligation payments) — for trend display
+  const todayOutflow = computed(() =>
+    expenses.value.filter((e) => isT(e.date)).reduce((s, e) => s + e.amount, 0)
+  )
+
+  // Cash trend: based on ALL money in/out today (including debt payments)
+  const cashTrend = computed(() => {
+    if (todayOutflow.value === 0 && todayIncome.value === 0) return 'neutral'
+    return todayIncome.value > todayOutflow.value ? 'up' : 'down'
+  })
+
+  // Debt trend: only count payments that actually reduce debt (credit cards / small loans)
+  const debtTrend = computed(() => {
+    const paidObs = d.value.paid_obligations || []
+    const extraPaid = d.value.extra_paid || 0
+    const hasDebtPayment = paidObs.some((key) => {
+      const name = key.split(':').slice(1).join(':')
+      return findDebtId(name) !== null
+    })
+    if (hasDebtPayment || extraPaid > 0) return 'down'
+    return 'neutral'
+  })
+
+  // Transaction trend for today: same as cashTrend
+  const txTrend = computed(() => cashTrend.value)
 
   const debtCards = computed(() =>
     (d.value.debts?.credit_cards || []).map((c) => ({
@@ -270,9 +366,15 @@ export function useDebtData(d) {
     dToSalary,
     afterSalary,
     dayLimit,
+    cashDaysLeft,
     todaySpent,
+    todayOutflow,
+    todayIncome,
     monthSpent,
     availCash,
+    cashTrend,
+    debtTrend,
+    txTrend,
     isOver,
     limPct,
     limSt,

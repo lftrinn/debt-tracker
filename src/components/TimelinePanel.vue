@@ -1,7 +1,7 @@
 <template>
   <div class="card">
     <div class="c-title">Lộ trình thoát nợ</div>
-    <div class="tl" style="margin-top:14px">
+    <div class="tl tl--scroll" style="margin-top:14px">
       <div v-for="m in milestones" :key="m.month" class="tl-item">
         <div class="tl-left">
           <div class="tl-dot" :class="m.st"></div>
@@ -15,8 +15,8 @@
           >
             {{ hide.eventAmt ? maskMoney(m.ev) : m.ev }}
           </div>
-          <div class="tl-debt" v-if="m.debt != null">
-            Tổng nợ: <template v-if="hide.debt"><span class="masked">₫•••••••</span></template><template v-else>₫{{ fS(m.debt) }}</template>
+          <div class="tl-debt" :style="m.debt == null ? { visibility: 'hidden' } : {}">
+            Tổng nợ: <template v-if="hide.debt"><span class="masked">₫•••••••</span></template><template v-else>₫{{ m.debt != null ? fS(m.debt) : 0 }}</template>
           </div>
         </div>
       </div>
