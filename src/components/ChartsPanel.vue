@@ -97,6 +97,13 @@ function pct(val) {
   return t > 0 ? Math.round(val / t * 100) : 0
 }
 
+function fmtTick(v) {
+  if (v >= 1e9) return (v / 1e9).toFixed(v % 1e9 === 0 ? 0 : 1) + 'B'
+  if (v >= 1e6) return (v / 1e6).toFixed(v % 1e6 === 0 ? 0 : 1) + 'M'
+  if (v >= 1e3) return Math.round(v / 1e3) + 'K'
+  return String(v)
+}
+
 function getSpendBuckets() {
   const range = spendRange.value
   if (range === 'week') {
@@ -173,9 +180,7 @@ function buildSpendChart() {
 
   const yTickCb = h
     ? (v) => v + '%'
-    : spendRange.value === 'year'
-      ? (v) => v >= 1000000 ? (v / 1000000).toFixed(0) + 'M' : v >= 1000 ? (v / 1000) + 'K' : v
-      : (v) => v >= 1000 ? v / 1000 + 'K' : v
+    : (v) => fmtTick(v)
 
   if (chartInst) chartInst.destroy()
   chartInst = new Chart(chartRef.value, {
@@ -298,9 +303,7 @@ function buildDebtChart() {
           ticks: {
             color: chartTick,
             font: chartFont,
-            callback: h
-              ? (v) => v + '%'
-              : (v) => v >= 1000000 ? (v / 1000000).toFixed(0) + 'M' : v >= 1000 ? (v / 1000) + 'K' : v,
+            callback: h ? (v) => v + '%' : (v) => fmtTick(v),
           },
           ...(h ? { max: 100, min: 0 } : {}),
         },

@@ -70,11 +70,12 @@ export function useDebtData(d) {
 
   // Total expenses since current_cash.as_of (inclusive)
   // Exclude obligation payments (_obTag) — those already deducted from balance directly
+  // Exclude Visa payments — those don't reduce cash, they increase card balance
   const spentSinceSnapshot = computed(() => {
     const asOf = d.value.current_cash?.as_of
     if (!asOf) return 0
     return expenses.value
-      .filter((e) => e.date >= asOf && !e._obTag)
+      .filter((e) => e.date >= asOf && !e._obTag && (!e.payMethod || e.payMethod === 'cash'))
       .reduce((s, e) => s + e.amount, 0)
   })
 
@@ -168,15 +169,130 @@ export function useDebtData(d) {
   // Transaction trend for today: same as cashTrend
   const txTrend = computed(() => cashTrend.value)
 
+  // Check if all minimum payment obligations for a card are paid
+  // Only count obligations with dates <= the card's min_due_date
+  const minPaidByCard = computed(() => {
+    const paid = new Set(d.value.paid_obligations || [])
+    const plans = d.value.monthly_plans || {}
+    const now = new Date()
+    // Collect obligations from current and next 2 months
+    const months = [0, 1, 2].map((i) => {
+      const dt = new Date(now.getFullYear(), now.getMonth() + i, 1)
+      return dt.toISOString().slice(0, 7)
+    })
+    const allObs = []
+    months.forEach((mo) => {
+      const plan = plans[mo]
+      if (plan?.obligations) {
+        plan.obligations.forEach((ob) => allObs.push(ob))
+      }
+    })
+    // Also include one_time_expenses as virtual obligations (for CC payments created via add popup)
+    ;(d.value.one_time_expenses || []).forEach((ev) => {
+      const evMonth = (ev.date || '').slice(0, 7)
+      if (months.includes(evMonth)) {
+        allObs.push({ name: ev.name, date: ev.date, amount: ev.amount, category: null })
+      }
+    })
+    if (allObs.length === 0) return {}
+    const result = {}
+    const cards = d.value.debts?.credit_cards || []
+    cards.forEach((c) => {
+      const shortName = c.name.replace(' — Techcombank', '').replace(' — ', '').toLowerCase().trim()
+      const dueDate = c.min_due_date || ''
+      // Find payment obligations for this card (minimum or custom level)
+      // Only include obligations with date <= card's min_due_date
+      const cardObs = allObs.filter((ob) => {
+        if (ob.monthly) return false
+        const obName = (ob.name || '').toLowerCase()
+        const matchesCard = obName.includes(shortName)
+        if (!matchesCard) return false
+        // Match: debt_minimum, custom CC payment (category null), or name contains min/minimum
+        const isCcPayment = ob.category === 'debt_minimum'
+          || (ob.category == null && matchesCard)
+          || obName.includes('min')
+          || obName.includes('tối thiểu')
+          || obName.includes('minimum')
+        if (!isCcPayment) return false
+        // If card has a due date, only count obligations on or before that date
+        const obDate = ob.date || ob['date ']
+        if (dueDate && obDate) return obDate <= dueDate
+        return true
+      })
+      if (cardObs.length === 0) {
+        result[c.id] = false
+      } else {
+        result[c.id] = cardObs.every((ob) => {
+          const dateStr = ob.date || ob['date ']
+          const key = dateStr + ':' + ob.name
+          return paid.has(key)
+        })
+      }
+    })
+    return result
+  })
+
   const debtCards = computed(() =>
-    (d.value.debts?.credit_cards || []).map((c) => ({
-      id: c.id,
-      name: c.name.replace(' — Techcombank', '').replace(' — ', ''),
-      balance: c.balance,
-      limit: c.credit_limit,
-      rate: Math.round(c.interest_rate_annual * 100),
-      min: c.minimum_payment,
-    }))
+    (d.value.debts?.credit_cards || []).map((c) => {
+      const dueDate = c.min_due_date || ''
+      const daysLeft = dueDate ? dDiff(dueDate) : null
+      const paid = minPaidByCard.value[c.id] || false
+      // Urgency: paid → 'ok', overdue → 'overdue', ≤3d → 'urgent', ≤7d → 'soon', else 'normal'
+      let minUrg = 'normal'
+      if (paid) minUrg = 'ok'
+      else if (daysLeft !== null) {
+        if (daysLeft <= 0) minUrg = 'overdue'
+        else if (daysLeft <= 3) minUrg = 'urgent'
+        else if (daysLeft <= 7) minUrg = 'soon'
+      }
+      // Find planned payment for this card in the upcoming month
+      const cardShort = c.name.replace(' — Techcombank', '').replace(' — ', '').toLowerCase()
+      const nowMonth = new Date().toISOString().slice(0, 7)
+      const nextMonth = (() => { const dt = new Date(); dt.setMonth(dt.getMonth() + 1); return dt.toISOString().slice(0, 7) })()
+      let plannedPayment = null
+      // Check one_time_expenses for a payment matching this card in current or next month
+      for (const ev of (d.value.one_time_expenses || [])) {
+        const evName = (ev.name || '').toLowerCase()
+        if (!evName.includes(cardShort)) continue
+        const evMonth = (ev.date || '').slice(0, 7)
+        if (evMonth === nowMonth || evMonth === nextMonth) {
+          const isMin = evName.includes('minimum')
+          plannedPayment = { amount: ev.amount, isMin, name: ev.name, date: ev.date }
+          break
+        }
+      }
+      // Also check upcoming items from monthly_plans (include paid items to preserve label)
+      if (!plannedPayment) {
+        const plans = d.value.monthly_plans || {}
+        for (const mo of [nowMonth, nextMonth]) {
+          const obs = plans[mo]?.obligations || []
+          for (const ob of obs) {
+            if (ob.monthly) continue
+            const obName = (ob.name || '').toLowerCase()
+            if (!obName.includes(cardShort)) continue
+            // Match debt_minimum or CC payments edited to custom (category null but name matches card)
+            if (ob.category && ob.category !== 'debt_minimum') continue
+            const isMin = obName.includes('minimum')
+            plannedPayment = { amount: ob.amount, isMin, name: ob.name, date: ob.date || '' }
+            break
+          }
+          if (plannedPayment) break
+        }
+      }
+      return {
+        id: c.id,
+        name: c.name.replace(' — Techcombank', '').replace(' — ', ''),
+        balance: c.balance,
+        limit: c.credit_limit,
+        rate: Math.round(c.interest_rate_annual * 100),
+        min: c.minimum_payment,
+        minDueDate: dueDate,
+        minDaysLeft: daysLeft,
+        minPaid: paid,
+        minUrg,
+        plannedPayment,
+      }
+    })
   )
 
   const smallLoans = computed(() =>
@@ -229,6 +345,7 @@ export function useDebtData(d) {
     const plans = d.value.monthly_plans || {}
     const paid = new Set(d.value.paid_obligations || [])
     const now = new Date()
+    const todayStr = now.toISOString().slice(0, 10)
     const months = [0, 1, 2].map((i) => {
       const dt = new Date(now.getFullYear(), now.getMonth() + i, 1)
       return dt.toISOString().slice(0, 7)
@@ -243,21 +360,27 @@ export function useDebtData(d) {
         const dateStr = ob.date || ob['date ']
         if (!dateStr) return
         const diff = dDiff(dateStr)
-        if (diff < -2) return
-        const d2 = new Date(dateStr)
         const key = dateStr + ':' + ob.name
+        const isPaid = paid.has(key)
+        // Hide paid items whose date is in the past
+        if (isPaid && dateStr < todayStr) return
+        if (!isPaid && diff < -30) return
+        const d2 = new Date(dateStr)
+        const overdueDays = dateStr < todayStr ? Math.abs(diff) : 0
         items.push({
           _key: key,
           day: String(d2.getDate()).padStart(2, '0'),
           mo: String(d2.getMonth() + 1).padStart(2, '0'),
           name: ob.name,
-          sub: ob.category === 'debt_minimum' ? 'Thanh toán tối thiểu' : null,
+          sub: overdueDays > 0
+            ? `Chậm ${overdueDays} ngày`
+            : ob.category === 'debt_minimum' ? 'Thanh toán tối thiểu' : null,
           amt: ob.amount,
-          paid: paid.has(key),
-          urg: paid.has(key)
+          paid: isPaid,
+          urg: isPaid
             ? 'ok'
-            : diff < 0
-              ? 'urgent'
+            : overdueDays > 0
+              ? 'overdue'
               : diff <= 5
                 ? 'urgent'
                 : diff <= 10
@@ -265,7 +388,10 @@ export function useDebtData(d) {
                   : 'ok',
           _date: dateStr,
           source: 'monthly_plan',
+          _category: ob.category || null,
+          _isLastPeriod: ob.category === 'installment' && (ob.name || '').includes('kỳ cuối'),
           _mo: mo,
+          overdueDays,
         })
       })
     })
@@ -273,27 +399,36 @@ export function useDebtData(d) {
     // One-time expenses
     ;(d.value.one_time_expenses || []).forEach((ev) => {
       const diff = dDiff(ev.date)
-      if (diff < -2) return
-      const d2 = new Date(ev.date)
       const key = ev.date + ':' + ev.name
+      const isPaid = paid.has(key)
+      // Hide paid items whose date is in the past
+      if (isPaid && ev.date < todayStr) return
+      if (!isPaid && diff < -30) return
+      const d2 = new Date(ev.date)
+      const overdueDays = ev.date < todayStr ? Math.abs(diff) : 0
       items.push({
         _key: key,
         day: String(d2.getDate()).padStart(2, '0'),
         mo: String(d2.getMonth() + 1).padStart(2, '0'),
         name: ev.name,
-        sub: 'Khoản chi một lần 📌',
+        sub: overdueDays > 0
+          ? `Chậm ${overdueDays} ngày`
+          : null,
         amt: ev.amount,
-        paid: paid.has(key),
-        urg: paid.has(key)
+        paid: isPaid,
+        urg: isPaid
           ? 'ok'
-          : diff <= 5
-            ? 'urgent'
-            : diff <= 10
-              ? 'soon'
-              : 'ok',
+          : overdueDays > 0
+            ? 'overdue'
+            : diff <= 5
+              ? 'urgent'
+              : diff <= 10
+                ? 'soon'
+                : 'ok',
         _date: ev.date,
         source: 'one_time',
         _id: ev.id,
+        overdueDays,
       })
     })
 
@@ -336,13 +471,15 @@ export function useDebtData(d) {
     const cards = d.value.debts?.credit_cards || []
     for (const c of cards) {
       const cn = c.name.toLowerCase()
-      if (n.includes('visa 1') || (cn.includes('visa 1') && n.includes('visa'))) {
-        if (n.includes('visa 1') || n.includes('867011'))
-          return { type: 'cc', id: c.id }
+      // Extract short name from card (e.g. "Visa 1" from "Visa 1 — Techcombank")
+      const shortName = cn.split(' — ')[0].trim()
+      // Match if obligation name contains the card's short name
+      if (shortName && n.includes(shortName)) {
+        return { type: 'cc', id: c.id }
       }
-      if (n.includes('visa 2') || (cn.includes('visa 2') && n.includes('visa'))) {
-        if (n.includes('visa 2') || n.includes('867028'))
-          return { type: 'cc', id: c.id }
+      // Fallback: match by card number fragments in the name
+      if (c.id && n.includes(c.id)) {
+        return { type: 'cc', id: c.id }
       }
     }
     const loans = d.value.debts?.small_loans || []

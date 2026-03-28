@@ -71,7 +71,10 @@
               <template v-if="item.paid"><Icon name="undo-2" :size="14" /> Hoàn tác thanh toán</template>
               <template v-else><Icon name="check" :size="14" /> Thanh toán</template>
             </button>
-            <button class="popup-btn secondary" @click="startEdit"><Icon name="pencil" :size="14" /> Chỉnh sửa</button>
+            <div style="display:flex;gap:8px">
+              <button v-if="canCopy" class="popup-btn secondary" style="flex:1" @click="handleCopy"><Icon name="copy" :size="14" /> Sao chép</button>
+              <button class="popup-btn secondary" style="flex:1" @click="startEdit"><Icon name="pencil" :size="14" /> Sửa</button>
+            </div>
             <button v-if="canDelete" class="popup-btn danger" @click="$emit('delete', item)"><Icon name="trash-2" :size="14" /> Xoá</button>
           </div>
         </template>
@@ -79,14 +82,26 @@
         <!-- EDIT MODE -->
         <template v-else>
           <div class="popup-body">
+            <!-- CC payment level selector (edit mode) -->
+            <div v-if="isCcItem" class="popup-field">
+              <label class="popup-label">Mức trả</label>
+              <div style="display:flex;gap:4px;background:var(--surface2);border-radius:8px;padding:2px">
+                <button :class="['tab-btn', editPayLevel === 'min' ? 'active' : '']" style="flex:1;font-size:10px;padding:5px 0" @click="editPayLevel = 'min'">
+                  Tối thiểu{{ matchedCard && !hide ? ' (₫' + fS(matchedCard.min) + ')' : '' }}
+                </button>
+                <button :class="['tab-btn', editPayLevel === 'custom' ? 'active' : '']" style="flex:1;font-size:10px;padding:5px 0" @click="editPayLevel = 'custom'">
+                  Trả nhiều hơn
+                </button>
+              </div>
+            </div>
             <div class="popup-field">
               <label class="popup-label">{{ item._variant === 'upcoming' ? 'Tên khoản' : 'Mô tả' }}</label>
-              <input class="popup-input" v-model="buf.name" placeholder="Nhập tên..." />
+              <input class="popup-input" v-model="buf.name" :readonly="isCcItem" :style="isCcItem ? { opacity: '.7' } : {}" placeholder="Nhập tên..." />
             </div>
             <div class="popup-field">
               <label class="popup-label">Ngày</label>
               <div class="date-wrap">
-                <input type="date" class="popup-input" v-model="buf.date" :max="item._variant === 'tx' ? tStr() : undefined" style="color-scheme:dark;" />
+                <input type="date" class="popup-input popup-input--date" v-model="buf.date" :max="item._variant === 'tx' ? tStr() : undefined" placeholder="dd/mm/yyyy" />
               </div>
             </div>
             <div class="popup-field">
@@ -122,23 +137,50 @@ import Icon from './Icon.vue'
 import { useFormatters } from '../composables/useFormatters'
 import { useCategories } from '../composables/useCategories'
 
-const { fN, fDate, tStr } = useFormatters()
+const { fN, fS, fDate, tStr } = useFormatters()
 const { resolveCat, expenseCategories, incomeCategories } = useCategories()
 
 const props = defineProps({
   item: [Object, null],
   availCash: { type: Number, default: 0 },
   hide: Boolean,
+  debtCards: { type: Array, default: () => [] },
 })
 
-const emit = defineEmits(['close', 'save-upcoming', 'save-tx', 'delete', 'toggle-paid'])
+const emit = defineEmits(['close', 'save-upcoming', 'save-tx', 'delete', 'toggle-paid', 'clone-item'])
 
 const editing = ref(false)
 const buf = ref({ name: '', date: '', amt: 0, cat: '' })
+const editPayLevel = ref('min') // 'min' | 'custom' — only used for CC edit
+
+/** Is this item a credit card payment? */
+const isCcItem = computed(() => {
+  if (!props.item || props.item._variant !== 'upcoming') return false
+  const n = (props.item.name || '').toLowerCase()
+  return (props.debtCards || []).some((c) => n.includes(c.name.toLowerCase()))
+})
+
+/** Get the matching card for this CC item */
+const matchedCard = computed(() => {
+  if (!isCcItem.value) return null
+  const n = (props.item.name || '').toLowerCase()
+  return (props.debtCards || []).find((c) => n.includes(c.name.toLowerCase())) || null
+})
 
 const canDelete = computed(() => {
   if (!props.item) return false
-  if (props.item._variant === 'upcoming') return props.item.source === 'one_time'
+  if (props.item._variant === 'upcoming') {
+    // Allow delete for non-installment upcoming items (including CC debt payments)
+    const cat = props.item._category
+    return cat !== 'installment'
+  }
+  return true
+})
+
+const canCopy = computed(() => {
+  if (!props.item) return true
+  // Hide copy for last installment period
+  if (props.item._isLastPeriod) return false
   return true
 })
 
@@ -154,11 +196,48 @@ function startEdit() {
   const i = props.item
   if (i._variant === 'upcoming') {
     buf.value = { name: i.name, date: i._date, amt: i.amt }
+    // Detect CC payment level
+    if (isCcItem.value) {
+      const n = (i.name || '').toLowerCase()
+      editPayLevel.value = n.includes('minimum') ? 'min' : 'custom'
+    }
   } else {
     const resolved = resolveCat(i.cat)
     buf.value = { name: i.desc, date: i.date, amt: i.amount, cat: resolved.key }
   }
   editing.value = true
+}
+
+/** Build CC payment name from card, date, and level (edit mode) */
+function buildEditCcPayName() {
+  const card = matchedCard.value
+  if (!card) return
+  const d2 = buf.value.date ? new Date(buf.value.date) : null
+  const monthLabel = d2 ? 'T' + (d2.getMonth() + 1) + '/' + d2.getFullYear() : ''
+  if (editPayLevel.value === 'min') {
+    buf.value.name = card.name + ' minimum' + (monthLabel ? ' ' + monthLabel : '')
+  } else {
+    buf.value.name = card.name + ' trả nợ' + (monthLabel ? ' ' + monthLabel : '')
+  }
+}
+
+/** Watch edit date changes for CC items */
+watch(() => buf.value.date, () => {
+  if (editing.value && isCcItem.value) buildEditCcPayName()
+})
+
+/** Watch edit pay level changes for CC items */
+watch(editPayLevel, () => {
+  if (!editing.value || !isCcItem.value || !matchedCard.value) return
+  buildEditCcPayName()
+  if (editPayLevel.value === 'min') {
+    buf.value.amt = matchedCard.value.min || buf.value.amt
+  }
+})
+
+function handleCopy() {
+  const i = props.item
+  emit('clone-item', { ...i })
 }
 
 function handleSave() {

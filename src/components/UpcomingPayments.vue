@@ -4,9 +4,12 @@
       <span class="c-title">Thanh toán sắp đến</span>
       <span style="flex:1"></span>
       <span class="badge" style="margin-right:4px">{{ paidCount }}/{{ items.length }}</span>
-      <span class="badge">{{ label }}</span>
+      <span class="badge" style="margin-right:4px">{{ label }}</span>
+      <button class="up-edit-btn" @click="showAdd = true" title="Thêm khoản thanh toán">
+        <Icon name="plus" :size="14" />
+      </button>
     </div>
-    <div class="up-list" style="max-height:calc(4 * 48px + 3 * 6px);overflow-y:auto;margin-top:11px;padding-right:2px;">
+    <div class="up-list" style="max-height:calc(4 * 48px + 3 * 6px);overflow-y:auto;margin-top:11px;padding-right:2px;scroll-snap-type:y mandatory;">
       <div
         v-for="p in items"
         :key="p._key"
@@ -20,7 +23,7 @@
         </div>
         <div style="flex:1;min-width:0">
           <div class="up-name" :style="p.paid ? { color: 'var(--muted)', textDecoration: 'line-through' } : {}">{{ p.name }}</div>
-          <div v-if="p.sub && !p.paid" class="up-sub" style="margin-top:2px">{{ p.sub }}</div>
+          <div v-if="p.sub && !p.paid" class="up-sub" :style="{ marginTop: '2px', color: p.overdueDays > 0 ? 'var(--danger)' : undefined, fontWeight: p.overdueDays > 0 ? '600' : undefined }">{{ p.sub }}</div>
           <div v-if="p.paid" class="up-sub" style="color:var(--accent3);margin-top:2px"><Icon name="check" :size="11" /> Đã thanh toán</div>
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">
@@ -54,11 +57,104 @@
         </div>
       </div>
     </div>
+
+    <!-- Add popup -->
+    <Transition name="popup">
+      <div v-if="showAdd" class="popup-overlay" @click.self="showAdd = false">
+        <div class="popup-sheet">
+          <div class="popup-handle"><div class="popup-handle-bar"></div></div>
+          <div class="popup-hdr">
+            <span class="popup-title">Thêm khoản thanh toán</span>
+            <button class="popup-close" @click="showAdd = false"><Icon name="x" :size="18" /></button>
+          </div>
+          <div class="popup-body">
+            <div style="display:flex;gap:4px;background:var(--surface2);border-radius:9px;padding:3px;margin-bottom:12px">
+              <button :class="['tab-btn', addType === 'pay' ? 'active' : '']" style="flex:1;font-size:11px" @click="addType = 'pay'">
+                <Icon name="hand-coins" :size="12" /> Trả nợ
+              </button>
+              <button :class="['tab-btn', addType === 'oneTime' ? 'active' : '']" style="flex:1;font-size:11px" @click="addType = 'oneTime'">
+                <Icon name="pin" :size="12" /> Chi thêm
+              </button>
+            </div>
+
+            <!-- Trả nợ -->
+            <template v-if="addType === 'pay'">
+              <div class="popup-field">
+                <label class="popup-label">Chọn khoản nợ</label>
+                <select class="popup-input popup-input--sm" v-model="payTarget">
+                  <option value="">— Chọn khoản nợ —</option>
+                  <option v-for="c in debtCards" :key="c.id" :value="'cc:' + c.id">{{ c.name }}{{ hide.amount ? '' : ' (còn ₫' + fS(c.balance) + ')' }}</option>
+                  <option v-for="l in availableLoans" :key="l.id" :value="'sl:' + l.id">{{ l.name.split('—')[0].trim() }}{{ hide.amount ? '' : ' (còn ₫' + fS(l.remaining_balance) + ')' }}</option>
+                </select>
+              </div>
+              <!-- Loan installment selector -->
+              <div v-if="loanInstallments.length" class="popup-field">
+                <label class="popup-label">Chọn kỳ</label>
+                <select class="popup-input popup-input--sm" v-model="payInstallment">
+                  <option value="">— Chọn kỳ —</option>
+                  <option v-for="inst in loanInstallments" :key="inst.key" :value="inst.key">{{ inst.name }} — {{ inst.dateLabel }}{{ hide.amount ? '' : ' (₫' + fS(inst.amount) + ')' }}</option>
+                </select>
+              </div>
+              <!-- Credit card payment level -->
+              <div v-if="isCcTarget" class="popup-field">
+                <label class="popup-label">Mức trả</label>
+                <div style="display:flex;gap:4px;background:var(--surface2);border-radius:8px;padding:2px">
+                  <button :class="['tab-btn', payLevel === 'min' ? 'active' : '']" style="flex:1;font-size:10px;padding:5px 0" @click="payLevel = 'min'">
+                    Tối thiểu{{ selectedCard && !hide.amount ? ' (₫' + fS(selectedCard.min) + ')' : '' }}
+                  </button>
+                  <button :class="['tab-btn', payLevel === 'custom' ? 'active' : '']" style="flex:1;font-size:10px;padding:5px 0" @click="payLevel = 'custom'">
+                    Trả nhiều hơn
+                  </button>
+                </div>
+              </div>
+              <div v-if="payName" class="popup-field">
+                <label class="popup-label">Tên</label>
+                <input class="popup-input popup-input--sm" v-model="payName" readonly style="font-family:var(--sans);opacity:.7" />
+              </div>
+              <div class="popup-row-2col">
+                <div class="popup-field" style="flex:1">
+                  <label class="popup-label">Ngày</label>
+                  <input type="date" class="popup-input popup-input--sm popup-input--date" v-model="payDate" placeholder="dd/mm/yyyy" />
+                </div>
+                <div class="popup-field" style="flex:1">
+                  <label class="popup-label">Số tiền (₫)</label>
+                  <input class="popup-input popup-input--sm" v-model.number="payAmt" type="number" inputmode="numeric" placeholder="0" />
+                </div>
+              </div>
+            </template>
+
+            <!-- Chi thêm -->
+            <template v-if="addType === 'oneTime'">
+              <div class="popup-field">
+                <label class="popup-label">Tên khoản chi</label>
+                <input class="popup-input popup-input--sm" v-model="oneTimeName" placeholder="Đám cưới đồng nghiệp..." style="font-family:var(--sans)" />
+              </div>
+              <div class="popup-row-2col">
+                <div class="popup-field" style="flex:1">
+                  <label class="popup-label">Ngày</label>
+                  <input type="date" class="popup-input popup-input--sm popup-input--date" v-model="oneTimeDate" placeholder="dd/mm/yyyy" />
+                </div>
+                <div class="popup-field" style="flex:1">
+                  <label class="popup-label">Số tiền (₫)</label>
+                  <input class="popup-input popup-input--sm" v-model.number="oneTimeAmt" type="number" inputmode="numeric" placeholder="0" />
+                </div>
+              </div>
+            </template>
+          </div>
+          <div class="popup-actions">
+            <button v-if="addType === 'pay'" class="popup-btn primary" style="background:var(--accent3)"
+              @click="submitPay" :disabled="!payName || !payDate || !payAmt">Thêm khoản thanh toán</button>
+            <button v-else class="popup-btn primary"
+              @click="submitOneTime" :disabled="!oneTimeName || !oneTimeDate || !oneTimeAmt">Thêm khoản chi</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import Icon from './Icon.vue'
 import { useFormatters } from '../composables/useFormatters'
 
@@ -69,9 +165,335 @@ const props = defineProps({
   label: String,
   hide: Object,
   availCash: { type: Number, default: 0 },
+  debtCards: { type: Array, default: () => [] },
+  smallLoans: { type: Array, default: () => [] },
+  monthlyPlans: { type: Object, default: () => ({}) },
+  paidObligations: { type: Array, default: () => [] },
+  oneTimeExpenses: { type: Array, default: () => [] },
 })
+
+const emit = defineEmits(['open-detail', 'toggle-paid', 'record-payment', 'add-one-time'])
 
 const paidCount = computed(() => (props.items || []).filter((p) => p.paid).length)
 
-defineEmits(['open-detail', 'toggle-paid'])
+const showAdd = ref(false)
+const addType = ref('pay')
+const payTarget = ref('')
+const payAmt = ref(null)
+const payInstallment = ref('')
+const payName = ref('')
+const payDate = ref('')
+const payLevel = ref('min') // 'min' | 'custom'
+const oneTimeName = ref('')
+const oneTimeDate = ref('')
+const oneTimeAmt = ref(null)
+
+/** Is the current target a credit card? */
+const isCcTarget = computed(() => payTarget.value.startsWith('cc:'))
+
+/** Get the selected credit card object */
+const selectedCard = computed(() => {
+  if (!isCcTarget.value) return null
+  return (props.debtCards || []).find((c) => c.id === payTarget.value.slice(3)) || null
+})
+
+/** Build payment name based on card, date, and level */
+function buildCcPayName() {
+  const card = selectedCard.value
+  if (!card) return
+  const d2 = payDate.value ? new Date(payDate.value) : null
+  const monthLabel = d2 ? 'T' + (d2.getMonth() + 1) + '/' + d2.getFullYear() : ''
+  if (payLevel.value === 'min') {
+    payName.value = card.name + ' minimum' + (monthLabel ? ' ' + monthLabel : '')
+  } else {
+    payName.value = card.name + ' trả nợ' + (monthLabel ? ' ' + monthLabel : '')
+  }
+}
+
+function resetPopup() {
+  addType.value = 'pay'
+  payTarget.value = ''
+  payInstallment.value = ''
+  payName.value = ''
+  payDate.value = ''
+  payAmt.value = null
+  payLevel.value = 'min'
+  oneTimeName.value = ''
+  oneTimeDate.value = ''
+  oneTimeAmt.value = null
+}
+
+watch(showAdd, (v) => {
+  document.body.style.overflow = v ? 'hidden' : ''
+  if (!v) resetPopup()
+})
+
+/** Set of keys already present in the upcoming list OR already created as one-time expenses */
+const existingKeys = computed(() => {
+  const s = new Set()
+  // Keys from upcoming items (monthly_plans obligations + one_time_expenses already in list)
+  ;(props.items || []).forEach((p) => { if (p._key) s.add(p._key) })
+  // Also match by name from one_time_expenses (covers items not yet in upcoming view)
+  ;(props.oneTimeExpenses || []).forEach((e) => s.add((e.name || '').toLowerCase()))
+  return s
+})
+
+/** Filter out loans that have all remaining periods already scheduled */
+const availableLoans = computed(() => {
+  const paid = new Set(props.paidObligations || [])
+  const existing = existingKeys.value
+  return (props.smallLoans || []).filter((loan) => {
+    const loanShort = loan.name.toLowerCase().split('—')[0].trim().split(' ').slice(0, 2).join(' ')
+    const shortName = loan.name.split('—')[0].trim()
+    const termMonths = loan.term_months || 0
+    let hasAvailable = false
+    // Check monthly_plans obligations
+    const plans = props.monthlyPlans || {}
+    Object.keys(plans).forEach((mo) => {
+      const obs = plans[mo]?.obligations || []
+      obs.forEach((ob) => {
+        if (ob.monthly) return
+        const n = (ob.name || '').toLowerCase()
+        if (!n.includes(loanShort) || ob.category !== 'installment') return
+        const dateStr = ob.date || ob['date '] || ''
+        const key = dateStr + ':' + ob.name
+        if (!paid.has(key) && !existing.has(key) && !existing.has(n)) hasAvailable = true
+      })
+    })
+    if (hasAvailable) return true
+    // Check payment_due_kỳN fields
+    for (let i = 1; i <= termMonths; i++) {
+      const dueDate = loan['payment_due_kỳ' + i]
+      if (!dueDate) continue
+      const suffix = i === termMonths ? ' kỳ cuối (' + i + '/' + termMonths + ')' : ' kỳ ' + i + '/' + termMonths
+      const instName = shortName + suffix
+      const key = dueDate + ':' + instName
+      if (!paid.has(key) && !existing.has(key) && !existing.has(instName.toLowerCase())) return true
+    }
+    return false
+  })
+})
+
+/** Find the next valid month for a credit card payment (skip months that already have a payment) */
+function getNextCcPayDate(cardName, currentDate) {
+  const existing = existingKeys.value
+  const nameLower = cardName.toLowerCase()
+  // Parse current date
+  const d2 = currentDate ? new Date(currentDate) : new Date()
+  // Try up to 12 months ahead
+  for (let i = 1; i <= 12; i++) {
+    const next = new Date(d2.getFullYear(), d2.getMonth() + i, d2.getDate())
+    const nextStr = next.toISOString().slice(0, 10)
+    const monthNum = next.getMonth() + 1
+    const year = next.getFullYear()
+    // Check if there's already a payment for this card in this month
+    // Patterns: "Visa 1 minimum T4/2026", "Visa 1 — trả nợ" with date in that month
+    let monthHasPayment = false
+    const tLabel = 'T' + monthNum + '/' + year
+    // Check upcoming items
+    for (const p of (props.items || [])) {
+      if (!p.name) continue
+      const pLower = p.name.toLowerCase()
+      if (!pLower.includes(nameLower)) continue
+      // Check if the item's date falls in the target month
+      const pDate = p._date || ''
+      if (pDate && pDate.slice(0, 7) === next.toISOString().slice(0, 7)) { monthHasPayment = true; break }
+      // Also check month label in name like "T4/2026"
+      if (pLower.includes(tLabel.toLowerCase())) { monthHasPayment = true; break }
+    }
+    // Also check one_time_expenses
+    if (!monthHasPayment) {
+      for (const e of (props.oneTimeExpenses || [])) {
+        if (!e.name) continue
+        const eLower = e.name.toLowerCase()
+        if (!eLower.includes(nameLower)) continue
+        if (e.date && e.date.slice(0, 7) === next.toISOString().slice(0, 7)) { monthHasPayment = true; break }
+        if (eLower.includes(tLabel.toLowerCase())) { monthHasPayment = true; break }
+      }
+    }
+    if (!monthHasPayment) {
+      const mo = String(monthNum)
+      const nameWithMonth = cardName + ' minimum ' + tLabel
+      return { date: nextStr, name: nameWithMonth, amount: null }
+    }
+  }
+  return null
+}
+
+/** When payTarget is a small loan, find unpaid installments.
+ *  Filters out: already paid + already in upcoming list + already created as one-time expense. */
+const loanInstallments = computed(() => {
+  const t = payTarget.value
+  if (!t || !t.startsWith('sl:')) return []
+  const loanId = t.slice(3)
+  const loan = (props.smallLoans || []).find((l) => l.id === loanId)
+  if (!loan) return []
+  const loanShort = loan.name.toLowerCase().split('—')[0].trim().split(' ').slice(0, 2).join(' ')
+  const paid = new Set(props.paidObligations || [])
+  const existing = existingKeys.value
+  const plans = props.monthlyPlans || {}
+  const results = []
+  const foundKeys = new Set()
+  // 1) Scan monthly_plans for matching installments
+  Object.keys(plans).sort().forEach((mo) => {
+    const obs = plans[mo]?.obligations || []
+    obs.forEach((ob) => {
+      if (ob.monthly) return
+      const n = (ob.name || '').toLowerCase()
+      if (!n.includes(loanShort) || ob.category !== 'installment') return
+      const dateStr = ob.date || ob['date '] || ''
+      const key = dateStr + ':' + ob.name
+      if (paid.has(key)) return
+      if (existing.has(key) || existing.has(n)) return
+      foundKeys.add(key)
+      const d2 = dateStr.replace('~', '')
+      const dateLabel = d2 ? new Date(d2).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }) : mo
+      results.push({ key, name: ob.name, amount: ob.amount, date: dateStr, dateLabel })
+    })
+  })
+  // 2) Also generate installments from loan's payment_due_kỳN fields if not in plans
+  const shortName = loan.name.split('—')[0].trim()
+  const termMonths = loan.term_months || 0
+  for (let i = 1; i <= termMonths; i++) {
+    const dueKey = 'payment_due_kỳ' + i
+    const dueDate = loan[dueKey]
+    if (!dueDate) continue
+    const suffix = i === termMonths ? ' kỳ cuối (' + i + '/' + termMonths + ')' : ' kỳ ' + i + '/' + termMonths
+    const instName = shortName + suffix
+    const key = dueDate + ':' + instName
+    if (paid.has(key) || foundKeys.has(key)) continue
+    if (existing.has(key) || existing.has(instName.toLowerCase())) continue
+    const alreadyFound = results.some((r) => r.date === dueDate && r.name.toLowerCase().includes('kỳ ' + i + '/'))
+    if (alreadyFound) continue
+    const dateLabel = new Date(dueDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
+    results.push({ key, name: instName, amount: loan.monthly_payment || 0, date: dueDate, dateLabel })
+  }
+  results.sort((a, b) => a.date.localeCompare(b.date))
+  return results
+})
+
+/** Reset fields when debt target changes */
+watch(payTarget, () => {
+  payInstallment.value = ''
+  payName.value = ''
+  payDate.value = ''
+  payAmt.value = null
+  payLevel.value = 'min'
+  // For credit cards, set default amount and name
+  if (isCcTarget.value && selectedCard.value) {
+    payAmt.value = selectedCard.value.min || null
+    buildCcPayName()
+  }
+})
+
+/** When date changes for CC target, auto-update month label in name */
+watch(payDate, () => {
+  if (isCcTarget.value) buildCcPayName()
+})
+
+/** When payment level changes, update name and amount */
+watch(payLevel, () => {
+  if (!isCcTarget.value || !selectedCard.value) return
+  buildCcPayName()
+  if (payLevel.value === 'min') {
+    payAmt.value = selectedCard.value.min || null
+  }
+  // For custom level, keep whatever amount user has or clear to let them input
+})
+
+/** When installment selected, auto-fill name and amount */
+watch(payInstallment, (key) => {
+  if (!key) { payName.value = ''; payDate.value = ''; payAmt.value = null; return }
+  const inst = loanInstallments.value.find((i) => i.key === key)
+  if (inst) {
+    payName.value = inst.name
+    payDate.value = inst.date.replace('~', '')
+    payAmt.value = inst.amount
+  }
+})
+
+function submitPay() {
+  if (!payName.value || !payDate.value || !payAmt.value || payAmt.value <= 0) return
+  emit('add-one-time', { name: payName.value, date: payDate.value, amount: payAmt.value })
+  payAmt.value = null
+  payTarget.value = ''
+  payDate.value = ''
+  payName.value = ''
+  payInstallment.value = ''
+  showAdd.value = false
+}
+
+function openWithPrefill(data) {
+  if (data.type === 'oneTime') {
+    addType.value = 'oneTime'
+    oneTimeName.value = data.name || ''
+    oneTimeDate.value = data.date || ''
+    oneTimeAmt.value = data.amount || null
+  } else {
+    addType.value = 'pay'
+    // Try to auto-detect which debt target this belongs to
+    const nameLower = (data.name || '').toLowerCase()
+    let matched = ''
+    for (const c of (props.debtCards || [])) {
+      if (nameLower.includes(c.name.toLowerCase())) { matched = 'cc:' + c.id; break }
+    }
+    if (!matched) {
+      for (const l of (props.smallLoans || [])) {
+        const short = l.name.split('—')[0].trim().toLowerCase()
+        if (nameLower.includes(short)) { matched = 'sl:' + l.id; break }
+      }
+    }
+    // Set target first (triggers watcher that resets fields), then override with prefill data
+    if (matched) {
+      payTarget.value = matched
+      // nextTick: watcher resets fields, then auto-select next available
+      setTimeout(() => {
+        if (matched.startsWith('sl:')) {
+          const insts = loanInstallments.value
+          if (insts.length) {
+            payInstallment.value = insts[0].key
+          }
+        } else if (matched.startsWith('cc:')) {
+          // Credit card: detect level from copied name and find next month
+          const copiedName = (data.name || '').toLowerCase()
+          const isMin = copiedName.includes('minimum')
+          payLevel.value = isMin ? 'min' : 'custom'
+          const card = (props.debtCards || []).find((c) => c.id === matched.slice(3))
+          if (card) {
+            const next = getNextCcPayDate(card.name, data.date || '')
+            if (next) {
+              payDate.value = next.date
+              payAmt.value = isMin ? (card.minimum_payment || card.min || data.amount || null) : (data.amount || null)
+              buildCcPayName()
+            } else {
+              payDate.value = data.date || ''
+              payAmt.value = data.amount || null
+              buildCcPayName()
+            }
+          }
+        } else {
+          payName.value = data.name || ''
+          payDate.value = data.date || ''
+          payAmt.value = data.amount || null
+        }
+      }, 0)
+    } else {
+      payName.value = data.name || ''
+      payDate.value = data.date || ''
+      payAmt.value = data.amount || null
+    }
+  }
+  showAdd.value = true
+}
+
+defineExpose({ openWithPrefill })
+
+function submitOneTime() {
+  if (!oneTimeName.value || !oneTimeDate.value || !oneTimeAmt.value) return
+  emit('add-one-time', { name: oneTimeName.value, date: oneTimeDate.value, amount: oneTimeAmt.value })
+  oneTimeName.value = ''
+  oneTimeDate.value = ''
+  oneTimeAmt.value = null
+  showAdd.value = false
+}
 </script>

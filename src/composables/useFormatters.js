@@ -6,11 +6,17 @@ export function useFormatters() {
 
   const fS = (n) => {
     const v = Math.abs(n || 0)
-    return v >= 1000000
-      ? (v / 1000000).toFixed(1) + 'M'
-      : v >= 1000
-        ? (v / 1000).toFixed(0) + 'K'
-        : String(v)
+    if (v >= 1000000000) {
+      const b = v / 1000000000
+      return (b % 1 === 0 ? String(b) : b.toFixed(1).replace(/\.0$/, '')) + 'B'
+    }
+    if (v >= 1000000) {
+      const m = v / 1000000
+      return (m % 1 === 0 ? String(m) : m.toFixed(1).replace(/\.0$/, '')) + 'M'
+    }
+    return v >= 1000
+      ? (v / 1000).toFixed(0) + 'K'
+      : String(v)
   }
 
   const fV = (n) => '₫' + fN(Math.abs(n))
@@ -22,10 +28,19 @@ export function useFormatters() {
       year: 'numeric',
     })
 
-  const tStr = () => new Date().toISOString().slice(0, 10)
-  const isTM = (dt) => dt.startsWith(new Date().toISOString().slice(0, 7))
+  const tStr = () => {
+    const n = new Date()
+    return n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0')
+  }
+  const isTM = (dt) => dt.startsWith(tStr().slice(0, 7))
   const isT = (dt) => dt === tStr()
-  const dDiff = (s) => Math.ceil((new Date(s) - new Date()) / 86400000)
+  const dDiff = (s) => {
+    const [y, m, d] = s.split('-').map(Number)
+    const target = new Date(y, m - 1, d)
+    const now = new Date()
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+    return Math.round((target - today) / 86400000)
+  }
 
   return { fN, fS, fV, fDate, tStr, isTM, isT, dDiff }
 }

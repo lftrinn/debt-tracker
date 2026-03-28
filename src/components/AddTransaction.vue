@@ -15,6 +15,14 @@
       <div class="c-title" style="margin-bottom:10px">Ghi khoản chi</div>
       <div class="add-form">
         <input class="inp" v-model="nDesc" placeholder="Mô tả (vd: Cơm tối, Cà phê...)" />
+        <div class="form-row" style="gap:6px">
+          <select class="cat-sel" style="flex:1" v-model="nCat">
+            <option v-for="c in expenseCategories" :key="c.key" :value="c.key">{{ c.label }}</option>
+          </select>
+          <select class="cat-sel" style="flex:1" v-model="nPayMethod">
+            <option v-for="m in payMethods" :key="m.key" :value="m.key">{{ m.label }}</option>
+          </select>
+        </div>
         <div class="form-row">
           <div class="inp-amount-wrap">
             <input class="inp inp-amount" v-model.number="nAmt" type="number" inputmode="numeric" placeholder="Số tiền (VNĐ)" />
@@ -27,9 +35,6 @@
               >{{ a.label }}</button>
             </div>
           </div>
-          <select class="cat-sel" v-model="nCat">
-            <option v-for="c in expenseCategories" :key="c.key" :value="c.key">{{ c.label }}</option>
-          </select>
         </div>
         <button class="btn-add" @click="addExp" :disabled="syncing || !nDesc.trim() || !nAmt">
           {{ syncing ? 'Đang lưu...' : 'THÊM' }} <Icon name="arrow-right" :size="14" />
@@ -67,7 +72,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import Icon from './Icon.vue'
 import { useCategories } from '../composables/useCategories'
 
@@ -77,17 +82,36 @@ const props = defineProps({
   syncing: Boolean,
   expenses: { type: Array, default: () => [] },
   incomes: { type: Array, default: () => [] },
+  creditCards: { type: Array, default: () => [] },
+  prefill: { type: Object, default: null },
 })
 
-const emit = defineEmits(['add-expense', 'add-income'])
+const emit = defineEmits(['add-expense', 'add-income', 'prefill-consumed'])
 
 const txType = ref('exp')
 const nDesc = ref('')
 const nAmt = ref(null)
 const nCat = ref('an')
+const nPayMethod = ref('cash')
 const iDesc = ref('')
 const iAmt = ref(null)
 const iCat = ref('luong')
+
+watch(() => props.prefill, (data) => {
+  if (!data) return
+  if (data.type === 'inc') {
+    txType.value = 'inc'
+    iDesc.value = data.desc || ''
+    iAmt.value = data.amount || null
+    if (data.cat) iCat.value = data.cat
+  } else {
+    txType.value = 'exp'
+    nDesc.value = data.desc || ''
+    nAmt.value = data.amount || null
+    if (data.cat) nCat.value = data.cat
+  }
+  emit('prefill-consumed')
+}, { immediate: true })
 
 function fmtShort(v) {
   if (v >= 1000000000) {
@@ -126,12 +150,21 @@ function getTopAmounts(items) {
   }))
 }
 
+const payMethods = computed(() => {
+  const methods = [{ key: 'cash', label: 'Tiền mặt' }]
+  ;(props.creditCards || []).forEach((c) => {
+    const shortName = c.name.replace(' — Techcombank', '').replace(' — ', '')
+    methods.push({ key: c.id, label: shortName })
+  })
+  return methods
+})
+
 const topExpAmounts = computed(() => getTopAmounts(props.expenses))
 const topIncAmounts = computed(() => getTopAmounts(props.incomes))
 
 function addExp() {
   if (!nAmt.value || nAmt.value <= 0 || !nDesc.value.trim()) return
-  emit('add-expense', { desc: nDesc.value.trim(), amount: nAmt.value, cat: nCat.value })
+  emit('add-expense', { desc: nDesc.value.trim(), amount: nAmt.value, cat: nCat.value, payMethod: nPayMethod.value })
   nDesc.value = ''
   nAmt.value = null
 }

@@ -27,11 +27,13 @@
     :item="popupItem"
     :availCash="availCash"
     :hide="!!hz('upcoming.amount')"
+    :debtCards="debtCards"
     @close="popupItem = null"
     @toggle-paid="(k, a, n) => { popupItem = null; togglePaid(k, a, n) }"
     @save-upcoming="handlePopupSaveUpcoming"
     @save-tx="handlePopupSaveTx"
     @delete="handlePopupDelete"
+    @clone-item="handleCopy"
   />
 
   <!-- MAIN -->
@@ -45,7 +47,7 @@
       <div ref="alertRef" v-else-if="dayLimit > 0" class="alert ok">
         <Icon name="check" :size="14" />
         <span class="alert-main">Còn {{ hz('alert') ? '•••' : fS(dayLimit - todaySpent) }} · mức {{ hz('alert') ? '•••' : fS(dayLimit) }}/ngày</span>
-        <span v-if="cashDaysLeft !== null && cashDaysLeft < dToSalary" class="alert-badge-warn">{{ hz('alert') ? '•••' : cashDaysLeft }}/{{ dToSalary }} ngày</span>
+        <span v-if="cashDaysLeft !== null && cashDaysLeft < dToSalary" class="alert-badge-warn">{{ hz('alert') ? '•/•' : cashDaysLeft + '/' + dToSalary }} ngày</span>
       </div>
 
 
@@ -67,6 +69,7 @@
         :debtTrend="debtTrend"
         :debtAnimKey="debtAnimKey"
         :hide="{ total: hz('debt.total'), cardBal: hz('debt.cardBal'), minPay: hz('debt.minPay') }"
+        @update-card="updateCardDirect"
       />
 
       <ProgressSection
@@ -77,12 +80,20 @@
       />
 
       <UpcomingPayments
+        ref="upcomingRef"
         :items="upcoming"
         :label="upcomingLabel"
         :availCash="availCash"
+        :debtCards="debtCards"
+        :smallLoans="smallLoans"
+        :monthlyPlans="d.monthly_plans || {}"
+        :paidObligations="d.paid_obligations || []"
+        :oneTimeExpenses="d.one_time_expenses || []"
         :hide="{ amount: hz('upcoming.amount'), shortage: hz('upcoming.shortage') }"
         @open-detail="openDetail($event, 'upcoming')"
         @toggle-paid="togglePaid"
+        @record-payment="recPay"
+        @add-one-time="addOneTime"
       />
 
       <!-- Tabs -->
@@ -100,8 +111,11 @@
         :syncing="syncing"
         :expenses="expenses"
         :incomes="incomes"
+        :creditCards="d.debts?.credit_cards || []"
+        :prefill="copyTxData"
         @add-expense="addExp"
         @add-income="addInc"
+        @prefill-consumed="copyTxData = null"
       />
 
       <TransactionList
@@ -128,15 +142,10 @@
       <SettingsPanel
         v-if="tab === 'cfg'"
         ref="settingsRef"
-        :creditCards="d.debts?.credit_cards || []"
-        :debtCards="debtCards"
-        :smallLoans="smallLoans"
         :dayLimit="dayLimit"
         :todaySpent="todaySpent"
         :limPct="limPct"
         :limSt="limSt"
-        :cashBalance="d.current_cash?.balance || 0"
-        :cashReserved="d.current_cash?.reserved || 0"
         :rules="d.rules?.must_not || []"
         :syncMsg="syncMsg"
         :syncTime="syncTime"
@@ -144,11 +153,7 @@
         :importErr="importErr"
         :hide="{ cardInfo: hz('settings.cardInfo'), dailyLim: hz('settings.dailyLim'), dropdown: hz('settings.dropdown'), cashInfo: hz('settings.cashInfo') }"
         :hideZones="hideZones"
-        @update-card="updateCard"
         @update-limit="updLimit"
-        @record-payment="recPay"
-        @add-cash="addCash"
-        @add-one-time="addOneTime"
         @import-json="importNewJson"
         @set-hide-zone="({ key, val }) => setHideZone(key, val)"
       />
@@ -194,6 +199,7 @@ const sErr = ref('')
 const tab = ref('add')
 const importErr = ref('')
 const settingsRef = ref(null)
+const upcomingRef = ref(null)
 const toastMsg = ref('')
 const toastType = ref('ok')
 const toastTrigger = ref(0)
@@ -237,6 +243,34 @@ onUnmounted(() => { syncObserver?.disconnect(); alertObserver?.disconnect(); cle
 
 const popupItem = ref(null)
 function openDetail(item, variant) { popupItem.value = { ...item, _variant: variant } }
+
+function handleCopy(item) {
+  popupItem.value = null
+  if (item._variant === 'upcoming') {
+    const isDebt = item._category === 'debt_minimum' || item._category === 'installment'
+    setTimeout(() => {
+      upcomingRef.value?.openWithPrefill({
+        type: isDebt ? 'pay' : 'oneTime',
+        name: item.name,
+        date: item._date || item.date || '',
+        amount: item.amt || item.amount || 0,
+      })
+    }, 100)
+  } else {
+    // Transaction — switch to add tab and prefill
+    tab.value = 'add'
+    setTimeout(() => {
+      const addEl = document.querySelector('.add-tx')
+      if (addEl) addEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 50)
+    copyTxData.value = {
+      desc: item.desc || item.name || '',
+      amount: item.amount || item.amt || 0,
+      cat: item.cat || 'an',
+      type: item.type || 'exp',
+    }
+  }
+}
 const hideAmounts = ref(localStorage.getItem('dt_hide') !== '0')
 function toggleHide() {
   hideAmounts.value = !hideAmounts.value
@@ -299,6 +333,7 @@ const cashAnimKey = ref(0)
 const spentAnimKey = ref(0)
 const debtAnimKey = ref(0)
 const editBuf = ref({ name: '', date: '', amt: null })
+const copyTxData = ref(null)
 
 watch(availCash, () => { cashAnimKey.value++ })
 watch(todaySpent, () => { spentAnimKey.value++ })
@@ -352,12 +387,54 @@ async function pullData() {
   try {
     d.value = await api.pull()
     appState.value = 'ready'
+    cleanupPastPaid()
   } catch {
     syncSt.value = 'error'
     syncMsg.value = 'Lỗi'
     syncTime.value = ''
     appState.value = d.value.debts ? 'error' : 'setup'
   }
+}
+
+/** Remove paid obligations whose date is in the past — also clean source data */
+async function cleanupPastPaid() {
+  const todayStr = tStr()
+  const paid = new Set(d.value.paid_obligations || [])
+  if (!paid.size) return
+  const pastKeys = new Set([...paid].filter((k) => {
+    const dateStr = k.split(':')[0]
+    return dateStr && dateStr < todayStr
+  }))
+  if (!pastKeys.size) return
+  // Remove from paid_obligations
+  pastKeys.forEach((k) => paid.delete(k))
+  // Remove matching one_time_expenses
+  const filteredOneTime = (d.value.one_time_expenses || []).filter((ev) => {
+    const key = ev.date + ':' + ev.name
+    return !pastKeys.has(key)
+  })
+  // Remove matching obligations from monthly_plans
+  const plans = { ...(d.value.monthly_plans || {}) }
+  for (const mo of Object.keys(plans)) {
+    const obs = plans[mo]?.obligations
+    if (!obs) continue
+    const filtered = obs.filter((ob) => {
+      const dateStr = ob.date || ob['date ']
+      if (!dateStr) return true
+      const key = dateStr + ':' + ob.name
+      return !pastKeys.has(key)
+    })
+    if (filtered.length !== obs.length) {
+      plans[mo] = { ...plans[mo], obligations: filtered }
+    }
+  }
+  d.value = {
+    ...d.value,
+    paid_obligations: [...paid],
+    one_time_expenses: filteredOneTime,
+    monthly_plans: plans,
+  }
+  await pushData()
 }
 
 // --- Setup ---
@@ -425,9 +502,23 @@ function logout() {
 }
 
 // --- Actions ---
-async function addExp({ desc, amount, cat }) {
-  const e = { id: Date.now(), desc, amount, cat, date: tStr() }
-  d.value = { ...d.value, expenses: [e, ...(d.value.expenses || [])] }
+async function addExp({ desc, amount, cat, payMethod }) {
+  const isCash = !payMethod || payMethod === 'cash'
+  const e = { id: Date.now(), desc, amount, cat, date: tStr(), payMethod: payMethod || 'cash' }
+  const nd = {
+    ...d.value,
+    expenses: [e, ...(d.value.expenses || [])],
+  }
+  if (!isCash) {
+    // Visa payment — add amount to card balance
+    nd.debts = {
+      ...nd.debts,
+      credit_cards: (nd.debts?.credit_cards || []).map((c) =>
+        c.id === payMethod ? { ...c, balance: (c.balance || 0) + amount } : c
+      ),
+    }
+  }
+  d.value = nd
   ;(await pushData()) ? toast('Đã thêm chi tiêu') : toast('Lỗi lưu chi tiêu', 'err')
 }
 
@@ -444,7 +535,18 @@ async function deleteTx(e) {
     d.value = { ...d.value, incomes: d.value.incomes.filter((i) => i.id !== e.id) }
     if (inc) d.value = { ...d.value, current_cash: { ...d.value.current_cash, balance: Math.max(0, (d.value.current_cash?.balance || 0) - inc.amount) } }
   } else {
-    d.value = { ...d.value, expenses: d.value.expenses.filter((i) => i.id !== e.id) }
+    const exp = (d.value.expenses || []).find((i) => i.id === e.id)
+    const nd = { ...d.value, expenses: d.value.expenses.filter((i) => i.id !== e.id) }
+    // Reverse Visa balance if paid by card
+    if (exp?.payMethod && exp.payMethod !== 'cash') {
+      nd.debts = {
+        ...nd.debts,
+        credit_cards: (nd.debts?.credit_cards || []).map((c) =>
+          c.id === exp.payMethod ? { ...c, balance: Math.max(0, (c.balance || 0) - exp.amount) } : c
+        ),
+      }
+    }
+    d.value = nd
   }
   ;(await pushData()) ? toast('Đã xoá giao dịch') : toast('Lỗi xoá giao dịch', 'err')
 }
@@ -505,6 +607,25 @@ async function updateCard(cardId) {
   ;(await pushData()) ? toast('Đã cập nhật thẻ') : toast('Lỗi cập nhật thẻ', 'err')
 }
 
+async function updateCardDirect({ cardId, balance, min, minDueDate }) {
+  d.value = {
+    ...d.value,
+    debts: {
+      ...d.value.debts,
+      credit_cards: d.value.debts.credit_cards.map((c) => {
+        if (c.id !== cardId) return c
+        return {
+          ...c,
+          ...(balance != null ? { balance } : {}),
+          ...(min != null ? { minimum_payment: min } : {}),
+          ...(minDueDate !== undefined ? { min_due_date: minDueDate } : {}),
+        }
+      }),
+    },
+  }
+  ;(await pushData()) ? toast('Đã cập nhật thẻ') : toast('Lỗi cập nhật thẻ', 'err')
+}
+
 // --- Upcoming edit/pay ---
 async function saveEdit(p) {
   const buf = editBuf.value
@@ -524,7 +645,10 @@ async function saveEdit(p) {
           obligations: nd.monthly_plans[mo].obligations.map((ob) => {
             const k = (ob.date || '') + ':' + (ob.name || '')
             if (k !== p._key) return ob
-            return { ...ob, name: buf.name, date: buf.date, amount: buf.amt }
+            // Update category if CC payment level changed (minimum ↔ custom)
+            const newCat = (buf.name || '').toLowerCase().includes('minimum') ? 'debt_minimum'
+              : (ob.category === 'debt_minimum' ? null : ob.category)
+            return { ...ob, name: buf.name, date: buf.date, amount: buf.amt, category: newCat }
           }),
         },
       }
@@ -542,8 +666,24 @@ async function saveEdit(p) {
 }
 
 async function deleteUpcoming(p) {
-  if (p.source !== 'one_time') return
-  d.value = { ...d.value, one_time_expenses: (d.value.one_time_expenses || []).filter((e) => e.id !== p._id) }
+  if (p.source === 'one_time') {
+    d.value = { ...d.value, one_time_expenses: (d.value.one_time_expenses || []).filter((e) => e.id !== p._id) }
+  } else if (p.source === 'monthly_plan' && p._mo) {
+    const plans = { ...(d.value.monthly_plans || {}) }
+    const plan = plans[p._mo]
+    if (plan?.obligations) {
+      plans[p._mo] = {
+        ...plan,
+        obligations: plan.obligations.filter((ob) => {
+          const dateStr = ob.date || ob['date '] || ''
+          return (dateStr + ':' + ob.name) !== p._key
+        }),
+      }
+      d.value = { ...d.value, monthly_plans: plans }
+    }
+  } else {
+    return
+  }
   ;(await pushData()) ? toast('Đã xoá khoản chi') : toast('Lỗi xoá khoản chi', 'err')
 }
 

@@ -1,29 +1,9 @@
 <template>
   <div>
     <div class="cfg-list">
-      <div class="cfg-item" @click="open = 'cc'">
-        <span class="cfg-item-ico"><Icon name="credit-card" :size="16" /></span>
-        <span class="cfg-item-label">Cập nhật sao kê thẻ</span>
-        <span class="cfg-item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
-      </div>
       <div class="cfg-item" @click="open = 'lim'">
         <span class="cfg-item-ico"><Icon name="chart-no-axes-column" :size="16" /></span>
         <span class="cfg-item-label">Hạn mức chi hàng ngày</span>
-        <span class="cfg-item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
-      </div>
-      <div class="cfg-item" @click="open = 'pay'">
-        <span class="cfg-item-ico"><Icon name="hand-coins" :size="16" /></span>
-        <span class="cfg-item-label">Ghi nhận trả nợ</span>
-        <span class="cfg-item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
-      </div>
-      <div class="cfg-item" @click="open = 'cash'">
-        <span class="cfg-item-ico"><Icon name="wallet" :size="16" /></span>
-        <span class="cfg-item-label">Nạp tiền vào quỹ</span>
-        <span class="cfg-item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
-      </div>
-      <div class="cfg-item" @click="open = 'oneTime'">
-        <span class="cfg-item-ico"><Icon name="pin" :size="16" /></span>
-        <span class="cfg-item-label">Khoản chi một lần</span>
         <span class="cfg-item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
       </div>
       <div class="cfg-item" @click="open = 'hz'">
@@ -67,40 +47,6 @@
             <button class="popup-close" @click="closePopup"><Icon name="x" :size="18" /></button>
           </div>
 
-          <!-- CC UPDATE -->
-          <template v-if="open === 'cc'">
-            <div class="popup-body">
-              <div style="display:flex;flex-direction:column;gap:12px">
-                <div v-for="c in creditCards" :key="c.id" style="padding:12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border)">
-                  <div style="font-size:12px;font-weight:700;margin-bottom:10px;color:var(--text)">
-                    {{ c.name.replace(' — Techcombank', '') }}
-                  </div>
-                  <div style="display:flex;flex-direction:column;gap:7px">
-                    <div class="row-g" style="margin-top:0">
-                      <span class="small-n" style="flex-shrink:0;width:80px">{{ hide.cardInfo ? 'Dư nợ (%)' : 'Dư nợ mới' }}</span>
-                      <div v-if="hide.cardInfo" class="inp-sm hide-info">{{ balPct(c) }}% tổng nợ</div>
-                      <input v-else class="inp-sm" type="number" inputmode="numeric"
-                        :placeholder="fN(c.balance)"
-                        v-model.number="ccUpdate[c.id + ':balance']" />
-                    </div>
-                    <div class="row-g" style="margin-top:0">
-                      <span class="small-n" style="flex-shrink:0;width:80px">{{ hide.cardInfo ? 'Tối thiểu (%)' : 'Trả tối thiểu' }}</span>
-                      <div v-if="hide.cardInfo" class="inp-sm hide-info">{{ minPct(c) }}% dư nợ</div>
-                      <input v-else class="inp-sm" type="number" inputmode="numeric"
-                        :placeholder="fN(c.minimum_payment)"
-                        v-model.number="ccUpdate[c.id + ':min']" />
-                    </div>
-                    <button v-if="!hide.cardInfo" class="popup-btn primary" style="margin-top:2px"
-                      @click="$emit('update-card', c.id)"
-                      :disabled="!ccUpdate[c.id + ':balance'] && !ccUpdate[c.id + ':min']">
-                      Cập nhật
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </template>
-
           <!-- DAILY LIMIT -->
           <template v-if="open === 'lim'">
             <div class="popup-body">
@@ -121,75 +67,6 @@
             </div>
             <div v-if="!hide.dailyLim" class="popup-actions">
               <button class="popup-btn primary" @click="saveLimit" :disabled="!nLimit">Lưu hạn mức</button>
-            </div>
-          </template>
-
-          <!-- DEBT PAYMENT -->
-          <template v-if="open === 'pay'">
-            <div class="popup-body">
-              <div class="popup-field">
-                <label class="popup-label">Chọn khoản nợ</label>
-                <select class="popup-input" v-model="payTarget" style="font-family:var(--sans);font-size:12px">
-                  <option value="">— Chọn khoản nợ —</option>
-                  <option v-for="c in debtCards" :key="c.id" :value="'cc:' + c.id">{{ c.name }} {{ hide.dropdown ? '' : '(còn ₫' + fS(c.balance) + ')' }}</option>
-                  <option v-for="l in smallLoans" :key="l.id" :value="'sl:' + l.id">{{ l.name }} {{ hide.dropdown ? '' : '(còn ₫' + fS(l.remaining_balance) + ')' }}</option>
-                </select>
-              </div>
-              <div class="popup-field">
-                <label class="popup-label">Số tiền đã trả (₫)</label>
-                <input class="popup-input" v-model.number="payAmt" type="number" inputmode="numeric" placeholder="0" />
-              </div>
-            </div>
-            <div class="popup-actions">
-              <button class="popup-btn primary" style="background:var(--accent3)" @click="recPay" :disabled="!payTarget || !payAmt">Ghi nhận trả nợ</button>
-            </div>
-          </template>
-
-          <!-- ADD CASH -->
-          <template v-if="open === 'cash'">
-            <div class="popup-body">
-              <div class="popup-details" style="margin-bottom:4px">
-                <div class="popup-row">
-                  <span class="popup-label">Hiện có</span>
-                  <span class="popup-val">{{ hide.cashInfo ? '₫•••••' : '₫' + fN(cashBalance) }}</span>
-                </div>
-                <div class="popup-row">
-                  <span class="popup-label">Reserved</span>
-                  <span class="popup-val">{{ hide.cashInfo ? '₫•••••' : '₫' + fN(cashReserved) }}</span>
-                </div>
-              </div>
-              <div class="popup-field">
-                <label class="popup-label">Ghi chú</label>
-                <input class="popup-input" v-model="cashNote" placeholder="Lương tháng 4..." style="font-family:var(--sans)" />
-              </div>
-              <div class="popup-field">
-                <label class="popup-label">Số tiền (₫)</label>
-                <input class="popup-input" v-model.number="addCashAmt" type="number" inputmode="numeric" placeholder="0" />
-              </div>
-            </div>
-            <div class="popup-actions">
-              <button class="popup-btn primary" @click="addCash" :disabled="!addCashAmt">Nạp tiền</button>
-            </div>
-          </template>
-
-          <!-- ONE-TIME EXPENSE -->
-          <template v-if="open === 'oneTime'">
-            <div class="popup-body">
-              <div class="popup-field">
-                <label class="popup-label">Tên khoản chi</label>
-                <input class="popup-input" v-model="oneTimeName" placeholder="Đám cưới đồng nghiệp..." style="font-family:var(--sans)" />
-              </div>
-              <div class="popup-field">
-                <label class="popup-label">Ngày</label>
-                <input type="date" class="popup-input" v-model="oneTimeDate" style="color-scheme:dark;" />
-              </div>
-              <div class="popup-field">
-                <label class="popup-label">Số tiền (₫)</label>
-                <input class="popup-input" v-model.number="oneTimeAmt" type="number" inputmode="numeric" placeholder="0" />
-              </div>
-            </div>
-            <div class="popup-actions">
-              <button class="popup-btn primary" @click="addOneTime" :disabled="!oneTimeName || !oneTimeDate || !oneTimeAmt">Thêm khoản chi</button>
             </div>
           </template>
 
@@ -262,18 +139,13 @@ import { ref, reactive, computed, watch } from 'vue'
 import Icon from './Icon.vue'
 import { useFormatters } from '../composables/useFormatters'
 
-const { fN, fS } = useFormatters()
+const { fN } = useFormatters()
 
 const props = defineProps({
-  creditCards: Array,
-  debtCards: Array,
-  smallLoans: Array,
   dayLimit: Number,
   todaySpent: Number,
   limPct: Number,
   limSt: String,
-  cashBalance: Number,
-  cashReserved: Number,
   rules: Array,
   syncMsg: String,
   syncTime: String,
@@ -284,29 +156,17 @@ const props = defineProps({
 })
 
 const emit = defineEmits([
-  'update-card',
   'update-limit',
-  'record-payment',
-  'add-cash',
-  'add-one-time',
   'import-json',
   'set-hide-zone',
 ])
 
 const titles = {
-  cc: 'Cập nhật sao kê thẻ',
   lim: 'Hạn mức chi hàng ngày',
-  pay: 'Ghi nhận trả nợ',
-  cash: 'Nạp tiền vào quỹ',
-  oneTime: 'Khoản chi một lần',
   hz: 'Vùng ẩn số tiền',
   rules: 'Quy tắc',
   json: 'Cập nhật dữ liệu JSON',
 }
-
-const totalCcDebt = computed(() => (props.creditCards || []).reduce((s, c) => s + (c.balance || 0), 0))
-function balPct(c) { return totalCcDebt.value > 0 ? Math.round(c.balance / totalCcDebt.value * 100) : 0 }
-function minPct(c) { return c.balance > 0 ? ((c.minimum_payment / c.balance) * 100).toFixed(1) : 0 }
 
 const zoneTree = [
   { icon: 'alert-triangle', label: 'Cảnh báo hạn mức', children: [{ key: 'alert', name: 'Số tiền vượt / còn lại' }] },
@@ -359,15 +219,7 @@ function toggleParent(g, checked) {
 // --- State ---
 const open = ref(null)
 const expandedGroups = reactive({})
-const ccUpdate = reactive({})
 const nLimit = ref(null)
-const payTarget = ref('')
-const payAmt = ref(null)
-const addCashAmt = ref(null)
-const cashNote = ref('')
-const oneTimeName = ref('')
-const oneTimeDate = ref('')
-const oneTimeAmt = ref(null)
 const importJson = ref('')
 
 function closePopup() {
@@ -391,35 +243,6 @@ function saveLimit() {
     nLimit.value = null
     closePopup()
   }
-}
-
-function recPay() {
-  if (!payAmt.value || payAmt.value <= 0 || !payTarget.value) return
-  emit('record-payment', { target: payTarget.value, amount: payAmt.value })
-  payAmt.value = null
-  payTarget.value = ''
-  closePopup()
-}
-
-function addCash() {
-  if (!addCashAmt.value || addCashAmt.value <= 0) return
-  emit('add-cash', { amount: addCashAmt.value, note: cashNote.value })
-  addCashAmt.value = null
-  cashNote.value = ''
-  closePopup()
-}
-
-function addOneTime() {
-  if (!oneTimeName.value || !oneTimeDate.value || !oneTimeAmt.value) return
-  emit('add-one-time', {
-    name: oneTimeName.value,
-    date: oneTimeDate.value,
-    amount: oneTimeAmt.value,
-  })
-  oneTimeName.value = ''
-  oneTimeDate.value = ''
-  oneTimeAmt.value = null
-  closePopup()
 }
 
 // --- Swipe to dismiss ---
@@ -525,5 +348,5 @@ function onTouchEnd(e) {
   }
 }
 
-defineExpose({ ccUpdate })
+defineExpose({})
 </script>

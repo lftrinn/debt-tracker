@@ -12,7 +12,8 @@
       <span class="badge">{{ transactions.length }}</span>
     </div>
     <div v-if="txTrend !== 'neutral'" class="tx-trend-summary">
-      <template v-if="txTrend === 'up'">Thu +{{ fS(todayIncome) }} · Chi -{{ fS(todaySpent) }}</template>
+      <template v-if="hide">Thu +••••• · Chi -•••••</template>
+      <template v-else-if="txTrend === 'up'">Thu +{{ fS(todayIncome) }} · Chi -{{ fS(todaySpent) }}</template>
       <template v-else>Chi -{{ fS(todaySpent) }} · Thu +{{ fS(todayIncome) }}</template>
     </div>
     <div class="exp-list" :class="{ 'exp-list--scroll': transactions.length > 4 }">
@@ -27,7 +28,7 @@
         <div class="exp-ico"><Icon :name="resolveCat(e.cat).icon" :size="16" /></div>
         <div class="exp-info">
           <div class="exp-name">{{ e.desc }}</div>
-          <div class="exp-meta">{{ fDate(e.date) }} · {{ e.type === 'inc' ? 'Khoản thu' : 'Chi tiêu' }}</div>
+          <div class="exp-meta">{{ fDate(e.date) }} · {{ e.type === 'inc' ? 'Khoản thu' : 'Chi tiêu' }}{{ e.payMethod && e.payMethod !== 'cash' ? ' · 💳' : '' }}</div>
         </div>
         <div :style="{
           fontFamily: 'var(--mono)',
