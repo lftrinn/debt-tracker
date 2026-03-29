@@ -286,8 +286,8 @@ function saveEdit() {
 .debt-overview__card-r1 { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
 .debt-overview__card-name { font-size: 10px; font-weight: 700; color: rgba(var(--text-rgb),.85); }
 .debt-overview__card-trend { display: flex; gap: 2px; align-items: center; flex: 1; justify-content: center; }
-.debt-overview__trend-spend { color: var(--accent6); opacity: .8; }
-.debt-overview__trend-pay { color: var(--accent3); opacity: .8; }
+.debt-overview__trend-spend { color: var(--accent6); opacity: .8; animation: trendAppear .25s ease-out; }
+.debt-overview__trend-pay { color: var(--accent3); opacity: .8; animation: trendAppear .25s ease-out; }
 /* Header trend icon: spending → cam, payment → xanh */
 .trend-ico.down { color: var(--accent6); }
 .debt-overview__card-edit { background: none; border: none; color: var(--muted); width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: color .2s; flex-shrink: 0; padding: 0; opacity: .5; }
