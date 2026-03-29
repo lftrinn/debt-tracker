@@ -30,15 +30,18 @@
           <div class="tx-list__item-name">{{ e.desc }}</div>
           <div class="tx-list__item-meta">{{ fDate(e.date) }} · {{ e.type === 'inc' ? $t('transactions.income') : $t('transactions.expense') }}{{ e.payMethod && e.payMethod !== 'cash' ? ' · 💳' : '' }}</div>
         </div>
-        <div :style="{
-          fontFamily: 'var(--mono)',
-          fontSize: '12px',
-          fontWeight: '700',
-          flexShrink: '0',
-          color: e.type === 'inc' ? 'var(--accent3)' : 'var(--accent2)',
-        }">
+        <div class="tx-list__item-amt" :style="{ color: e.type === 'inc' ? 'var(--accent3)' : 'var(--accent2)' }">
           <template v-if="hide"><span class="masked">•••••</span></template>
-          <template v-else>{{ e.type === 'inc' ? '+' : '-' }}{{ fCurr(e.amount) }}</template>
+          <template v-else>
+            <!-- Nếu tx currency khác display currency: hiển thị native + tương đương -->
+            <template v-if="e.currency && e.currency !== displayCurrency">
+              <span>{{ e.type === 'inc' ? '+' : '-' }}{{ fCurrNative(e.amount, e.currency) }}</span>
+              <span class="tx-list__item-equiv">≈ {{ fCurrFor(e.amount, e.currency) }}</span>
+            </template>
+            <template v-else>
+              {{ e.type === 'inc' ? '+' : '-' }}{{ fCurr(e.amount) }}
+            </template>
+          </template>
         </div>
       </div>
     </div>
@@ -53,7 +56,7 @@ import { useCurrency } from '../../composables/api/useCurrency'
 
 const { fDate } = useFormatters()
 const { resolveCat } = useCategories()
-const { fCurr } = useCurrency()
+const { fCurr, fCurrNative, fCurrFor, displayCurrency } = useCurrency()
 
 defineProps({
   transactions: Array,
@@ -86,4 +89,6 @@ defineEmits(['open-detail'])
 .tx-list__item-name { font-size: 12px; font-weight: 600; color: rgba(var(--text-rgb),.75); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tx-list__item-meta { font-family: var(--mono); font-size: 9px; color: var(--muted); margin-top: 2px; }
 .tx-list__empty { text-align: center; padding: 18px; color: var(--muted); font-size: 11px; font-family: var(--mono); }
+.tx-list__item-amt { font-family: var(--mono); font-size: 12px; font-weight: 700; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.tx-list__item-equiv { font-size: 9px; font-weight: 400; color: var(--muted); }
 </style>

@@ -105,8 +105,24 @@
               </div>
             </div>
             <div class="popup-field">
-              <label class="popup-label">{{ $t('detail.amountLabel') }}</label>
-              <input class="popup-input" v-model.number="buf.amt" type="number" inputmode="numeric" placeholder="0" />
+              <label class="popup-label">
+                {{ $t('detail.amountLabel') }}
+                <span v-if="txCurrency" class="detail__cur-badge">{{ txCurrency }}</span>
+              </label>
+              <input class="popup-input" v-model.number="buf.amt" type="number" inputmode="numeric" placeholder="0" @input="onNativeAmtInput" />
+              <!-- Dual input: hiển thị khi currency của giao dịch khác display currency -->
+              <div v-if="showDisplayEquiv" class="detail__equiv-row">
+                <span class="detail__equiv-label">≈</span>
+                <input
+                  class="popup-input detail__equiv-input"
+                  v-model.number="bufDisplayAmt"
+                  type="number"
+                  inputmode="numeric"
+                  :placeholder="displayCurrency"
+                  @input="onDisplayAmtInput"
+                />
+                <span class="detail__equiv-cur">{{ displayCurrency }}</span>
+              </div>
             </div>
             <div v-if="item._variant === 'tx'" class="popup-field">
               <label class="popup-label">{{ $t('detail.categoryLabel') }}</label>
@@ -132,7 +148,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import Icon from './Icon.vue'
 import { useFormatters } from '../../composables/ui/useFormatters'
 import { useCategories } from '../../composables/data/useCategories'
@@ -140,7 +156,7 @@ import { useCurrency } from '../../composables/api/useCurrency'
 
 const { fDate, tStr } = useFormatters()
 const { resolveCat, expenseCategories, incomeCategories } = useCategories()
-const { fCurr, fCurrFull } = useCurrency()
+const { fCurr, fCurrFull, displayCurrency, baseCurrency, convertBetween, ratesLoading } = useCurrency()
 
 const props = defineProps({
   item: [Object, null],
@@ -154,6 +170,53 @@ const emit = defineEmits(['close', 'save-upcoming', 'save-tx', 'delete', 'toggle
 const editing = ref(false)
 const buf = ref({ name: '', date: '', amt: 0, cat: '' })
 const editPayLevel = ref('min') // 'min' | 'custom' — only used for CC edit
+
+// ─── Dual input (native currency ↔ display currency) ──────────────────────
+/** Currency của giao dịch đang xem/edit; null nếu không phải tx item */
+const txCurrency = computed(() => {
+  if (!props.item || props.item._variant !== 'tx') return null
+  return (props.item.currency || baseCurrency.value) || null
+})
+/** Hiện dual input khi tx currency khác display currency và rates đã load */
+const showDisplayEquiv = computed(() =>
+  editing.value
+  && txCurrency.value != null
+  && txCurrency.value !== displayCurrency.value
+  && !ratesLoading.value
+)
+/** Giá trị tương đương theo display currency (chỉ dùng trong edit mode) */
+const bufDisplayAmt = ref(null)
+
+let updatingFromDisplay = false
+
+/** User chỉnh native amount → tính lại display equiv */
+function onNativeAmtInput() {
+  if (updatingFromDisplay) return
+  if (buf.value.amt != null && txCurrency.value && txCurrency.value !== displayCurrency.value) {
+    bufDisplayAmt.value = roundForCur(
+      convertBetween(buf.value.amt, txCurrency.value, displayCurrency.value),
+      displayCurrency.value
+    )
+  }
+}
+
+/** User chỉnh display equiv → tính ngược lại native amount */
+function onDisplayAmtInput() {
+  updatingFromDisplay = true
+  if (bufDisplayAmt.value != null && txCurrency.value) {
+    buf.value.amt = roundForCur(
+      convertBetween(bufDisplayAmt.value, displayCurrency.value, txCurrency.value),
+      txCurrency.value
+    )
+  }
+  nextTick(() => { updatingFromDisplay = false })
+}
+
+/** Làm tròn số tiền theo loại currency */
+function roundForCur(v, cur) {
+  if (cur === 'USD') return Math.round(v * 100) / 100
+  return Math.round(v)
+}
 
 /** Is this item a credit card payment? */
 const isCcItem = computed(() => {
@@ -206,6 +269,13 @@ function startEdit() {
   } else {
     const resolved = resolveCat(i.cat)
     buf.value = { name: i.desc, date: i.date, amt: i.amount, cat: resolved.key }
+    // Populate display equiv nếu currencies khác nhau
+    const cur = (i.currency || baseCurrency.value)
+    if (cur !== displayCurrency.value && i.amount != null) {
+      bufDisplayAmt.value = roundForCur(convertBetween(i.amount, cur, displayCurrency.value), displayCurrency.value)
+    } else {
+      bufDisplayAmt.value = null
+    }
   }
   editing.value = true
 }
@@ -364,3 +434,13 @@ function onTouchEnd(e) {
   }
 }
 </script>
+
+<style scoped>
+/* Currency badge trong label amount */
+.detail__cur-badge { font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: rgba(var(--accent-rgb),.12); color: var(--accent); margin-left: 6px; vertical-align: middle; }
+/* Dual input row */
+.detail__equiv-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.detail__equiv-label { font-family: var(--mono); font-size: 13px; color: var(--muted); flex-shrink: 0; }
+.detail__equiv-input { flex: 1; }
+.detail__equiv-cur { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--muted); flex-shrink: 0; min-width: 28px; }
+</style>
