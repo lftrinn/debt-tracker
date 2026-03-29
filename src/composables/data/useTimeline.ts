@@ -3,6 +3,7 @@ import type { Ref, ComputedRef } from 'vue'
 import type { AppData, Milestone } from '@/types/data'
 import { i18n } from '../../i18n'
 import { useFormatters } from '../ui/useFormatters'
+import { useCurrency } from '../api/useCurrency'
 import { getLocalized } from './useI18nData'
 
 /**
@@ -13,6 +14,7 @@ import { getLocalized } from './useI18nData'
  */
 export function useTimeline(d: Ref<AppData>): { milestones: ComputedRef<Milestone[]> } {
   const { fS } = useFormatters()
+  const { fCurr } = useCurrency()
 
   /**
    * Danh sách mốc trả nợ với trạng thái so với tháng hiện tại.
@@ -39,7 +41,7 @@ export function useTimeline(d: Ref<AppData>): { milestones: ComputedRef<Mileston
 
     return (d.value.payoff_timeline?.projected_debt_by_month || []).map((p): Milestone => ({
       month: p.month,
-      ev: p.total_debt === 0 ? i18n.global.t('timeline.fullyDebtFree') : i18n.global.t('timeline.debtLabel') + ' ₫' + fS(p.total_debt),
+      ev: p.total_debt === 0 ? i18n.global.t('timeline.fullyDebtFree') : i18n.global.t('timeline.debtLabel') + ' ' + fCurr(p.total_debt),
       debt: p.total_debt,
       st: p.month < now ? 'done' : p.month === now ? 'active' : 'future',
     }))

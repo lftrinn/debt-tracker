@@ -33,10 +33,10 @@
         <div class="tx-list__item-amt" :style="{ color: e.type === 'inc' ? 'var(--accent3)' : 'var(--accent2)' }">
           <template v-if="hide"><span class="masked">•••••</span></template>
           <template v-else>
-            <!-- Nếu tx currency khác display currency: hiển thị native + tương đương -->
+            <!-- Nếu tx currency khác display currency: hiển thị display currency trước, native sau -->
             <template v-if="e.currency && e.currency !== displayCurrency">
-              <span>{{ e.type === 'inc' ? '+' : '-' }}{{ fCurrNative(e.amount, e.currency) }}</span>
-              <span class="tx-list__item-equiv">≈ {{ fCurrFor(e.amount, e.currency) }}</span>
+              <span>{{ e.type === 'inc' ? '+' : '-' }}{{ fCurrFor(e.amount, e.currency) }}</span>
+              <span class="tx-list__item-equiv">{{ fCurrNative(e.amount, e.currency) }}</span>
             </template>
             <template v-else>
               {{ e.type === 'inc' ? '+' : '-' }}{{ fCurr(e.amount) }}

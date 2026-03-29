@@ -17,15 +17,16 @@
         </transition>
       </div>
       <div class="app-header__actions">
-        <!-- Nút chọn ngôn ngữ -->
-        <button class="app-header__btn" @click="langOpen = true" :title="$t('settings.menu.language')">
-          <Icon name="globe" :size="16" />
-        </button>
+        <!-- Thứ tự: eye toggle | reload | globe (ngôn ngữ ở ngoài cùng bên phải) -->
         <button class="app-header__btn app-header__btn--eye" :class="{ 'app-header__btn--eye-active': hideAmounts }" @click="$emit('toggle-hide')" :title="hideAmounts ? $t('header.showAmounts') : $t('header.hideAmounts')">
           <Icon :name="hideAmounts ? 'eye-off' : 'eye'" :size="18" />
         </button>
         <button class="app-header__btn" @click="$emit('reload')" :title="$t('header.reload')">
           <Icon name="refresh-cw" :size="16" />
+        </button>
+        <!-- Nút chọn ngôn ngữ — ở ngoài cùng bên phải -->
+        <button class="app-header__btn" @click="langOpen = true" :title="$t('settings.menu.language')">
+          <Icon name="globe" :size="16" />
         </button>
       </div>
 

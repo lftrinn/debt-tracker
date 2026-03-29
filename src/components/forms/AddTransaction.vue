@@ -104,7 +104,7 @@ import { useCurrency, CURRENCIES } from '../../composables/api/useCurrency'
 
 const { t } = useI18n()
 const { expenseCategories, incomeCategories } = useCategories()
-const { displayCurrency, baseCurrency, convertBetween, ratesLoading } = useCurrency()
+const { displayCurrency, baseCurrency, convertBetween, ratesLoading, fCurrNative } = useCurrency()
 
 const props = defineProps({
   syncing: Boolean,
@@ -226,23 +226,14 @@ watch(() => props.prefill, (data) => {
   emit('prefill-consumed')
 }, { immediate: true })
 
-function fmtShort(v) {
-  if (v >= 1000000000) {
-    const n = v / 1000000000
-    return n % 1 === 0 ? n + 'B' : n.toFixed(1).replace(/\.0$/, '') + 'B'
-  }
-  if (v >= 1000000) {
-    const n = v / 1000000
-    return n % 1 === 0 ? n + 'M' : n.toFixed(1).replace(/\.0$/, '') + 'M'
-  }
-  if (v >= 1000) {
-    const n = v / 1000
-    return n % 1 === 0 ? n + 'K' : n.toFixed(1).replace(/\.0$/, '') + 'K'
-  }
-  return String(v)
-}
-
-function getTopAmounts(items) {
+/**
+ * Lấy top 3 amount phổ biến nhất, chuyển đổi sang inputCurrency.
+ * Giả sử amount trong data được lưu theo baseCurrency.
+ * Nếu rates chưa load hoặc inputCurrency === baseCurrency thì dùng giá trị gốc.
+ * @param items - Danh sách expense/income
+ * @param inputCurrency - Currency đang dùng cho input hiện tại
+ */
+function getTopAmounts(items, inputCurrency) {
   if (!items.length) return []
   const freq = {}
   items.forEach((e) => {
@@ -254,10 +245,20 @@ function getTopAmounts(items) {
     count,
   }))
   entries.sort((a, b) => b.count - a.count || b.value - a.value)
-  return entries.slice(0, 3).map((e) => ({
-    value: e.value,
-    label: fmtShort(e.value),
-  }))
+  return entries.slice(0, 3).map((e) => {
+    let displayVal = e.value
+    // Chuyển đổi sang inputCurrency nếu khác baseCurrency và rates đã load
+    if (inputCurrency !== baseCurrency.value && !ratesLoading.value) {
+      const converted = convertBetween(e.value, baseCurrency.value, inputCurrency)
+      displayVal = inputCurrency === 'USD'
+        ? Math.round(converted * 100) / 100
+        : Math.round(converted)
+    }
+    return {
+      value: displayVal,
+      label: fCurrNative(displayVal, inputCurrency),
+    }
+  })
 }
 
 const payMethods = computed(() => {
@@ -269,8 +270,8 @@ const payMethods = computed(() => {
   return methods
 })
 
-const topExpAmounts = computed(() => getTopAmounts(props.expenses))
-const topIncAmounts = computed(() => getTopAmounts(props.incomes))
+const topExpAmounts = computed(() => getTopAmounts(props.expenses, nCurrency.value))
+const topIncAmounts = computed(() => getTopAmounts(props.incomes, iCurrency.value))
 
 function addExp() {
   if (!nAmt.value || nAmt.value <= 0 || !nDesc.value.trim()) return
