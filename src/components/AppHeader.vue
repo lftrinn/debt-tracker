@@ -12,7 +12,7 @@
             <span class="hdr-date-compact">{{ today }}</span>
             <span class="hdr-sep">·</span>
             <Icon :name="limIcon" :size="12" class="hdr-lim-ico" :class="[limSt, { blink: limBlink }]" @click="$emit('scroll-alert')" />
-            <span v-if="cashDaysLeft !== null && cashDaysLeft < dToSalary" class="hdr-days-badge" @click="$emit('scroll-alert')">{{ hideAmounts ? '•/•' : cashDaysLeft + '/' + dToSalary }}</span>
+            <span v-if="cashDaysLeft !== null && cashDaysLeft < dToSalary" class="hdr-days-badge" @click="$emit('scroll-alert')">{{ hideAlert ? '•/•' : cashDaysLeft + '/' + dToSalary }}</span>
           </div>
         </transition>
       </div>
@@ -47,6 +47,7 @@ import Icon from './Icon.vue'
 const props = defineProps({
   today: String,
   hideAmounts: Boolean,
+  hideAlert: Boolean,
   scrolled: Boolean,
   syncStatus: String,
   syncMsg: String,
