@@ -121,8 +121,11 @@
           <template v-if="open === 'rules'">
             <div class="popup-body">
               <div v-if="!rules.length" class="empty">{{ $t('settings.rules.empty') }}</div>
-              <div v-for="r in rules" :key="r" class="settings__rule">
-                <div class="settings__rule-dot"></div><span>{{ r }}</span>
+              <!-- Bọc danh sách quy tắc trong container có thể scroll khi nội dung dài -->
+              <div v-else class="settings__rules-list">
+                <div v-for="r in rules" :key="r" class="settings__rule">
+                  <div class="settings__rule-dot"></div><span>{{ r }}</span>
+                </div>
               </div>
             </div>
           </template>
@@ -529,8 +532,11 @@ defineExpose({})
 .settings__lang-name { font-weight: 500; }
 .settings__lang-check { color: var(--accent); }
 
+/* Danh sách quy tắc có thể scroll khi nhiều items */
+.settings__rules-list { display: flex; flex-direction: column; max-height: 280px; overflow-y: auto; }
+
 /* Hide zones treeview */
-.settings__hz-tree { display: flex; flex-direction: column; gap: 4px; }
+.settings__hz-tree { display: flex; flex-direction: column; gap: 4px; max-height: 310px; overflow-y: auto; }
 .settings__hz-group { margin-bottom: 2px; }
 .settings__hz-parent { display: flex; align-items: center; gap: 9px; padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; user-select: none; transition: all .15s; }
 .settings__hz-group--expanded .settings__hz-parent { border-radius: 9px 9px 4px 4px; }
