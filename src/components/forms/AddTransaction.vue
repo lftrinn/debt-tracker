@@ -23,18 +23,36 @@
             <option v-for="m in payMethods" :key="m.key" :value="m.key">{{ m.label }}</option>
           </select>
         </div>
-        <div class="add-form__row">
+        <!-- Số tiền + chọn currency -->
+        <div class="add-form__row" style="gap:6px">
           <div class="add-form__amount-wrap">
-            <input class="add-form__input add-form__amount" v-model.number="nAmt" type="number" inputmode="numeric" :placeholder="$t('addTx.expense.amountPlaceholder')" />
+            <input class="add-form__input add-form__amount" v-model.number="nAmt" type="number" inputmode="numeric" :placeholder="$t('addTx.expense.amountPlaceholder')" @input="onExpAmtInput" />
             <div v-if="topExpAmounts.length" class="add-form__quick-amounts">
               <button
                 v-for="a in topExpAmounts"
                 :key="a.value"
                 class="add-form__quick-btn"
-                @click="nAmt = a.value"
+                @click="nAmt = a.value; onExpAmtInput()"
               >{{ a.label }}</button>
             </div>
           </div>
+          <!-- Dropdown chọn đơn vị tiền -->
+          <select class="add-form__select add-form__cur-select" v-model="nCurrency" @change="onExpCurChange">
+            <option v-for="c in CURRENCIES" :key="c" :value="c">{{ c }}</option>
+          </select>
+        </div>
+        <!-- Dual input: hiển thị tương đương theo display currency khi khác nhau -->
+        <div v-if="showExpEquiv" class="add-form__equiv-row">
+          <span class="add-form__equiv-label">≈</span>
+          <input
+            class="add-form__input add-form__equiv-input"
+            v-model.number="nAmtDisplay"
+            type="number"
+            inputmode="numeric"
+            :placeholder="displayCurrency"
+            @input="onExpDisplayInput"
+          />
+          <span class="add-form__equiv-cur">{{ displayCurrency }}</span>
         </div>
         <button class="add-form__submit" @click="addExp" :disabled="syncing || !nDesc.trim() || !nAmt">
           {{ syncing ? $t('addTx.saving') : $t('addTx.add') }} <Icon name="arrow-right" :size="14" />
@@ -47,19 +65,38 @@
       <div class="c-title" style="margin-bottom:10px">{{ $t('addTx.income.title') }}</div>
       <div class="add-form">
         <input class="add-form__input" v-model="iDesc" :placeholder="$t('addTx.income.descPlaceholder')" />
-        <div class="add-form__row">
+        <div class="add-form__row" style="gap:6px">
           <div class="add-form__amount-wrap">
-            <input class="add-form__input add-form__amount" v-model.number="iAmt" type="number" inputmode="numeric" placeholder="Số tiền (VNĐ)" />
+            <input class="add-form__input add-form__amount" v-model.number="iAmt" type="number" inputmode="numeric" :placeholder="$t('addTx.expense.amountPlaceholder')" @input="onIncAmtInput" />
             <div v-if="topIncAmounts.length" class="add-form__quick-amounts">
               <button
                 v-for="a in topIncAmounts"
                 :key="a.value"
                 class="add-form__quick-btn"
-                @click="iAmt = a.value"
+                @click="iAmt = a.value; onIncAmtInput()"
               >{{ a.label }}</button>
             </div>
           </div>
-          <select class="add-form__select" v-model="iCat">
+          <!-- Dropdown chọn đơn vị tiền -->
+          <select class="add-form__select add-form__cur-select" v-model="iCurrency" @change="onIncCurChange">
+            <option v-for="c in CURRENCIES" :key="c" :value="c">{{ c }}</option>
+          </select>
+        </div>
+        <!-- Dual input cho income -->
+        <div v-if="showIncEquiv" class="add-form__equiv-row">
+          <span class="add-form__equiv-label">≈</span>
+          <input
+            class="add-form__input add-form__equiv-input"
+            v-model.number="iAmtDisplay"
+            type="number"
+            inputmode="numeric"
+            :placeholder="displayCurrency"
+            @input="onIncDisplayInput"
+          />
+          <span class="add-form__equiv-cur">{{ displayCurrency }}</span>
+        </div>
+        <div class="add-form__row" style="margin-top:0">
+          <select class="add-form__select" style="flex:1" v-model="iCat">
             <option v-for="c in incomeCategories" :key="c.key" :value="c.key">{{ c.label }}</option>
           </select>
         </div>
@@ -72,13 +109,15 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Icon from '../ui/Icon.vue'
 import { useCategories } from '../../composables/data/useCategories'
+import { useCurrency, CURRENCIES } from '../../composables/api/useCurrency'
 
 const { t } = useI18n()
 const { expenseCategories, incomeCategories } = useCategories()
+const { displayCurrency, baseCurrency, convertBetween, ratesLoading } = useCurrency()
 
 const props = defineProps({
   syncing: Boolean,
@@ -90,15 +129,90 @@ const props = defineProps({
 
 const emit = defineEmits(['add-expense', 'add-income', 'prefill-consumed'])
 
+// ─── State chi tiêu ───────────────────────────────────────────────────────
 const txType = ref('exp')
 const nDesc = ref('')
 const nAmt = ref(null)
 const nCat = ref('an')
 const nPayMethod = ref('cash')
+const nCurrency = ref(baseCurrency.value)
+const nAmtDisplay = ref(null) // tương đương theo displayCurrency
+
+// ─── State thu nhập ───────────────────────────────────────────────────────
 const iDesc = ref('')
 const iAmt = ref(null)
 const iCat = ref('luong')
+const iCurrency = ref(baseCurrency.value)
+const iAmtDisplay = ref(null)
 
+// ─── Hiện dual input khi txCurrency khác displayCurrency và đã có rates ──
+const hasRates = computed(() => !ratesLoading.value)
+const showExpEquiv = computed(() => nCurrency.value !== displayCurrency.value && hasRates.value)
+const showIncEquiv = computed(() => iCurrency.value !== displayCurrency.value && hasRates.value)
+
+// ─── Flag tránh vòng lặp watch khi sync hai chiều ─────────────────────────
+let expUpdatingFromDisplay = false
+let incUpdatingFromDisplay = false
+
+/** Tính lại nAmtDisplay từ nAmt khi user nhập vào input gốc */
+function onExpAmtInput() {
+  if (expUpdatingFromDisplay) return
+  if (nAmt.value != null && nCurrency.value !== displayCurrency.value) {
+    nAmtDisplay.value = roundDisplay(convertBetween(nAmt.value, nCurrency.value, displayCurrency.value))
+  } else {
+    nAmtDisplay.value = null
+  }
+}
+
+/** User nhập vào input display → tính ngược lại nAmt */
+function onExpDisplayInput() {
+  expUpdatingFromDisplay = true
+  if (nAmtDisplay.value != null) {
+    nAmt.value = roundNative(convertBetween(nAmtDisplay.value, displayCurrency.value, nCurrency.value))
+  }
+  nextTick(() => { expUpdatingFromDisplay = false })
+}
+
+/** Khi đổi currency dropdown → cập nhật lại display equiv */
+function onExpCurChange() {
+  onExpAmtInput()
+}
+
+function onIncAmtInput() {
+  if (incUpdatingFromDisplay) return
+  if (iAmt.value != null && iCurrency.value !== displayCurrency.value) {
+    iAmtDisplay.value = roundDisplay(convertBetween(iAmt.value, iCurrency.value, displayCurrency.value))
+  } else {
+    iAmtDisplay.value = null
+  }
+}
+
+function onIncDisplayInput() {
+  incUpdatingFromDisplay = true
+  if (iAmtDisplay.value != null) {
+    iAmt.value = roundNative(convertBetween(iAmtDisplay.value, displayCurrency.value, iCurrency.value))
+  }
+  nextTick(() => { incUpdatingFromDisplay = false })
+}
+
+function onIncCurChange() {
+  onIncAmtInput()
+}
+
+/** Làm tròn cho display currency (2 chữ số nếu USD, 0 nếu VND/JPY) */
+function roundDisplay(v) {
+  if (displayCurrency.value === 'USD') return Math.round(v * 100) / 100
+  return Math.round(v)
+}
+
+/** Làm tròn cho native currency */
+function roundNative(v) {
+  const cur = nCurrency.value || iCurrency.value
+  if (cur === 'USD') return Math.round(v * 100) / 100
+  return Math.round(v)
+}
+
+// ─── Prefill ──────────────────────────────────────────────────────────────
 watch(() => props.prefill, (data) => {
   if (!data) return
   if (data.type === 'inc') {
@@ -106,11 +220,13 @@ watch(() => props.prefill, (data) => {
     iDesc.value = data.desc || ''
     iAmt.value = data.amount || null
     if (data.cat) iCat.value = data.cat
+    iCurrency.value = data.currency || baseCurrency.value
   } else {
     txType.value = 'exp'
     nDesc.value = data.desc || ''
     nAmt.value = data.amount || null
     if (data.cat) nCat.value = data.cat
+    nCurrency.value = data.currency || baseCurrency.value
   }
   emit('prefill-consumed')
 }, { immediate: true })
@@ -133,19 +249,16 @@ function fmtShort(v) {
 
 function getTopAmounts(items) {
   if (!items.length) return []
-  // Count frequency of each amount
   const freq = {}
   items.forEach((e) => {
     const a = e.amount
     if (a > 0) freq[a] = (freq[a] || 0) + 1
   })
-  // Sort by frequency desc, then by most recent
   const entries = Object.entries(freq).map(([amt, count]) => ({
     value: Number(amt),
     count,
   }))
   entries.sort((a, b) => b.count - a.count || b.value - a.value)
-  // Take top 3
   return entries.slice(0, 3).map((e) => ({
     value: e.value,
     label: fmtShort(e.value),
@@ -166,16 +279,20 @@ const topIncAmounts = computed(() => getTopAmounts(props.incomes))
 
 function addExp() {
   if (!nAmt.value || nAmt.value <= 0 || !nDesc.value.trim()) return
-  emit('add-expense', { desc: nDesc.value.trim(), amount: nAmt.value, cat: nCat.value, payMethod: nPayMethod.value })
+  emit('add-expense', { desc: nDesc.value.trim(), amount: nAmt.value, cat: nCat.value, payMethod: nPayMethod.value, currency: nCurrency.value })
   nDesc.value = ''
   nAmt.value = null
+  nAmtDisplay.value = null
+  nCurrency.value = baseCurrency.value // reset về base currency sau mỗi giao dịch
 }
 
 function addInc() {
   if (!iAmt.value || iAmt.value <= 0 || !iDesc.value.trim()) return
-  emit('add-income', { desc: iDesc.value.trim(), amount: iAmt.value, cat: iCat.value })
+  emit('add-income', { desc: iDesc.value.trim(), amount: iAmt.value, cat: iCat.value, currency: iCurrency.value })
   iDesc.value = ''
   iAmt.value = null
+  iAmtDisplay.value = null
+  iCurrency.value = baseCurrency.value
 }
 </script>
 
@@ -186,12 +303,18 @@ function addInc() {
 .add-form__input::placeholder { color: var(--muted); }
 .add-form__input:focus { border-color: var(--accent); }
 .add-form__select { background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; padding: 10px 8px; color: var(--text); font-family: var(--sans); font-size: 12px; outline: none; cursor: pointer; }
+.add-form__cur-select { flex: 0 0 auto; font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--accent); padding: 10px 10px; min-width: 60px; }
 .add-form__amount-wrap { flex: 1; position: relative; }
 .add-form__amount { width: 100%; padding-right: 120px; box-sizing: border-box; }
 .add-form__amount::placeholder { font-size: 10px; }
 .add-form__quick-amounts { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); display: flex; gap: 4px; }
 .add-form__quick-btn { background: rgba(var(--accent-rgb),.1); border: 1px solid rgba(var(--accent-rgb),.2); border-radius: 5px; padding: 3px 7px; font-family: var(--mono); font-size: 9px; font-weight: 700; color: var(--accent); cursor: pointer; transition: all .15s; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
 .add-form__quick-btn:active { background: rgba(var(--accent-rgb),.25); transform: scale(.95); }
+/* Dual input row */
+.add-form__equiv-row { display: flex; align-items: center; gap: 6px; }
+.add-form__equiv-label { font-family: var(--mono); font-size: 13px; color: var(--muted); flex-shrink: 0; }
+.add-form__equiv-input { flex: 1; padding-right: 8px; }
+.add-form__equiv-cur { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--muted); flex-shrink: 0; min-width: 28px; }
 .add-form__submit { background: var(--accent); color: var(--bg); border: none; border-radius: 9px; padding: 11px; font-family: var(--sans); font-size: 13px; font-weight: 800; cursor: pointer; letter-spacing: .05em; transition: all .2s; }
 .add-form__submit:hover { opacity: .9; transform: translateY(-1px); }
 .add-form__submit:disabled { opacity: .3; cursor: not-allowed; transform: none; }
