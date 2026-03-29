@@ -151,6 +151,8 @@ textarea.inp-s { height: 130px; resize: none; font-size: 10px; line-height: 1.5;
 select.popup-input--sm { height: 38px; line-height: 1.2; }
 .popup-input:focus { border-color: var(--accent); }
 .popup-row-2col { display: flex; gap: 8px; }
+/* Đảm bảo input và select trong popup có chiều cao đồng nhất 38px */
+input.popup-input, select.popup-input { height: 38px; }
 /* Safari date input fix — ensure height and placeholder */
 .popup-input--date { height: 38px; min-height: 38px; line-height: 1.2; color-scheme: dark; }
 .popup-input--date::-webkit-date-and-time-value { text-align: left; }

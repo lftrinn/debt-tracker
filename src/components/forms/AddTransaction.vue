@@ -307,10 +307,10 @@ function addInc() {
 <style scoped>
 .add-form { display: flex; flex-direction: column; gap: 8px; margin-top: 11px; }
 .add-form__row { display: flex; gap: 7px; }
-.add-form__input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; padding: 10px 11px; color: var(--text); font-family: var(--sans); font-size: 12px; outline: none; transition: border-color .2s; }
+.add-form__input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; padding: 10px 11px; color: var(--text); font-family: var(--sans); font-size: 12px; outline: none; transition: border-color .2s; height: 38px; box-sizing: border-box; }
 .add-form__input::placeholder { color: var(--muted); }
 .add-form__input:focus { border-color: var(--accent); }
-.add-form__select { background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; padding: 10px 8px; color: var(--text); font-family: var(--sans); font-size: 12px; outline: none; cursor: pointer; }
+.add-form__select { background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; padding: 10px 8px; color: var(--text); font-family: var(--sans); font-size: 12px; outline: none; cursor: pointer; height: 38px; box-sizing: border-box; }
 .add-form__cur-select { flex: 0 0 auto; font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--accent); padding: 10px 10px; min-width: 60px; }
 .add-form__amount-wrap { flex: 1; position: relative; }
 .add-form__amount { width: 100%; padding-right: 120px; box-sizing: border-box; }
