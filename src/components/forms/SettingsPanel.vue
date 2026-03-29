@@ -6,6 +6,12 @@
         <span class="settings__item-label">{{ $t('settings.menu.limit') }}</span>
         <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
       </div>
+      <!-- Tiền tệ hiển thị — ngay dưới Hạn mức chi hàng ngày -->
+      <div class="settings__item" @click="openCurrency">
+        <span class="settings__item-ico"><Icon name="dollar-sign" :size="16" /></span>
+        <span class="settings__item-label">{{ $t('settings.menu.currency') }}</span>
+        <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
+      </div>
       <div class="settings__item" @click="open = 'hz'">
         <span class="settings__item-ico"><Icon name="lock" :size="16" /></span>
         <span class="settings__item-label">{{ $t('settings.menu.hideZones') }}</span>
@@ -19,16 +25,6 @@
       <div class="settings__item" @click="open = 'json'">
         <span class="settings__item-ico"><Icon name="refresh-ccw" :size="16" /></span>
         <span class="settings__item-label">{{ $t('settings.menu.json') }}</span>
-        <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
-      </div>
-      <div class="settings__item" @click="open = 'lang'">
-        <span class="settings__item-ico"><Icon name="globe" :size="16" /></span>
-        <span class="settings__item-label">{{ $t('settings.menu.language') }}</span>
-        <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
-      </div>
-      <div class="settings__item" @click="openCurrency">
-        <span class="settings__item-ico"><Icon name="dollar-sign" :size="16" /></span>
-        <span class="settings__item-label">{{ $t('settings.menu.currency') }}</span>
         <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
       </div>
       <div class="settings__sep"></div>
@@ -121,8 +117,11 @@
           <template v-if="open === 'rules'">
             <div class="popup-body">
               <div v-if="!rules.length" class="empty">{{ $t('settings.rules.empty') }}</div>
-              <div v-for="r in rules" :key="r" class="settings__rule">
-                <div class="settings__rule-dot"></div><span>{{ r }}</span>
+              <!-- Bọc danh sách quy tắc trong container có thể scroll khi nội dung dài -->
+              <div v-else class="settings__rules-list">
+                <div v-for="r in rules" :key="r" class="settings__rule">
+                  <div class="settings__rule-dot"></div><span>{{ r }}</span>
+                </div>
               </div>
             </div>
           </template>
@@ -141,72 +140,63 @@
             </div>
           </template>
 
-          <!-- LANGUAGE SELECTOR -->
-          <template v-if="open === 'lang'">
-            <div class="popup-body">
-              <div class="settings__lang-list">
-                <button
-                  v-for="loc in LOCALES"
-                  :key="loc"
-                  class="settings__lang-item"
-                  :class="{ 'settings__lang-item--active': currentLocale === loc }"
-                  @click="selectLocale(loc)"
-                >
-                  <span class="settings__lang-name">{{ $t('settings.language.' + loc) }}</span>
-                  <Icon v-if="currentLocale === loc" name="check" :size="14" class="settings__lang-check" />
-                </button>
-              </div>
-            </div>
-          </template>
-
-          <!-- CURRENCY SELECTOR -->
+          <!-- CURRENCY SELECTOR — dạng tab -->
           <template v-if="open === 'currency'">
             <div class="popup-body">
-              <!-- Tiền tệ gốc (lưu trong data) -->
-              <div class="settings__cur-section-label">{{ $t('settings.currency.base') }}</div>
-              <div class="hint" style="margin-bottom:8px">{{ $t('settings.currency.baseHint') }}</div>
-              <div class="settings__lang-list">
-                <button
-                  v-for="cur in CURRENCIES"
-                  :key="'base-' + cur"
-                  class="settings__lang-item"
-                  :class="{ 'settings__lang-item--active': currentBaseCurrency === cur }"
-                  @click="selectBaseCurrency(cur)"
-                >
-                  <span class="settings__lang-name">{{ $t('settings.currency.' + cur) }}</span>
-                  <Icon v-if="currentBaseCurrency === cur" name="check" :size="14" class="settings__lang-check" />
-                </button>
+              <!-- Tab navigation -->
+              <div class="tab-nav">
+                <button class="tab-btn" :class="{ active: currTab === 'display' }" @click="currTab = 'display'">{{ $t('settings.currency.tabDisplay') }}</button>
+                <button class="tab-btn" :class="{ active: currTab === 'base' }" @click="currTab = 'base'">{{ $t('settings.currency.tabBase') }}</button>
+                <button v-if="currentCurrency === 'JPY'" class="tab-btn" :class="{ active: currTab === 'jpy' }" @click="currTab = 'jpy'">{{ $t('settings.currency.tabJpy') }}</button>
               </div>
 
-              <div class="settings__cur-divider"></div>
+              <!-- Tab: Tiền tệ hiển thị (mặc định) -->
+              <template v-if="currTab === 'display'">
+                <div class="hint" style="margin-bottom:8px">{{ $t('settings.currency.displayHint') }}</div>
+                <div class="settings__lang-list">
+                  <button
+                    v-for="cur in CURRENCIES"
+                    :key="cur"
+                    class="settings__lang-item"
+                    :class="{ 'settings__lang-item--active': currentCurrency === cur }"
+                    @click="selectCurrency(cur)"
+                  >
+                    <span class="settings__lang-name">{{ $t('settings.currency.' + cur) }}</span>
+                    <Icon v-if="currentCurrency === cur" name="check" :size="14" class="settings__lang-check" />
+                  </button>
+                </div>
+                <div v-if="currentCurrency !== 'VND'" style="margin-top:10px;text-align:center" class="settings__sync-note">
+                  <template v-if="ratesLoading">{{ $t('settings.currency.rateLoading') }}</template>
+                  <template v-else-if="ratesError">{{ $t('settings.currency.rateError') }}</template>
+                  <template v-else>{{ $t('settings.currency.rateInfo') }}</template>
+                </div>
+              </template>
 
-              <!-- Tiền tệ hiển thị (chỉ ảnh hưởng display) -->
-              <div class="settings__cur-section-label">{{ $t('settings.currency.display') }}</div>
-              <div class="hint" style="margin-bottom:8px">{{ $t('settings.currency.displayHint') }}</div>
-              <div class="settings__lang-list">
-                <button
-                  v-for="cur in CURRENCIES"
-                  :key="cur"
-                  class="settings__lang-item"
-                  :class="{ 'settings__lang-item--active': currentCurrency === cur }"
-                  @click="selectCurrency(cur)"
-                >
-                  <span class="settings__lang-name">{{ $t('settings.currency.' + cur) }}</span>
-                  <Icon v-if="currentCurrency === cur" name="check" :size="14" class="settings__lang-check" />
-                </button>
-              </div>
-              <div v-if="currentCurrency === 'JPY'" style="margin-top:12px">
+              <!-- Tab: Tiền tệ gốc -->
+              <template v-if="currTab === 'base'">
+                <div class="hint" style="margin-bottom:8px">{{ $t('settings.currency.baseHint') }}</div>
+                <div class="settings__lang-list">
+                  <button
+                    v-for="cur in CURRENCIES"
+                    :key="'base-' + cur"
+                    class="settings__lang-item"
+                    :class="{ 'settings__lang-item--active': currentBaseCurrency === cur }"
+                    @click="selectBaseCurrency(cur)"
+                  >
+                    <span class="settings__lang-name">{{ $t('settings.currency.' + cur) }}</span>
+                    <Icon v-if="currentBaseCurrency === cur" name="check" :size="14" class="settings__lang-check" />
+                  </button>
+                </div>
+              </template>
+
+              <!-- Tab: Ký hiệu JPY — chỉ hiện khi tiền tệ hiển thị là JPY -->
+              <template v-if="currTab === 'jpy' && currentCurrency === 'JPY'">
                 <div class="hint" style="margin-bottom:6px">{{ $t('settings.currency.jpyNotation') }}</div>
                 <div style="display:flex;gap:4px">
                   <button :class="['tab-btn', currentJpyNotation === 'standard' ? 'active' : '']" style="flex:1" @click="selectJpyNotation('standard')">{{ $t('settings.currency.jpyStandard') }}</button>
                   <button :class="['tab-btn', currentJpyNotation === 'kanji' ? 'active' : '']" style="flex:1" @click="selectJpyNotation('kanji')">{{ $t('settings.currency.jpyKanji') }}</button>
                 </div>
-              </div>
-              <div v-if="currentCurrency !== 'VND'" style="margin-top:10px;text-align:center" class="settings__sync-note">
-                <template v-if="ratesLoading">{{ $t('settings.currency.rateLoading') }}</template>
-                <template v-else-if="ratesError">{{ $t('settings.currency.rateError') }}</template>
-                <template v-else>{{ $t('settings.currency.rateInfo') }}</template>
-              </div>
+              </template>
             </div>
           </template>
 
@@ -236,22 +226,15 @@ import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Icon from '../ui/Icon.vue'
 import { useFormatters } from '../../composables/ui/useFormatters'
-import { LOCALES, setLocale } from '../../i18n'
 import { useCurrency, CURRENCIES } from '../../composables/api/useCurrency'
 
 const { fN } = useFormatters()
-const { t, locale: i18nLocale } = useI18n()
+const { t } = useI18n()
 const { displayCurrency, baseCurrency, jpyNotation, ratesLoading, ratesError, fetchRates, setDisplayCurrency, setBaseCurrency, setJpyNotation, fCurrFull } = useCurrency()
 
-const currentLocale = computed(() => i18nLocale.value)
 const currentCurrency = computed(() => displayCurrency.value)
 const currentBaseCurrency = computed(() => baseCurrency.value)
 const currentJpyNotation = computed(() => jpyNotation.value)
-
-function selectLocale(loc) {
-  setLocale(loc)
-  closePopup()
-}
 
 function selectCurrency(cur) {
   setDisplayCurrency(cur)
@@ -268,6 +251,7 @@ function selectJpyNotation(n) {
 
 function openCurrency() {
   open.value = 'currency'
+  currTab.value = 'display'
   if (displayCurrency.value !== 'VND') fetchRates()
 }
 
@@ -298,7 +282,6 @@ const titles = computed(() => ({
   hz: t('settings.menu.hideZones'),
   rules: t('settings.menu.rules'),
   json: t('settings.menu.json'),
-  lang: t('settings.menu.language'),
   currency: t('settings.menu.currency'),
   progressMode: t('settings.progressMode.title'),
   logout: t('settings.menu.logout'),
@@ -356,6 +339,8 @@ function toggleParent(g, checked) {
 const open = ref(null)
 const expandedGroups = reactive({})
 const nLimit = ref(null)
+/** Tab hiện tại trong popup tiền tệ: 'display' | 'base' | 'jpy' */
+const currTab = ref('display')
 const importJson = ref('')
 
 function closePopup() {
@@ -529,8 +514,11 @@ defineExpose({})
 .settings__lang-name { font-weight: 500; }
 .settings__lang-check { color: var(--accent); }
 
+/* Danh sách quy tắc có thể scroll khi nhiều items */
+.settings__rules-list { display: flex; flex-direction: column; max-height: 280px; overflow-y: auto; }
+
 /* Hide zones treeview */
-.settings__hz-tree { display: flex; flex-direction: column; gap: 4px; }
+.settings__hz-tree { display: flex; flex-direction: column; gap: 4px; max-height: 310px; overflow-y: auto; }
 .settings__hz-group { margin-bottom: 2px; }
 .settings__hz-parent { display: flex; align-items: center; gap: 9px; padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; user-select: none; transition: all .15s; }
 .settings__hz-group--expanded .settings__hz-parent { border-radius: 9px 9px 4px 4px; }

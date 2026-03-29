@@ -7,8 +7,8 @@
         <Icon v-else-if="debtTrend === 'up'" name="trending-up" :size="12" />
         <Icon v-else name="minus" :size="12" />
       </span>
-      <!-- Toggle kiểu thanh tiến độ -->
-      <button class="debt-overview__prog-toggle" @click="toggleProgressMode" :title="progressMode === 'repaid' ? $t('debt.progressModeUsed') : $t('debt.progressModeRepaid')">
+      <!-- Toggle kiểu thanh tiến độ — icon xoay 2 vòng khi click -->
+      <button class="debt-overview__prog-toggle" :class="{ 'debt-overview__prog-toggle--spin': spinning }" @click="toggleProgressMode" :title="progressMode === 'repaid' ? $t('debt.progressModeUsed') : $t('debt.progressModeRepaid')">
         <Icon name="refresh-cw" :size="9" />
         <span>{{ progressMode === 'repaid' ? $t('debt.progressModeRepaid') : $t('debt.progressModeUsed') }}</span>
       </button>
@@ -32,7 +32,11 @@
         </div>
         <!-- Row 2: balance + rate -->
         <div class="debt-overview__card-r2">
-          <span class="debt-overview__card-bal"><template v-if="hide.cardBal">•••••</template><template v-else>{{ fCurr(c.balance) }}</template></span>
+          <!-- Mode 'đã trả': hiện số tiền khả dụng (credit_limit - balance), màu xanh -->
+          <span class="debt-overview__card-bal" :class="{ 'debt-overview__card-bal--avail': progressMode === 'repaid' }">
+            <template v-if="hide.cardBal">•••••</template>
+            <template v-else>{{ progressMode === 'repaid' ? fCurr(c.limit - c.balance) : fCurr(c.balance) }}</template>
+          </span>
           <span class="debt-overview__card-rate">{{ c.rate }}{{ $t('debt.ratePerYear') }}</span>
         </div>
         <!-- Row 3: progress + pct -->
@@ -98,7 +102,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import Icon from '../ui/Icon.vue'
 import { useFormatters } from '../../composables/ui/useFormatters'
 import { useCurrency } from '../../composables/api/useCurrency'
@@ -108,9 +112,17 @@ const { fN } = useFormatters()
 const { fCurr, fCurrFull } = useCurrency()
 const { progressMode, setProgressMode } = useDebtSettings()
 
-/** Đổi qua lại giữa 2 mode */
+/** Trạng thái animation xoay icon khi toggle */
+const spinning = ref(false)
+
+/** Đổi qua lại giữa 2 mode — icon xoay 720deg (~0.6s) */
 function toggleProgressMode() {
   setProgressMode(progressMode.value === 'repaid' ? 'used' : 'repaid')
+  spinning.value = false
+  nextTick(() => {
+    spinning.value = true
+    setTimeout(() => { spinning.value = false }, 700)
+  })
 }
 
 /** Tính phần trăm theo mode: 'used' = % dùng, 'repaid' = % đã trả */
@@ -121,15 +133,10 @@ function usedPct(c) {
   return c.limit > 0 ? Math.round(c.balance / c.limit * 100) : 0
 }
 
-/** Cấp độ màu thanh tiến độ theo mode */
+/** Cấp độ màu thanh tiến độ — mode 'repaid' luôn xanh, mode 'used' theo mức dùng */
 function progLevel(c) {
+  if (progressMode.value === 'repaid') return 'repaid'
   const pct = usedPct(c)
-  if (progressMode.value === 'repaid') {
-    if (pct >= 80) return 'repaid-ok'
-    if (pct >= 60) return 'repaid-caution'
-    if (pct >= 30) return 'repaid-warn'
-    return 'repaid-danger'
-  }
   if (pct >= 90) return 'critical'
   if (pct >= 70) return 'high'
   return 'normal'
@@ -215,11 +222,13 @@ function saveEdit() {
 .debt-overview__card-prog--normal { background: var(--accent2); }
 .debt-overview__card-prog--high { background: linear-gradient(90deg, var(--accent2), var(--accent6)); }
 .debt-overview__card-prog--critical { background: linear-gradient(90deg, var(--accent6), var(--danger)); }
-/* Repaid mode: 0-30% đỏ, 30-60% cam, 60-80% vàng, 80-100% xanh */
-.debt-overview__card-prog--repaid-danger { background: var(--danger); }
-.debt-overview__card-prog--repaid-warn { background: var(--accent6); }
-.debt-overview__card-prog--repaid-caution { background: var(--accent); }
-.debt-overview__card-prog--repaid-ok { background: var(--accent3); }
+/* Mode 'đã trả': thanh tiến độ màu xanh lá */
+.debt-overview__card-prog--repaid { background: var(--accent3); }
+/* Mode 'đã trả': số tiền khả dụng (credit_limit - balance) hiển thị màu xanh */
+.debt-overview__card-bal--avail { color: var(--accent3); }
+/* Animation xoay 720deg cho icon toggle khi chuyển mode */
+@keyframes spin2 { from { transform: rotate(0deg); } to { transform: rotate(720deg); } }
+.debt-overview__prog-toggle--spin :deep(svg) { animation: spin2 .6s ease; }
 .debt-overview__card-r4 { display: flex; align-items: center; justify-content: space-between; font-family: var(--mono); font-size: 9.5px; padding-top: 6px; margin-top: 2px; border-top: 1px solid rgba(var(--text-rgb),.05); }
 .debt-overview__min-label { font-weight: 700; letter-spacing: .02em; color: var(--muted); flex-shrink: 0; }
 .debt-overview__min-val { font-weight: 600; color: rgba(var(--text-rgb),.6); flex-shrink: 0; }
