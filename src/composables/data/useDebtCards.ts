@@ -1,6 +1,7 @@
 import { computed } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
 import type { AppData, DebtCard, DebtRef, TrendDirection } from '@/types/data'
+import { i18n } from '../../i18n'
 import { useFormatters } from '../ui/useFormatters'
 import { useColors } from '../ui/useColors'
 import { getLocalized } from './useI18nData'
@@ -112,8 +113,10 @@ export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
   /**
    * Danh sách thẻ tín dụng đã được enrich với trạng thái khẩn cấp thanh toán và khoản thanh toán theo kế hoạch.
    */
-  const debtCards = computed((): DebtCard[] =>
-    (d.value.debts?.credit_cards || []).map((c): DebtCard => {
+  const debtCards = computed((): DebtCard[] => {
+    // Đọc locale ở đây để Vue track dependency → recompute khi đổi ngôn ngữ
+    const locale = (i18n.global.locale as { value: string }).value
+    return (d.value.debts?.credit_cards || []).map((c): DebtCard => {
       const dueDate = c.min_due_date || ''
       const daysLeft = dueDate ? dDiff(dueDate) : null
       const paid = minPaidByCard.value[c.id] || false
@@ -161,7 +164,7 @@ export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
 
       return {
         id: c.id,
-        name: getLocalized(c, 'name').replace(' — Techcombank', '').replace(' — ', ''),
+        name: getLocalized(c, 'name', locale).replace(' — Techcombank', '').replace(' — ', ''),
         balance: c.balance,
         limit: c.credit_limit,
         rate: Math.round(c.interest_rate_annual * 100),
@@ -175,7 +178,7 @@ export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
         thisMonthPaid: paid,
       }
     })
-  )
+  })
 
   /** Chỉ lấy các khoản vay nhỏ còn dư nợ (lọc bỏ đã trả hết). */
   const smallLoans = computed(() =>
@@ -199,15 +202,17 @@ export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
 
   /** Dữ liệu phân tích nợ theo từng thẻ/khoản vay, gán màu từ palette để hiển thị trên biểu đồ tròn. */
   const debtBreakdown = computed(() => {
+    // Đọc locale ở đây để Vue track dependency → recompute khi đổi ngôn ngữ
+    const locale = (i18n.global.locale as { value: string }).value
     const cc = (d.value.debts?.credit_cards || []).map((c, i) => ({
-      name: getLocalized(c, 'name').replace(' — Techcombank', ''),
+      name: getLocalized(c, 'name', locale).replace(' — Techcombank', ''),
       val: c.balance,
       color: palette[i % palette.length],
     }))
     const sl = (d.value.debts?.small_loans || [])
       .filter((l) => (l.remaining_balance || 0) > 0)
       .map((l, i) => {
-        const n = getLocalized(l, 'name')
+        const n = getLocalized(l, 'name', locale)
         return {
           name: n.length > 24 ? n.slice(0, 24) + '…' : n,
           val: l.remaining_balance,

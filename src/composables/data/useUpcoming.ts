@@ -35,6 +35,8 @@ export function useUpcoming(d: Ref<AppData>): {
    * Gộp từ monthly_plans (3 tháng hiện tại và tới) và one_time_expenses, sắp xếp theo ngày tăng dần.
    */
   const upcoming = computed((): UpcomingItem[] => {
+    // Đọc locale ở đây để Vue track dependency → recompute khi đổi ngôn ngữ
+    const locale = (i18n.global.locale as { value: string }).value
     const plans = d.value.monthly_plans || {}
     const paid = new Set(d.value.paid_obligations || [])
     const now = new Date()
@@ -63,7 +65,7 @@ export function useUpcoming(d: Ref<AppData>): {
           _key: key,
           day: String(d2.getDate()).padStart(2, '0'),
           mo: String(d2.getMonth() + 1).padStart(2, '0'),
-          name: getLocalized(ob, 'name'),
+          name: getLocalized(ob, 'name', locale),
           sub: overdueDays > 0
             ? i18n.global.t('upcoming.overdueDays', { n: overdueDays })
             : ob.category === 'debt_minimum' ? i18n.global.t('upcoming.minPayLabel') : null,
@@ -92,7 +94,7 @@ export function useUpcoming(d: Ref<AppData>): {
         _key: key,
         day: String(d2.getDate()).padStart(2, '0'),
         mo: String(d2.getMonth() + 1).padStart(2, '0'),
-        name: getLocalized(ev, 'name'),
+        name: getLocalized(ev, 'name', locale),
         sub: overdueDays > 0 ? i18n.global.t('upcoming.overdueDays', { n: overdueDays }) : null,
         amt: ev.amount,
         paid: isPaid,
