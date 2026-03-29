@@ -43,10 +43,10 @@
     <div class="wrap">
       <SyncBar ref="syncBarRef" :status="syncSt" :message="syncMsgText" :syncTime="syncTime" :today="today" />
 
-      <div ref="alertRef" v-if="isOver" class="alert over"><Icon name="alert-triangle" :size="14" /> {{ $t('app.alert.over') }}{{ hz('alert') ? '•••' : fV(todaySpent - dayLimit) }}</div>
+      <div ref="alertRef" v-if="isOver" class="alert over"><Icon name="alert-triangle" :size="14" /> {{ $t('app.alert.over') }}{{ hz('alert') ? '•••' : fCurrFull(todaySpent - dayLimit) }}</div>
       <div ref="alertRef" v-else-if="dayLimit > 0" class="alert ok">
         <Icon name="check" :size="14" />
-        <span class="alert-main">{{ hz('alert') ? '•••' : $t('app.alert.okMain', { amount: fS(dayLimit - todaySpent), limit: fS(dayLimit) }) }}</span>
+        <span class="alert-main">{{ hz('alert') ? '•••' : $t('app.alert.okMain', { amount: fCurr(dayLimit - todaySpent), limit: fCurr(dayLimit) }) }}</span>
         <span v-if="cashDaysLeft !== null && cashDaysLeft < dToSalary" class="alert-badge-warn">{{ hz('alert') ? '•/•' : $t('app.alert.days', { days: cashDaysLeft, salary: dToSalary }) }}</span>
       </div>
 
@@ -169,6 +169,7 @@ import type { AppData } from '@/types/data'
 import type { ToastType } from './composables/useToast'
 import type { Locale } from './i18n'
 import { setLocale } from './i18n'
+import { useCurrency } from './composables/useCurrency'
 
 import { useApi } from './composables/useApi'
 import { useFormatters } from './composables/useFormatters'
@@ -201,7 +202,9 @@ import Icon from './components/Icon.vue'
 // ─── API & Formatters ─────────────────────────────────────────────────────
 const api = useApi()
 const { syncSt, syncMsg, syncTime, syncing, isConfigured } = api
-const { fN, fS, fV, tStr } = useFormatters()
+const { fN, tStr } = useFormatters()
+const { fCurr, fCurrFull, fetchRates } = useCurrency()
+fetchRates()
 const { t } = useI18n()
 const syncMsgText = computed(() => t(syncMsg.value))
 
@@ -257,7 +260,7 @@ const {
 } = useDebtData(d)
 
 const overMsg = computed(() =>
-  isOver.value ? `${t('app.alert.over')}${hz('alert') ? '•••' : fV(todaySpent.value - dayLimit.value)}` : ''
+  isOver.value ? `${t('app.alert.over')}${hz('alert') ? '•••' : fCurrFull(todaySpent.value - dayLimit.value)}` : ''
 )
 
 // ─── Animation keys ───────────────────────────────────────────────────────

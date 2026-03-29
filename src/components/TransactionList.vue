@@ -13,8 +13,8 @@
     </div>
     <div v-if="txTrend !== 'neutral'" class="tx-trend-summary">
       <template v-if="hide">Thu +••••• · Chi -•••••</template>
-      <template v-else-if="txTrend === 'up'">Thu +{{ fS(todayIncome) }} · Chi -{{ fS(todaySpent) }}</template>
-      <template v-else>Chi -{{ fS(todaySpent) }} · Thu +{{ fS(todayIncome) }}</template>
+      <template v-else-if="txTrend === 'up'">Thu +{{ fCurr(todayIncome) }} · Chi -{{ fCurr(todaySpent) }}</template>
+      <template v-else>Chi -{{ fCurr(todaySpent) }} · Thu +{{ fCurr(todayIncome) }}</template>
     </div>
     <div class="exp-list" :class="{ 'exp-list--scroll': transactions.length > 4 }">
       <div v-if="!transactions.length" class="empty">{{ $t('transactions.empty') }}</div>
@@ -38,7 +38,7 @@
           color: e.type === 'inc' ? 'var(--accent3)' : 'var(--accent2)',
         }">
           <template v-if="hide"><span class="masked">•••••</span></template>
-          <template v-else>{{ e.type === 'inc' ? '+' : '-' }}{{ fS(e.amount) }}</template>
+          <template v-else>{{ e.type === 'inc' ? '+' : '-' }}{{ fCurr(e.amount) }}</template>
         </div>
       </div>
     </div>
@@ -49,9 +49,11 @@
 import Icon from './Icon.vue'
 import { useFormatters } from '../composables/useFormatters'
 import { useCategories } from '../composables/useCategories'
+import { useCurrency } from '../composables/useCurrency'
 
-const { fN, fS, fDate } = useFormatters()
+const { fDate } = useFormatters()
 const { resolveCat } = useCategories()
+const { fCurr } = useCurrency()
 
 defineProps({
   transactions: Array,

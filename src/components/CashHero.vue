@@ -14,7 +14,7 @@
         :key="'cash' + cashAnimKey"
       >
         <span v-if="hide.balance" class="masked">•••••••</span>
-        <template v-else>{{ fS(availCash) }}</template>
+        <template v-else>{{ fCurr(availCash) }}</template>
       </div>
       <div class="ch-sub">{{ $t('cash.daysToSalary', { n: dToSalary }) }}</div>
     </div>
@@ -25,18 +25,18 @@
         :key="'spent' + spentAnimKey"
       >
         <span v-if="hide.todaySpent" class="masked">•••••••</span>
-        <template v-else>{{ fS(todaySpent) }}</template>
+        <template v-else>{{ fCurr(todaySpent) }}</template>
       </div>
-      <div class="ch-sub">{{ $t('cash.monthly') }} <span v-if="hide.monthSpent" class="masked">•••</span><template v-else>{{ fS(monthSpent) }}</template></div>
+      <div class="ch-sub">{{ $t('cash.monthly') }} <span v-if="hide.monthSpent" class="masked">•••</span><template v-else>{{ fCurr(monthSpent) }}</template></div>
     </div>
   </div>
 </template>
 
 <script setup>
 import Icon from './Icon.vue'
-import { useFormatters } from '../composables/useFormatters'
+import { useCurrency } from '../composables/useCurrency'
 
-const { fS } = useFormatters()
+const { fCurr } = useCurrency()
 
 defineProps({
   availCash: Number,

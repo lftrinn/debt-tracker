@@ -8,16 +8,16 @@
       <div class="prog-fill prog-fill-anim" :style="{ width: repayPct + '%' }"></div>
     </div>
     <div class="prog-meta">
-      <span>{{ $t('progress.original') }} <template v-if="hide.origDebt">₫•••••</template><template v-else>₫{{ fS(origDebt) }}</template></span>
-      <span>{{ $t('progress.remaining') }} <template v-if="hide.remaining">₫•••••</template><template v-else>₫{{ fS(totalDebt) }}</template></span>
+      <span>{{ $t('progress.original') }} <template v-if="hide.origDebt">•••••</template><template v-else>{{ fCurr(origDebt) }}</template></span>
+      <span>{{ $t('progress.remaining') }} <template v-if="hide.remaining">•••••</template><template v-else>{{ fCurr(totalDebt) }}</template></span>
     </div>
   </div>
 </template>
 
 <script setup>
-import { useFormatters } from '../composables/useFormatters'
+import { useCurrency } from '../composables/useCurrency'
 
-const { fS } = useFormatters()
+const { fCurr } = useCurrency()
 
 defineProps({
   repayPct: Number,

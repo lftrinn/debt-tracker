@@ -176,6 +176,7 @@ export default {
       rules: 'Quy tắc',
       json: 'Cập nhật dữ liệu JSON',
       language: 'Ngôn ngữ',
+      currency: 'Tiền tệ hiển thị',
       logout: 'Đăng xuất',
     },
     limit: {
@@ -230,6 +231,18 @@ export default {
       vi: 'Tiếng Việt',
       en: 'English',
       ja: '日本語',
+    },
+    currency: {
+      display: 'Hiển thị giá trị theo',
+      VND: 'Đồng Việt Nam (₫)',
+      USD: 'US Dollar ($)',
+      JPY: 'Yên Nhật (¥)',
+      jpyNotation: 'Định dạng số lớn',
+      jpyStandard: 'K / M / B',
+      jpyKanji: '万 / 億 (Kanji)',
+      rateInfo: 'Tỷ giá cập nhật hằng ngày',
+      rateError: 'Không tải được tỷ giá',
+      rateLoading: 'Đang tải tỷ giá...',
     },
     logout: {
       confirm: 'Bạn có chắc muốn đăng xuất không?',

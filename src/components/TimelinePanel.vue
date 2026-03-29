@@ -16,7 +16,7 @@
             {{ hide.eventAmt ? maskMoney(m.ev) : m.ev }}
           </div>
           <div class="tl-debt" :style="m.debt == null ? { visibility: 'hidden' } : {}">
-            {{ $t('timeline.totalDebt') }} <template v-if="hide.debt"><span class="masked">₫•••••••</span></template><template v-else>₫{{ m.debt != null ? fS(m.debt) : 0 }}</template>
+            {{ $t('timeline.totalDebt') }} <template v-if="hide.debt"><span class="masked">•••••••</span></template><template v-else>{{ m.debt != null ? fCurr(m.debt) : 0 }}</template>
           </div>
         </div>
       </div>
@@ -25,9 +25,9 @@
 </template>
 
 <script setup>
-import { useFormatters } from '../composables/useFormatters'
+import { useCurrency } from '../composables/useCurrency'
 
-const { fS } = useFormatters()
+const { fCurr } = useCurrency()
 
 defineProps({
   milestones: Array,

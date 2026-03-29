@@ -176,6 +176,7 @@ export default {
       rules: 'Rules',
       json: 'Update JSON data',
       language: 'Language',
+      currency: 'Display Currency',
       logout: 'Log out',
     },
     limit: {
@@ -230,6 +231,18 @@ export default {
       vi: 'Tiếng Việt',
       en: 'English',
       ja: '日本語',
+    },
+    currency: {
+      display: 'Show values in',
+      VND: 'Vietnamese Dong (₫)',
+      USD: 'US Dollar ($)',
+      JPY: 'Japanese Yen (¥)',
+      jpyNotation: 'Large number notation',
+      jpyStandard: 'K / M / B',
+      jpyKanji: '万 / 億 (Kanji)',
+      rateInfo: 'Exchange rates updated daily',
+      rateError: 'Failed to load exchange rates',
+      rateLoading: 'Loading exchange rates...',
     },
     logout: {
       confirm: 'Are you sure you want to log out?',

@@ -26,6 +26,11 @@
         <span class="cfg-item-label">{{ $t('settings.menu.language') }}</span>
         <span class="cfg-item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
       </div>
+      <div class="cfg-item" @click="openCurrency">
+        <span class="cfg-item-ico"><Icon name="dollar-sign" :size="16" /></span>
+        <span class="cfg-item-label">{{ $t('settings.menu.currency') }}</span>
+        <span class="cfg-item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
+      </div>
       <div class="cfg-sep"></div>
       <div class="cfg-item cfg-item--danger" @click="open = 'logout'">
         <span class="cfg-item-ico cfg-item-ico--danger"><Icon name="log-out" :size="16" /></span>
@@ -67,8 +72,8 @@
                 <span class="small-n">{{ limPct }}%</span>
               </div>
               <div class="small-n" style="margin-bottom:4px">
-                <template v-if="hide.dailyLim">₫••••• / ₫•••••</template>
-                <template v-else>₫{{ fN(todaySpent) }} / ₫{{ fN(dayLimit) }}</template>
+                <template v-if="hide.dailyLim">••••• / •••••</template>
+                <template v-else>{{ fCurrFull(todaySpent) }} / {{ fCurrFull(dayLimit) }}</template>
               </div>
               <div v-if="!hide.dailyLim" class="popup-field">
                 <label class="popup-label">{{ $t('debt.balanceLabel') }}</label>
@@ -154,6 +159,37 @@
             </div>
           </template>
 
+          <!-- CURRENCY SELECTOR -->
+          <template v-if="open === 'currency'">
+            <div class="popup-body">
+              <div class="hint" style="margin-bottom:8px">{{ $t('settings.currency.display') }}</div>
+              <div class="lang-list">
+                <button
+                  v-for="cur in CURRENCIES"
+                  :key="cur"
+                  class="lang-item"
+                  :class="{ active: currentCurrency === cur }"
+                  @click="selectCurrency(cur)"
+                >
+                  <span class="lang-name">{{ $t('settings.currency.' + cur) }}</span>
+                  <Icon v-if="currentCurrency === cur" name="check" :size="14" class="lang-check" />
+                </button>
+              </div>
+              <div v-if="currentCurrency === 'JPY'" style="margin-top:12px">
+                <div class="hint" style="margin-bottom:6px">{{ $t('settings.currency.jpyNotation') }}</div>
+                <div style="display:flex;gap:4px">
+                  <button :class="['tab-btn', currentJpyNotation === 'standard' ? 'active' : '']" style="flex:1" @click="selectJpyNotation('standard')">{{ $t('settings.currency.jpyStandard') }}</button>
+                  <button :class="['tab-btn', currentJpyNotation === 'kanji' ? 'active' : '']" style="flex:1" @click="selectJpyNotation('kanji')">{{ $t('settings.currency.jpyKanji') }}</button>
+                </div>
+              </div>
+              <div v-if="currentCurrency !== 'VND'" style="margin-top:10px;text-align:center" class="small-n">
+                <template v-if="ratesLoading">{{ $t('settings.currency.rateLoading') }}</template>
+                <template v-else-if="ratesError">{{ $t('settings.currency.rateError') }}</template>
+                <template v-else>{{ $t('settings.currency.rateInfo') }}</template>
+              </div>
+            </div>
+          </template>
+
           <!-- LOGOUT CONFIRM -->
           <template v-if="open === 'logout'">
             <div class="popup-body">
@@ -181,15 +217,32 @@ import { useI18n } from 'vue-i18n'
 import Icon from './Icon.vue'
 import { useFormatters } from '../composables/useFormatters'
 import { LOCALES, setLocale } from '../i18n'
+import { useCurrency, CURRENCIES } from '../composables/useCurrency'
 
 const { fN } = useFormatters()
 const { t, locale: i18nLocale } = useI18n()
+const { displayCurrency, jpyNotation, ratesLoading, ratesError, fetchRates, setDisplayCurrency, setJpyNotation, fCurrFull } = useCurrency()
 
 const currentLocale = computed(() => i18nLocale.value)
+const currentCurrency = computed(() => displayCurrency.value)
+const currentJpyNotation = computed(() => jpyNotation.value)
 
 function selectLocale(loc) {
   setLocale(loc)
   closePopup()
+}
+
+function selectCurrency(cur) {
+  setDisplayCurrency(cur)
+}
+
+function selectJpyNotation(n) {
+  setJpyNotation(n)
+}
+
+function openCurrency() {
+  open.value = 'currency'
+  if (displayCurrency.value !== 'VND') fetchRates()
 }
 
 const props = defineProps({
@@ -219,6 +272,7 @@ const titles = computed(() => ({
   rules: t('settings.menu.rules'),
   json: t('settings.menu.json'),
   lang: t('settings.menu.language'),
+  currency: t('settings.menu.currency'),
   logout: t('settings.menu.logout'),
 }))
 

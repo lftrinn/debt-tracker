@@ -30,10 +30,10 @@
           <div class="up-amt-col">
             <div class="up-amt" :style="p.paid ? { color: 'var(--muted)' } : {}">
               <template v-if="hide.amount">•••••</template>
-              <template v-else>{{ fS(p.amt) }}</template>
+              <template v-else>{{ fCurr(p.amt) }}</template>
             </div>
             <div v-if="!p.paid && !hide.shortage && availCash < p.amt" class="up-shortage">
-              {{ $t('upcoming.shortage', { amount: fS(p.amt - availCash) }) }}
+              {{ $t('upcoming.shortage', { amount: fCurr(p.amt - availCash) }) }}
             </div>
           </div>
           <button
@@ -83,8 +83,8 @@
                 <label class="popup-label">{{ $t('upcoming.addPopup.selectDebt') }}</label>
                 <select class="popup-input popup-input--sm" v-model="payTarget">
                   <option value="">{{ $t('upcoming.addPopup.selectDebtPlaceholder') }}</option>
-                  <option v-for="c in debtCards" :key="c.id" :value="'cc:' + c.id">{{ c.name }}{{ hide.amount ? '' : ' (còn ₫' + fS(c.balance) + ')' }}</option>
-                  <option v-for="l in availableLoans" :key="l.id" :value="'sl:' + l.id">{{ l.name.split('—')[0].trim() }}{{ hide.amount ? '' : ' (còn ₫' + fS(l.remaining_balance) + ')' }}</option>
+                  <option v-for="c in debtCards" :key="c.id" :value="'cc:' + c.id">{{ c.name }}{{ hide.amount ? '' : ' (còn ' + fCurr(c.balance) + ')' }}</option>
+                  <option v-for="l in availableLoans" :key="l.id" :value="'sl:' + l.id">{{ l.name.split('—')[0].trim() }}{{ hide.amount ? '' : ' (còn ' + fCurr(l.remaining_balance) + ')' }}</option>
                 </select>
               </div>
               <!-- Loan installment selector -->
@@ -92,7 +92,7 @@
                 <label class="popup-label">{{ $t('upcoming.addPopup.selectPeriod') }}</label>
                 <select class="popup-input popup-input--sm" v-model="payInstallment">
                   <option value="">{{ $t('upcoming.addPopup.selectPeriodPlaceholder') }}</option>
-                  <option v-for="inst in loanInstallments" :key="inst.key" :value="inst.key">{{ inst.name }} — {{ inst.dateLabel }}{{ hide.amount ? '' : ' (₫' + fS(inst.amount) + ')' }}</option>
+                  <option v-for="inst in loanInstallments" :key="inst.key" :value="inst.key">{{ inst.name }} — {{ inst.dateLabel }}{{ hide.amount ? '' : ' (' + fCurr(inst.amount) + ')' }}</option>
                 </select>
               </div>
               <!-- Credit card payment level -->
@@ -100,7 +100,7 @@
                 <label class="popup-label">{{ $t('upcoming.addPopup.payLevel') }}</label>
                 <div style="display:flex;gap:4px;background:var(--surface2);border-radius:8px;padding:2px">
                   <button :class="['tab-btn', payLevel === 'min' ? 'active' : '']" style="flex:1;font-size:10px;padding:5px 0" @click="payLevel = 'min'">
-                    {{ $t('upcoming.addPopup.minimum') }}{{ selectedCard && !hide.amount ? ' (₫' + fS(selectedCard.min) + ')' : '' }}
+                    {{ $t('upcoming.addPopup.minimum') }}{{ selectedCard && !hide.amount ? ' (' + fCurr(selectedCard.min) + ')' : '' }}
                   </button>
                   <button :class="['tab-btn', payLevel === 'custom' ? 'active' : '']" style="flex:1;font-size:10px;padding:5px 0" @click="payLevel = 'custom'">
                     {{ $t('upcoming.addPopup.custom') }}
@@ -156,9 +156,9 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import Icon from './Icon.vue'
-import { useFormatters } from '../composables/useFormatters'
+import { useCurrency } from '../composables/useCurrency'
 
-const { fS } = useFormatters()
+const { fCurr } = useCurrency()
 
 const props = defineProps({
   items: Array,

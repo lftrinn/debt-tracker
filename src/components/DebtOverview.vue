@@ -9,8 +9,8 @@
       </span>
     </div>
     <div class="do-total num-flash" :key="'debt' + debtAnimKey">
-      <template v-if="hide.total"><span class="masked">₫•••••••••</span></template>
-      <template v-else><span>₫</span>{{ fN(totalDebt) }}</template>
+      <template v-if="hide.total"><span class="masked">•••••••••</span></template>
+      <template v-else>{{ fCurrFull(totalDebt) }}</template>
     </div>
     <div class="do-cards">
       <div class="do-card" :class="'do-card--' + c.minUrg" v-for="c in debtCards" :key="c.id">
@@ -23,7 +23,7 @@
         </div>
         <!-- Row 2: balance + rate -->
         <div class="do-r2">
-          <span class="do-card-bal"><template v-if="hide.cardBal">₫•••••</template><template v-else>₫{{ fS(c.balance) }}</template></span>
+          <span class="do-card-bal"><template v-if="hide.cardBal">•••••</template><template v-else>{{ fCurr(c.balance) }}</template></span>
           <span class="do-card-rate">{{ c.rate }}{{ $t('debt.ratePerYear') }}</span>
         </div>
         <!-- Row 3: progress + pct -->
@@ -35,12 +35,12 @@
         <div class="do-r4" :class="'do-r4--' + c.minUrg">
           <span class="do-min-label">{{ c.plannedPayment && !c.plannedPayment.isMin ? $t('debt.paidLabel') : $t('debt.minLabel') }}</span>
           <template v-if="c.minPaid">
-            <span v-if="!hide.minPay" class="do-min-val" style="color:var(--accent3)">₫{{ fS(c.plannedPayment ? c.plannedPayment.amount : c.min) }}</span>
+            <span v-if="!hide.minPay" class="do-min-val" style="color:var(--accent3)">{{ fCurr(c.plannedPayment ? c.plannedPayment.amount : c.min) }}</span>
             <Icon name="check" :size="11" class="do-min-ico--ok" />
           </template>
-          <template v-else-if="hide.minPay"><span class="do-min-val">₫•••</span></template>
+          <template v-else-if="hide.minPay"><span class="do-min-val">•••</span></template>
           <template v-else>
-            <span class="do-min-val">₫{{ fS(c.plannedPayment && !c.plannedPayment.isMin ? c.plannedPayment.amount : c.min) }}</span>
+            <span class="do-min-val">{{ fCurr(c.plannedPayment && !c.plannedPayment.isMin ? c.plannedPayment.amount : c.min) }}</span>
           </template>
           <template v-if="!c.minPaid && c.minDaysLeft !== null">
             <span v-if="c.minDaysLeft <= 0" class="do-min-tag do-min-tag--overdue">-{{ Math.abs(c.minDaysLeft) }}d</span>
@@ -92,8 +92,10 @@
 import { ref, computed, watch } from 'vue'
 import Icon from './Icon.vue'
 import { useFormatters } from '../composables/useFormatters'
+import { useCurrency } from '../composables/useCurrency'
 
-const { fN, fS } = useFormatters()
+const { fN } = useFormatters()
+const { fCurr, fCurrFull } = useCurrency()
 
 function usedPct(c) {
   return c.limit > 0 ? Math.round(c.balance / c.limit * 100) : 0

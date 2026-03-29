@@ -176,6 +176,7 @@ export default {
       rules: 'ルール',
       json: 'JSON データを更新',
       language: '言語',
+      currency: '表示通貨',
       logout: 'ログアウト',
     },
     limit: {
@@ -230,6 +231,18 @@ export default {
       vi: 'Tiếng Việt',
       en: 'English',
       ja: '日本語',
+    },
+    currency: {
+      display: '表示通貨',
+      VND: 'ベトナムドン (₫)',
+      USD: '米ドル ($)',
+      JPY: '日本円 (¥)',
+      jpyNotation: '大きな数字の表示形式',
+      jpyStandard: 'K / M / B',
+      jpyKanji: '万 / 億',
+      rateInfo: '為替レートは毎日更新されます',
+      rateError: '為替レートの取得に失敗しました',
+      rateLoading: '為替レートを取得中...',
     },
     logout: {
       confirm: 'ログアウトしてもよろしいですか？',

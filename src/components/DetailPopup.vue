@@ -39,8 +39,8 @@
             <div class="popup-amt" :class="item._variant === 'tx' ? (item.type === 'inc' ? 'inc' : 'exp') : 'exp'">
               <template v-if="hide">•••••</template>
               <template v-else>
-                <template v-if="item._variant === 'tx'">{{ item.type === 'inc' ? '+' : '-' }}₫{{ fN(item.amount || item.amt) }}</template>
-                <template v-else>₫{{ fN(item.amt || item.amount) }}</template>
+                <template v-if="item._variant === 'tx'">{{ item.type === 'inc' ? '+' : '-' }}{{ fCurrFull(item.amount || item.amt) }}</template>
+                <template v-else>{{ fCurrFull(item.amt || item.amount) }}</template>
               </template>
             </div>
 
@@ -56,11 +56,11 @@
               </div>
               <div v-if="item._variant === 'upcoming' && !hide" class="popup-row">
                 <span class="popup-label">{{ $t('detail.availCash') }}</span>
-                <span class="popup-val" :style="availCash < (item.amt || 0) ? { color: 'var(--accent2)' } : {}">₫{{ fN(availCash) }}</span>
+                <span class="popup-val" :style="availCash < (item.amt || 0) ? { color: 'var(--accent2)' } : {}">{{ fCurrFull(availCash) }}</span>
               </div>
               <div v-if="item._variant === 'upcoming' && !hide && !item.paid && availCash < (item.amt || 0)" class="popup-row">
                 <span class="popup-label">{{ $t('detail.shortfall') }}</span>
-                <span class="popup-val" style="color:var(--accent2)">₫{{ fN((item.amt || 0) - availCash) }}</span>
+                <span class="popup-val" style="color:var(--accent2)">{{ fCurrFull((item.amt || 0) - availCash) }}</span>
               </div>
             </div>
           </div>
@@ -87,7 +87,7 @@
               <label class="popup-label">{{ $t('detail.payLevel') }}</label>
               <div style="display:flex;gap:4px;background:var(--surface2);border-radius:8px;padding:2px">
                 <button :class="['tab-btn', editPayLevel === 'min' ? 'active' : '']" style="flex:1;font-size:10px;padding:5px 0" @click="editPayLevel = 'min'">
-                  {{ $t('detail.minimum') }}{{ matchedCard && !hide ? ' (₫' + fS(matchedCard.min) + ')' : '' }}
+                  {{ $t('detail.minimum') }}{{ matchedCard && !hide ? ' (' + fCurr(matchedCard.min) + ')' : '' }}
                 </button>
                 <button :class="['tab-btn', editPayLevel === 'custom' ? 'active' : '']" style="flex:1;font-size:10px;padding:5px 0" @click="editPayLevel = 'custom'">
                   {{ $t('detail.custom') }}
@@ -136,9 +136,11 @@ import { ref, computed, watch } from 'vue'
 import Icon from './Icon.vue'
 import { useFormatters } from '../composables/useFormatters'
 import { useCategories } from '../composables/useCategories'
+import { useCurrency } from '../composables/useCurrency'
 
-const { fN, fS, fDate, tStr } = useFormatters()
+const { fDate, tStr } = useFormatters()
 const { resolveCat, expenseCategories, incomeCategories } = useCategories()
+const { fCurr, fCurrFull } = useCurrency()
 
 const props = defineProps({
   item: [Object, null],
