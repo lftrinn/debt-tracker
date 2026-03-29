@@ -23,9 +23,15 @@
             <option v-for="m in payMethods" :key="m.key" :value="m.key">{{ m.label }}</option>
           </select>
         </div>
-        <!-- Số tiền + chọn currency -->
+        <!-- Số tiền + chọn currency; khi dual mode: 2 input cùng 1 hàng -->
         <div class="add-form__row" style="gap:6px">
-          <div class="add-form__amount-wrap">
+          <!-- Dual mode: 2 inputs ngang nhau -->
+          <div v-if="showExpEquiv" class="add-form__dual-inputs">
+            <input class="add-form__input" v-model.number="nAmt" type="number" inputmode="numeric" :placeholder="nCurrency" @input="onExpAmtInput" />
+            <input class="add-form__input" v-model.number="nAmtDisplay" type="number" inputmode="numeric" :placeholder="'≈ ' + displayCurrency" @input="onExpDisplayInput" />
+          </div>
+          <!-- Normal mode: amount + quick amounts -->
+          <div v-else class="add-form__amount-wrap">
             <input class="add-form__input add-form__amount" v-model.number="nAmt" type="number" inputmode="numeric" :placeholder="$t('addTx.expense.amountPlaceholder', { currency: nCurrency })" @input="onExpAmtInput" />
             <div v-if="topExpAmounts.length" class="add-form__quick-amounts">
               <button
@@ -41,19 +47,6 @@
             <option v-for="c in CURRENCIES" :key="c" :value="c">{{ c }}</option>
           </select>
         </div>
-        <!-- Dual input: hiển thị tương đương theo display currency khi khác nhau -->
-        <div v-if="showExpEquiv" class="add-form__equiv-row">
-          <span class="add-form__equiv-label">≈</span>
-          <input
-            class="add-form__input add-form__equiv-input"
-            v-model.number="nAmtDisplay"
-            type="number"
-            inputmode="numeric"
-            :placeholder="displayCurrency"
-            @input="onExpDisplayInput"
-          />
-          <span class="add-form__equiv-cur">{{ displayCurrency }}</span>
-        </div>
         <button class="add-form__submit" @click="addExp" :disabled="syncing || !nDesc.trim() || !nAmt">
           {{ syncing ? $t('addTx.saving') : $t('addTx.add') }} <Icon name="arrow-right" :size="14" />
         </button>
@@ -65,8 +58,15 @@
       <div class="c-title" style="margin-bottom:10px">{{ $t('addTx.income.title') }}</div>
       <div class="add-form">
         <input class="add-form__input" v-model="iDesc" :placeholder="$t('addTx.income.descPlaceholder')" />
+        <!-- Số tiền + chọn currency; khi dual mode: 2 input cùng 1 hàng -->
         <div class="add-form__row" style="gap:6px">
-          <div class="add-form__amount-wrap">
+          <!-- Dual mode: 2 inputs ngang nhau -->
+          <div v-if="showIncEquiv" class="add-form__dual-inputs">
+            <input class="add-form__input" v-model.number="iAmt" type="number" inputmode="numeric" :placeholder="iCurrency" @input="onIncAmtInput" />
+            <input class="add-form__input" v-model.number="iAmtDisplay" type="number" inputmode="numeric" :placeholder="'≈ ' + displayCurrency" @input="onIncDisplayInput" />
+          </div>
+          <!-- Normal mode: amount + quick amounts -->
+          <div v-else class="add-form__amount-wrap">
             <input class="add-form__input add-form__amount" v-model.number="iAmt" type="number" inputmode="numeric" :placeholder="$t('addTx.income.amountPlaceholder', { currency: iCurrency })" @input="onIncAmtInput" />
             <div v-if="topIncAmounts.length" class="add-form__quick-amounts">
               <button
@@ -81,19 +81,6 @@
           <select class="add-form__select add-form__cur-select" v-model="iCurrency" @change="onIncCurChange">
             <option v-for="c in CURRENCIES" :key="c" :value="c">{{ c }}</option>
           </select>
-        </div>
-        <!-- Dual input cho income -->
-        <div v-if="showIncEquiv" class="add-form__equiv-row">
-          <span class="add-form__equiv-label">≈</span>
-          <input
-            class="add-form__input add-form__equiv-input"
-            v-model.number="iAmtDisplay"
-            type="number"
-            inputmode="numeric"
-            :placeholder="displayCurrency"
-            @input="onIncDisplayInput"
-          />
-          <span class="add-form__equiv-cur">{{ displayCurrency }}</span>
         </div>
         <div class="add-form__row" style="margin-top:0">
           <select class="add-form__select" style="flex:1" v-model="iCat">
@@ -318,11 +305,9 @@ function addInc() {
 .add-form__quick-amounts { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); display: flex; gap: 4px; }
 .add-form__quick-btn { background: rgba(var(--accent-rgb),.1); border: 1px solid rgba(var(--accent-rgb),.2); border-radius: 5px; padding: 3px 7px; font-family: var(--mono); font-size: 9px; font-weight: 700; color: var(--accent); cursor: pointer; transition: all .15s; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
 .add-form__quick-btn:active { background: rgba(var(--accent-rgb),.25); transform: scale(.95); }
-/* Dual input row */
-.add-form__equiv-row { display: flex; align-items: center; gap: 6px; }
-.add-form__equiv-label { font-family: var(--mono); font-size: 13px; color: var(--muted); flex-shrink: 0; }
-.add-form__equiv-input { flex: 1; padding-right: 8px; }
-.add-form__equiv-cur { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--muted); flex-shrink: 0; min-width: 28px; }
+/* Dual input: 2 ô cùng 1 hàng khi currency khác nhau */
+.add-form__dual-inputs { display: flex; gap: 8px; flex: 1; min-width: 0; }
+.add-form__dual-inputs .add-form__input { flex: 1; min-width: 0; padding-right: 8px; }
 .add-form__submit { background: var(--accent); color: var(--bg); border: none; border-radius: 9px; padding: 11px; font-family: var(--sans); font-size: 13px; font-weight: 800; cursor: pointer; letter-spacing: .05em; transition: all .2s; }
 .add-form__submit:hover { opacity: .9; transform: translateY(-1px); }
 .add-form__submit:disabled { opacity: .3; cursor: not-allowed; transform: none; }
