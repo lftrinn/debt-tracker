@@ -109,20 +109,12 @@
                 {{ $t('detail.amountLabel') }}
                 <span v-if="txCurrency" class="detail__cur-badge">{{ txCurrency }}</span>
               </label>
-              <input class="popup-input" v-model.number="buf.amt" type="number" inputmode="numeric" placeholder="0" @input="onNativeAmtInput" />
-              <!-- Dual input: hiển thị khi currency của giao dịch khác display currency -->
-              <div v-if="showDisplayEquiv" class="detail__equiv-row">
-                <span class="detail__equiv-label">≈</span>
-                <input
-                  class="popup-input detail__equiv-input"
-                  v-model.number="bufDisplayAmt"
-                  type="number"
-                  inputmode="numeric"
-                  :placeholder="displayCurrency"
-                  @input="onDisplayAmtInput"
-                />
-                <span class="detail__equiv-cur">{{ displayCurrency }}</span>
+              <!-- Dual mode: 2 inputs cùng 1 hàng khi currency khác nhau -->
+              <div v-if="showDisplayEquiv" class="detail__dual-row">
+                <input class="popup-input" v-model.number="buf.amt" type="number" inputmode="numeric" :placeholder="txCurrency || '0'" @input="onNativeAmtInput" />
+                <input class="popup-input" v-model.number="bufDisplayAmt" type="number" inputmode="numeric" :placeholder="'≈ ' + displayCurrency" @input="onDisplayAmtInput" />
               </div>
+              <input v-else class="popup-input" v-model.number="buf.amt" type="number" inputmode="numeric" placeholder="0" @input="onNativeAmtInput" />
             </div>
             <div v-if="item._variant === 'tx'" class="popup-field">
               <label class="popup-label">{{ $t('detail.categoryLabel') }}</label>
@@ -444,9 +436,7 @@ function onTouchEnd(e) {
 <style scoped>
 /* Currency badge trong label amount */
 .detail__cur-badge { font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: rgba(var(--accent-rgb),.12); color: var(--accent); margin-left: 6px; vertical-align: middle; }
-/* Dual input row */
-.detail__equiv-row { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
-.detail__equiv-label { font-family: var(--mono); font-size: 13px; color: var(--muted); flex-shrink: 0; }
-.detail__equiv-input { flex: 1; }
-.detail__equiv-cur { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--muted); flex-shrink: 0; min-width: 28px; }
+/* Dual input: 2 ô cùng 1 hàng khi currency khác nhau */
+.detail__dual-row { display: flex; gap: 8px; }
+.detail__dual-row .popup-input { flex: 1; min-width: 0; }
 </style>

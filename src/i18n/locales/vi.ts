@@ -88,6 +88,7 @@ export default {
     dueDateLabel: 'Hạn thanh toán tối thiểu',
     dueDatePlaceholder: 'Chọn ngày',
     updateButton: 'Cập nhật',
+    remaining: 'Còn',
   },
   progress: {
     title: 'Tiến độ thoát nợ',
@@ -188,6 +189,7 @@ export default {
       json: 'Cập nhật dữ liệu JSON',
       language: 'Ngôn ngữ',
       currency: 'Tiền tệ hiển thị',
+      progressMode: 'Thanh tiến độ thẻ',
       logout: 'Đăng xuất',
     },
     limit: {
@@ -257,6 +259,11 @@ export default {
       rateInfo: 'Tỷ giá cập nhật hằng ngày',
       rateError: 'Không tải được tỷ giá',
       rateLoading: 'Đang tải tỷ giá...',
+    },
+    progressMode: {
+      title: 'Kiểu hiển thị thanh tiến độ',
+      used: 'Hiển thị % đã sử dụng',
+      repaid: 'Hiển thị % đã trả',
     },
     logout: {
       confirm: 'Bạn có chắc muốn đăng xuất không?',

@@ -97,16 +97,29 @@ import { ref, computed, watch } from 'vue'
 import Icon from '../ui/Icon.vue'
 import { useFormatters } from '../../composables/ui/useFormatters'
 import { useCurrency } from '../../composables/api/useCurrency'
+import { useDebtSettings } from '../../composables/ui/useDebtSettings'
 
 const { fN } = useFormatters()
 const { fCurr, fCurrFull } = useCurrency()
+const { progressMode } = useDebtSettings()
 
+/** Tính phần trăm theo mode: 'used' = % dùng, 'repaid' = % đã trả */
 function usedPct(c) {
+  if (progressMode.value === 'repaid') {
+    return c.limit > 0 ? Math.round((c.limit - c.balance) / c.limit * 100) : 0
+  }
   return c.limit > 0 ? Math.round(c.balance / c.limit * 100) : 0
 }
 
+/** Cấp độ màu thanh tiến độ theo mode */
 function progLevel(c) {
   const pct = usedPct(c)
+  if (progressMode.value === 'repaid') {
+    if (pct >= 80) return 'repaid-ok'
+    if (pct >= 60) return 'repaid-caution'
+    if (pct >= 30) return 'repaid-warn'
+    return 'repaid-danger'
+  }
   if (pct >= 90) return 'critical'
   if (pct >= 70) return 'high'
   return 'normal'
@@ -189,6 +202,11 @@ function saveEdit() {
 .debt-overview__card-prog--normal { background: var(--accent2); }
 .debt-overview__card-prog--high { background: linear-gradient(90deg, var(--accent2), var(--accent6)); }
 .debt-overview__card-prog--critical { background: linear-gradient(90deg, var(--accent6), var(--danger)); }
+/* Repaid mode: 0-30% đỏ, 30-60% cam, 60-80% vàng, 80-100% xanh */
+.debt-overview__card-prog--repaid-danger { background: var(--danger); }
+.debt-overview__card-prog--repaid-warn { background: var(--accent6); }
+.debt-overview__card-prog--repaid-caution { background: var(--accent); }
+.debt-overview__card-prog--repaid-ok { background: var(--accent3); }
 .debt-overview__card-r4 { display: flex; align-items: center; justify-content: space-between; font-family: var(--mono); font-size: 9.5px; padding-top: 6px; margin-top: 2px; border-top: 1px solid rgba(var(--text-rgb),.05); }
 .debt-overview__min-label { font-weight: 700; letter-spacing: .02em; color: var(--muted); flex-shrink: 0; }
 .debt-overview__min-val { font-weight: 600; color: rgba(var(--text-rgb),.6); flex-shrink: 0; }

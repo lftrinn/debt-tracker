@@ -83,8 +83,8 @@
                 <label class="popup-label">{{ $t('upcoming.addPopup.selectDebt') }}</label>
                 <select class="popup-input popup-input--sm" v-model="payTarget">
                   <option value="">{{ $t('upcoming.addPopup.selectDebtPlaceholder') }}</option>
-                  <option v-for="c in debtCards" :key="c.id" :value="'cc:' + c.id">{{ c.name }}{{ hide.amount ? '' : ' (còn ' + fCurr(c.balance) + ')' }}</option>
-                  <option v-for="l in availableLoans" :key="l.id" :value="'sl:' + l.id">{{ l.name.split('—')[0].trim() }}{{ hide.amount ? '' : ' (còn ' + fCurr(l.remaining_balance) + ')' }}</option>
+                  <option v-for="c in debtCards" :key="c.id" :value="'cc:' + c.id">{{ getLocalized(c, 'name') }}{{ hide.amount ? '' : ' (' + t('debt.remaining') + ' ' + fCurr(c.balance) + ')' }}</option>
+                  <option v-for="l in availableLoans" :key="l.id" :value="'sl:' + l.id">{{ getLocalized(l, 'name').split('—')[0].trim() }}{{ hide.amount ? '' : ' (' + t('debt.remaining') + ' ' + fCurr(l.remaining_balance) + ')' }}</option>
                 </select>
               </div>
               <!-- Loan installment selector -->
@@ -155,10 +155,12 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Icon from '../ui/Icon.vue'
 import { useCurrency } from '../../composables/api/useCurrency'
 import { getLocalized } from '../../composables/data/useI18nData'
 
+const { t } = useI18n()
 const { fCurr } = useCurrency()
 
 const props = defineProps({
