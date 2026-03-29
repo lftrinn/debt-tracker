@@ -214,8 +214,18 @@ describe('useDebtCards', () => {
       expect(debtTrend.value).toBe('neutral')
     })
 
-    it('extra_paid > 0 → down', () => {
-      const d = ref(makeData({ extra_paid: 500_000 }))
+    it('có paid_obligations tháng này, không có card spending → down', () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-03-15'))
+      const d = ref(makeData({
+        debts: { credit_cards: [VISA1], small_loans: [] },
+        monthly_plans: {
+          '2026-03': {
+            obligations: [{ name: 'Visa 1', date: '2026-03-15', amount: 500_000 }],
+          },
+        },
+        paid_obligations: ['2026-03-15:Visa 1'],
+      }))
       const { debtTrend } = useDebtCards(d)
       expect(debtTrend.value).toBe('down')
     })
