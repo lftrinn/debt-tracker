@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ref, computed } from 'vue'
+import type { AppData } from '@/types/data'
 import { useCashData } from '../useCashData'
 import { useDailyLimit } from '../useDailyLimit'
 import { makeData } from './helpers'

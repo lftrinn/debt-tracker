@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import type { AppData } from '@/types/data'
 
 /** Build a minimal valid AppData for tests. Override any field as needed. */
