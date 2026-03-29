@@ -5,41 +5,41 @@
       <span style="flex:1"></span>
       <span class="badge" style="margin-right:4px">{{ paidCount }}/{{ items.length }}</span>
       <span class="badge" style="margin-right:4px">{{ label }}</span>
-      <button class="up-edit-btn" @click="showAdd = true" :title="$t('upcoming.addTooltip')">
+      <button class="upcoming__edit-btn" @click="showAdd = true" :title="$t('upcoming.addTooltip')">
         <Icon name="plus" :size="14" />
       </button>
     </div>
-    <div class="up-list" style="max-height:calc(4 * 48px + 3 * 6px);overflow-y:auto;margin-top:11px;padding-right:2px;scroll-snap-type:y mandatory;">
+    <div class="upcoming__list" style="max-height:calc(4 * 48px + 3 * 6px);overflow-y:auto;margin-top:11px;padding-right:2px;scroll-snap-type:y mandatory;">
       <div
         v-for="p in items"
         :key="p._key"
-        class="up-item"
-        :class="p.paid ? 'paid' : p.urg"
+        class="upcoming__item"
+        :class="p.paid ? 'upcoming__item--paid' : 'upcoming__item--' + p.urg"
         @click="$emit('open-detail', p)"
       >
-        <div class="up-date-col">
-          <span class="up-day" :style="p.paid ? { color: 'var(--muted)' } : {}">{{ p.day }}</span>
-          <span class="up-mo">/{{ p.mo }}</span>
+        <div class="upcoming__date-col">
+          <span class="upcoming__day" :style="p.paid ? { color: 'var(--muted)' } : {}">{{ p.day }}</span>
+          <span class="upcoming__month">/{{ p.mo }}</span>
         </div>
         <div style="flex:1;min-width:0">
-          <div class="up-name" :style="p.paid ? { color: 'var(--muted)', textDecoration: 'line-through' } : {}">{{ p.name }}</div>
-          <div v-if="p.sub && !p.paid" class="up-sub" :style="{ marginTop: '2px', color: p.overdueDays > 0 ? 'var(--danger)' : undefined, fontWeight: p.overdueDays > 0 ? '600' : undefined }">{{ p.sub }}</div>
-          <div v-if="p.paid" class="up-sub" style="color:var(--accent3);margin-top:2px"><Icon name="check" :size="11" /> {{ $t('upcoming.paid') }}</div>
+          <div class="upcoming__name" :style="p.paid ? { color: 'var(--muted)', textDecoration: 'line-through' } : {}">{{ p.name }}</div>
+          <div v-if="p.sub && !p.paid" class="upcoming__sub" :style="{ marginTop: '2px', color: p.overdueDays > 0 ? 'var(--danger)' : undefined, fontWeight: p.overdueDays > 0 ? '600' : undefined }">{{ p.sub }}</div>
+          <div v-if="p.paid" class="upcoming__sub" style="color:var(--accent3);margin-top:2px"><Icon name="check" :size="11" /> {{ $t('upcoming.paid') }}</div>
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">
-          <div class="up-amt-col">
-            <div class="up-amt" :style="p.paid ? { color: 'var(--muted)' } : {}">
+          <div class="upcoming__amt-col">
+            <div class="upcoming__amt" :style="p.paid ? { color: 'var(--muted)' } : {}">
               <template v-if="hide.amount">•••••</template>
               <template v-else>{{ fCurr(p.amt) }}</template>
             </div>
-            <div v-if="!p.paid && !hide.shortage && availCash < p.amt" class="up-shortage">
+            <div v-if="!p.paid && !hide.shortage && availCash < p.amt" class="upcoming__shortage">
               {{ $t('upcoming.shortage', { amount: fCurr(p.amt - availCash) }) }}
             </div>
           </div>
           <button
             v-if="!p.paid"
-            class="up-check-btn"
-            :class="{ disabled: availCash < p.amt }"
+            class="upcoming__check-btn"
+            :class="{ 'upcoming__check-btn--disabled': availCash < p.amt }"
             :disabled="availCash < p.amt"
             @click.stop="$emit('toggle-paid', p._key, p.amt, p.name)"
             :title="availCash < p.amt ? $t('upcoming.notEnough') : $t('upcoming.payQuick')"
@@ -48,7 +48,7 @@
           </button>
           <button
             v-else
-            class="up-check-btn done"
+            class="upcoming__check-btn upcoming__check-btn--done"
             @click.stop="$emit('toggle-paid', p._key, p.amt, p.name)"
             :title="$t('upcoming.undoPay')"
           >
@@ -497,3 +497,31 @@ function submitOneTime() {
   showAdd.value = false
 }
 </script>
+
+<style scoped>
+.upcoming { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 15px 20px; margin-bottom: 12px; }
+.upcoming__list { display: flex; flex-direction: column; gap: 6px; scroll-snap-type: y mandatory; }
+.upcoming__list > .upcoming__item { scroll-snap-align: start; }
+.upcoming__item { display: flex; align-items: center; gap: 10px; padding: 9px 11px; background: var(--surface2); border-radius: 9px; border-left: 2px solid var(--border); min-height: 48px; box-sizing: border-box; cursor: pointer; transition: background .15s; -webkit-tap-highlight-color: transparent; }
+.upcoming__item:active { background: var(--border); }
+.upcoming__item--urgent { border-left-color: var(--accent2); }
+.upcoming__item--overdue { border-left-color: var(--danger); background: rgba(var(--danger-rgb),.06); }
+.upcoming__item--soon { border-left-color: var(--accent); }
+.upcoming__item--ok { border-left-color: var(--accent3); }
+.upcoming__item--paid { opacity: .6; }
+.upcoming__date-col { display: flex; flex-direction: column; align-items: center; min-width: 22px; }
+.upcoming__day { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--text); display: block; line-height: 1; }
+.upcoming__month { font-family: var(--mono); font-size: 9px; color: var(--muted); }
+.upcoming__name { flex: 1; font-size: 12px; font-weight: 600; color: rgba(var(--text-rgb),.75); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.upcoming__sub { font-size: 10px; color: var(--muted); }
+.upcoming__amt-col { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
+.upcoming__amt { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--accent2); flex-shrink: 0; min-width: 5.5ch; text-align: right; }
+.upcoming__shortage { font-family: var(--mono); font-size: 9px; color: var(--accent6); text-align: right; white-space: nowrap; }
+.upcoming__check-btn { background: none; border: 1px solid rgba(var(--accent3-rgb),.3); border-radius: 6px; color: var(--accent3); width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s; flex-shrink: 0; padding: 0; }
+.upcoming__check-btn:hover { background: rgba(var(--accent3-rgb),.12); border-color: var(--accent3); }
+.upcoming__check-btn--disabled { border-color: var(--border); color: var(--muted); cursor: not-allowed; opacity: .5; }
+.upcoming__check-btn--done { border-color: rgba(var(--accent-rgb),.3); color: var(--accent); }
+.upcoming__check-btn--done:hover { background: rgba(var(--accent-rgb),.12); border-color: var(--accent); }
+.upcoming__edit-btn { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s; flex-shrink: 0; padding: 0; }
+.upcoming__edit-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--accent); }
+</style>
