@@ -9,7 +9,7 @@
       </span>
       <!-- Toggle kiểu thanh tiến độ — icon xoay 2 vòng khi click -->
       <button class="debt-overview__prog-toggle" :class="{ 'debt-overview__prog-toggle--spin': spinning }" @click="toggleProgressMode" :title="progressMode === 'repaid' ? $t('debt.progressModeUsed') : $t('debt.progressModeRepaid')">
-        <Icon name="refresh-cw" :size="9" />
+        <Icon name="refresh-cw" :size="9" :strokeWidth="3" />
         <span>{{ progressMode === 'repaid' ? $t('debt.progressModeRepaid') : $t('debt.progressModeUsed') }}</span>
       </button>
     </div>
@@ -23,7 +23,8 @@
         <div class="debt-overview__card-r1">
           <div class="debt-overview__card-name">{{ c.name }}</div>
           <div class="debt-overview__card-trend">
-            <Icon v-if="c.thisMonthSpent > 0" name="trending-up" :size="9" class="debt-overview__trend-up" />
+            <!-- UP chỉ hiện khi: có spending VÀ (không phải repaid mode HOẶC chưa thanh toán) -->
+            <Icon v-if="c.thisMonthSpent > 0 && !(progressMode === 'repaid' && c.thisMonthPaid)" name="trending-up" :size="9" class="debt-overview__trend-up" />
             <Icon v-if="c.thisMonthPaid" name="trending-down" :size="9" class="debt-overview__trend-down" />
           </div>
           <button class="debt-overview__card-edit" @click.stop="openEdit(c)" :title="$t('debt.editTooltip')">
