@@ -189,6 +189,7 @@ export default {
       json: 'JSON データを更新',
       language: '言語',
       currency: '通貨',
+      progressMode: 'カード進捗バー',
       logout: 'ログアウト',
     },
     limit: {
@@ -258,6 +259,11 @@ export default {
       rateInfo: '為替レートは毎日更新されます',
       rateError: '為替レートの取得に失敗しました',
       rateLoading: '為替レートを取得中...',
+    },
+    progressMode: {
+      title: '進捗バー表示モード',
+      used: '使用率 % を表示',
+      repaid: '返済率 % を表示',
     },
     logout: {
       confirm: 'ログアウトしてもよろしいですか？',

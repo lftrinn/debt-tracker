@@ -189,6 +189,7 @@ export default {
       json: 'Update JSON data',
       language: 'Language',
       currency: 'Currency',
+      progressMode: 'Card progress bar',
       logout: 'Log out',
     },
     limit: {
@@ -258,6 +259,11 @@ export default {
       rateInfo: 'Exchange rates updated daily',
       rateError: 'Failed to load exchange rates',
       rateLoading: 'Loading exchange rates...',
+    },
+    progressMode: {
+      title: 'Progress bar display mode',
+      used: 'Show % used',
+      repaid: 'Show % repaid',
     },
     logout: {
       confirm: 'Are you sure you want to log out?',
