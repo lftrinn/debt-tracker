@@ -88,7 +88,7 @@ test('setup flow — kết nối bin có sẵn', async ({ page }) => {
   await page.locator('input[placeholder="Bin ID"]').fill('test-bin-id-e2e')
 
   // Click connect
-  await page.getByText('KẾT NỐI').click()
+  await page.getByRole('button', { name: 'KẾT NỐI' }).click()
 
   // Main UI should load
   await waitForReady(page)
@@ -106,7 +106,7 @@ test('thêm chi tiêu — xuất hiện trong lịch sử', async ({ page }) => 
   await page.getByRole('button', { name: '+ Thêm' }).click()
 
   // Fill in description
-  const descInput = page.locator('input.inp[placeholder*="Mô tả"]')
+  const descInput = page.locator('input.add-form__input[placeholder*="Mô tả"]')
   await descInput.fill('Cơm tối test')
 
   // Fill in amount
@@ -164,7 +164,7 @@ test('ẩn/hiện số tiền — toggle hide button', async ({ page }) => {
 
   // By default, hideAmounts is true (dt_hide not set → '1')
   // The eye button should be visible
-  const eyeBtn = page.locator('.btn-eye')
+  const eyeBtn = page.locator('.app-header__btn--eye')
   await expect(eyeBtn).toBeVisible()
 
   // Toggle to show amounts
