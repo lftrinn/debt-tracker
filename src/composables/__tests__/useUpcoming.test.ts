@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { ref } from 'vue'
-import { useUpcoming } from '../useUpcoming'
+import { useUpcoming } from '../data/useUpcoming'
 import { makeData } from './helpers'
 
 describe('useUpcoming', () => {

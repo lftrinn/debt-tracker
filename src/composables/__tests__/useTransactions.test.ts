@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { ref } from 'vue'
-import { useTransactions } from '../useTransactions'
+import { useTransactions } from '../actions/useTransactions'
 import { makeData, VISA1, mockPush, mockToast, mockTStr, mockFindDebtId } from './helpers'
 
 function setup(dataOverrides = {}) {
@@ -32,7 +32,7 @@ describe('useTransactions', () => {
     it('toast thành công sau khi push OK', async () => {
       const { toast, addExp } = setup()
       await addExp({ desc: 'Cafe', amount: 30_000, cat: 'cafe' })
-      expect(toast).toHaveBeenCalledWith('Đã thêm chi tiêu')
+      expect(toast).toHaveBeenCalledWith('toast.expAdded')
     })
 
     it('toast lỗi khi push thất bại', async () => {
@@ -41,7 +41,7 @@ describe('useTransactions', () => {
       const toast = mockToast()
       const { addExp } = useTransactions(d, push, toast, mockTStr(), mockFindDebtId())
       await addExp({ desc: 'X', amount: 10_000, cat: 'x' })
-      expect(toast).toHaveBeenCalledWith('Lỗi lưu chi tiêu', 'err')
+      expect(toast).toHaveBeenCalledWith('toast.expAddedErr', 'err')
     })
 
     it('thanh toán bằng Visa → tăng balance thẻ', async () => {
@@ -96,7 +96,7 @@ describe('useTransactions', () => {
     it('toast thành công', async () => {
       const { toast, addInc } = setup()
       await addInc({ desc: 'Lương', amount: 500_000, cat: 'luong' })
-      expect(toast).toHaveBeenCalledWith('Đã thêm thu nhập')
+      expect(toast).toHaveBeenCalledWith('toast.incAdded')
     })
   })
 
@@ -137,7 +137,7 @@ describe('useTransactions', () => {
       const { d, toast, addExp, deleteTx } = setup()
       await addExp({ desc: 'X', amount: 10_000, cat: 'x' })
       await deleteTx({ id: d.value.expenses[0].id, type: 'exp' })
-      expect(toast).toHaveBeenLastCalledWith('Đã xoá giao dịch')
+      expect(toast).toHaveBeenLastCalledWith('toast.txDeleted')
     })
   })
 

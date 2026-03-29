@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vue-tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(npx vitest:*)",
+      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --msg-filter 'python3 -c \"\":*)",
+      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --msg-filter 'sed \"\"/^Co-Authored-By:/d\"\"' b8e24de..HEAD)",
+      "Read(//c/Users/Trin/Documents/Projects/debt-tracker/**)",
+      "Bash(npm ci:*)",
+      "Bash(grep -v \"^$\")",
+      "Bash(grep -v \":0$\")",
+      "Bash(npm test:*)",
+      "Bash(grep -n \"^import\\\\|from ''''\\\\.\\\\.\" src/App.vue)",
+      "Bash(grep -rn \"from ''''\\\\.\\\\.\" src/composables/*.ts)",
+      "Bash(grep -rn \"from ''''\\\\.\" src/composables/*.ts)",
+      "Bash(grep -n \"from ''''\\\\.\" src/composables/__tests__/*.ts)",
+      "Bash(grep -rn \"^import\\\\|from ''''\\\\.\" src/components/*.vue)",
+      "Bash(grep -rn \"from ''''\\\\.\" src/components/*.vue)",
+      "Bash(python3 -:*)",
+      "Bash(python3 update_imports.py)",
+      "Bash(python update_imports.py)",
+      "Bash(python fix_imports.py)",
+      "Bash(grep -rn \"from ''''../i18n''''\\\\|from ''''../../i18n''''\" src/components/)"
+    ]
+  }
+}

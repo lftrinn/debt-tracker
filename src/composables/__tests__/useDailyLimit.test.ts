@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { ref } from 'vue'
-import { useDailyLimit } from '../useDailyLimit'
+import { useDailyLimit } from '../data/useDailyLimit'
 import { makeData } from './helpers'
 
 describe('useDailyLimit', () => {

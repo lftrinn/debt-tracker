@@ -1,6 +1,6 @@
 <template>
   <!-- LOADING -->
-  <LoadingScreen v-if="appState === 'loading'" :message="syncMsg" />
+  <LoadingScreen v-if="appState === 'loading'" :message="syncMsgText" />
 
   <!-- ERROR POPUP -->
   <ErrorPopup
@@ -38,16 +38,16 @@
 
   <!-- MAIN -->
   <div v-if="appState === 'ready' || appState === 'error'">
-    <AppHeader :today="today" :hideAmounts="hideAmounts" :hideAlert="hz('alert')" :scrolled="syncBarScrolled" :syncStatus="syncSt" :syncMsg="syncMsg" :syncTime="syncTime" :limSt="limSt" :limBlink="limBlink" :overBanner="overBanner" :overMsg="overMsg" :cashDaysLeft="cashDaysLeft" :dToSalary="dToSalary" @reload="hardReload" @logout="logout" @toggle-hide="toggleHide" @scroll-alert="scrollToAlert" @dismiss-over="dismissOverBanner" />
+    <AppHeader :today="today" :hideAmounts="hideAmounts" :hideAlert="hz('alert')" :scrolled="syncBarScrolled" :syncStatus="syncSt" :syncMsg="syncMsgText" :syncTime="syncTime" :limSt="limSt" :limBlink="limBlink" :overBanner="overBanner" :overMsg="overMsg" :cashDaysLeft="cashDaysLeft" :dToSalary="dToSalary" @reload="hardReload" @toggle-hide="toggleHide" @scroll-alert="scrollToAlert" @dismiss-over="dismissOverBanner" />
 
     <div class="wrap">
-      <SyncBar ref="syncBarRef" :status="syncSt" :message="syncMsg" :syncTime="syncTime" :today="today" />
+      <SyncBar ref="syncBarRef" :status="syncSt" :message="syncMsgText" :syncTime="syncTime" :today="today" />
 
-      <div ref="alertRef" v-if="isOver" class="alert over"><Icon name="alert-triangle" :size="14" /> Vượt hạn mức +{{ hz('alert') ? '•••' : fV(todaySpent - dayLimit) }}</div>
+      <div ref="alertRef" v-if="isOver" class="alert over"><Icon name="alert-triangle" :size="14" /> {{ $t('app.alert.over') }}{{ hz('alert') ? '•••' : fCurrFull(todaySpent - dayLimit) }}</div>
       <div ref="alertRef" v-else-if="dayLimit > 0" class="alert ok">
         <Icon name="check" :size="14" />
-        <span class="alert-main">Còn {{ hz('alert') ? '•••' : fS(dayLimit - todaySpent) }} · mức {{ hz('alert') ? '•••' : fS(dayLimit) }}/ngày</span>
-        <span v-if="cashDaysLeft !== null && cashDaysLeft < dToSalary" class="alert-badge-warn">{{ hz('alert') ? '•/•' : cashDaysLeft + '/' + dToSalary }} ngày</span>
+        <span class="alert-main">{{ hz('alert') ? '•••' : $t('app.alert.okMain', { amount: fCurr(dayLimit - todaySpent), limit: fCurr(dayLimit) }) }}</span>
+        <span v-if="cashDaysLeft !== null && cashDaysLeft < dToSalary" class="alert-badge-warn">{{ hz('alert') ? '•/•' : $t('app.alert.days', { days: cashDaysLeft, salary: dToSalary }) }}</span>
       </div>
 
       <CashHero
@@ -97,11 +97,11 @@
 
       <!-- Tabs -->
       <div class="tab-nav">
-        <button class="tab-btn" :class="{ active: tab === 'add' }" @click="tab = 'add'">+ Thêm</button>
-        <button class="tab-btn" :class="{ active: tab === 'list' }" @click="tab = 'list'">Lịch sử</button>
-        <button class="tab-btn" :class="{ active: tab === 'chart' }" @click="tab = 'chart'">Biểu đồ</button>
-        <button class="tab-btn" :class="{ active: tab === 'tl' }" @click="tab = 'tl'">Timeline</button>
-        <button class="tab-btn" :class="{ active: tab === 'cfg' }" @click="tab = 'cfg'">Cài đặt</button>
+        <button class="tab-btn" :class="{ active: tab === 'add' }" @click="tab = 'add'">{{ $t('app.tabs.add') }}</button>
+        <button class="tab-btn" :class="{ active: tab === 'list' }" @click="tab = 'list'">{{ $t('app.tabs.history') }}</button>
+        <button class="tab-btn" :class="{ active: tab === 'chart' }" @click="tab = 'chart'">{{ $t('app.tabs.charts') }}</button>
+        <button class="tab-btn" :class="{ active: tab === 'tl' }" @click="tab = 'tl'">{{ $t('app.tabs.timeline') }}</button>
+        <button class="tab-btn" :class="{ active: tab === 'cfg' }" @click="tab = 'cfg'">{{ $t('app.tabs.settings') }}</button>
       </div>
 
       <!-- Tab content -->
@@ -146,7 +146,7 @@
         :limPct="limPct"
         :limSt="limSt"
         :rules="d.rules?.must_not || []"
-        :syncMsg="syncMsg"
+        :syncMsg="syncMsgText"
         :syncTime="syncTime"
         :syncing="syncing"
         :importErr="importErr"
@@ -155,6 +155,7 @@
         @update-limit="updLimit"
         @import-json="handleImportJson"
         @set-hide-zone="({ key, val }: { key: string; val: boolean }) => setHideZone(key, val)"
+        @logout="logout"
       />
     </div>
   </div>
@@ -162,41 +163,50 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import type { Ref } from 'vue'
 import type { AppData } from '@/types/data'
+import type { ToastType } from './composables/ui/useToast'
+import type { Locale } from './i18n'
+import { setLocale } from './i18n'
+import { useCurrency } from './composables/api/useCurrency'
 
-import { useApi } from './composables/useApi'
-import { useFormatters } from './composables/useFormatters'
-import { useDebtData } from './composables/useDebtData'
-import { useToast } from './composables/useToast'
-import { useHideZones } from './composables/useHideZones'
-import { useAppSetup } from './composables/useAppSetup'
-import { useTransactions } from './composables/useTransactions'
-import { usePayments } from './composables/usePayments'
-import { useDebtActions } from './composables/useDebtActions'
+import { useApi } from './composables/api/useApi'
+import { useFormatters } from './composables/ui/useFormatters'
+import { useDebtData } from './composables/data/useDebtData'
+import { useToast } from './composables/ui/useToast'
+import { useHideZones } from './composables/ui/useHideZones'
+import { useAppSetup } from './composables/actions/useAppSetup'
+import { useTransactions } from './composables/actions/useTransactions'
+import { usePayments } from './composables/actions/usePayments'
+import { useDebtActions } from './composables/actions/useDebtActions'
 
-import LoadingScreen from './components/LoadingScreen.vue'
-import ErrorPopup from './components/ErrorPopup.vue'
-import SetupScreen from './components/SetupScreen.vue'
-import AppHeader from './components/AppHeader.vue'
-import SyncBar from './components/SyncBar.vue'
-import CashHero from './components/CashHero.vue'
-import DebtOverview from './components/DebtOverview.vue'
-import ProgressSection from './components/ProgressSection.vue'
-import UpcomingPayments from './components/UpcomingPayments.vue'
-import AddTransaction from './components/AddTransaction.vue'
-import TransactionList from './components/TransactionList.vue'
-import ChartsPanel from './components/ChartsPanel.vue'
-import TimelinePanel from './components/TimelinePanel.vue'
-import SettingsPanel from './components/SettingsPanel.vue'
-import ToastMessage from './components/ToastMessage.vue'
-import DetailPopup from './components/DetailPopup.vue'
-import Icon from './components/Icon.vue'
+import LoadingScreen from './components/ui/LoadingScreen.vue'
+import ErrorPopup from './components/ui/ErrorPopup.vue'
+import SetupScreen from './components/forms/SetupScreen.vue'
+import AppHeader from './components/layout/AppHeader.vue'
+import SyncBar from './components/layout/SyncBar.vue'
+import CashHero from './components/cards/CashHero.vue'
+import DebtOverview from './components/cards/DebtOverview.vue'
+import ProgressSection from './components/cards/ProgressSection.vue'
+import UpcomingPayments from './components/payments/UpcomingPayments.vue'
+import AddTransaction from './components/forms/AddTransaction.vue'
+import TransactionList from './components/payments/TransactionList.vue'
+import ChartsPanel from './components/charts/ChartsPanel.vue'
+import TimelinePanel from './components/charts/TimelinePanel.vue'
+import SettingsPanel from './components/forms/SettingsPanel.vue'
+import ToastMessage from './components/ui/ToastMessage.vue'
+import DetailPopup from './components/ui/DetailPopup.vue'
+import Icon from './components/ui/Icon.vue'
 
 // ─── API & Formatters ─────────────────────────────────────────────────────
 const api = useApi()
 const { syncSt, syncMsg, syncTime, syncing, isConfigured } = api
-const { fN, fS, fV, tStr } = useFormatters()
+const { fN, tStr } = useFormatters()
+const { fCurr, fCurrFull, fetchRates } = useCurrency()
+fetchRates()
+const { t } = useI18n()
+const syncMsgText = computed(() => t(syncMsg.value))
 
 // ─── UI state ─────────────────────────────────────────────────────────────
 const appState = ref<'loading' | 'setup' | 'ready' | 'error'>(isConfigured.value ? 'loading' : 'setup')
@@ -215,6 +225,7 @@ let overTimer: ReturnType<typeof setTimeout> | null = null
 
 // ─── Toast ────────────────────────────────────────────────────────────────
 const { toastMsg, toastType, toastTrigger, toast } = useToast()
+const toastFn = (key: string, type?: ToastType) => toast(t(key), type)
 
 // ─── Hide zones ───────────────────────────────────────────────────────────
 const { hideAmounts, toggleHide, hideZones, setHideZone, hz } = useHideZones()
@@ -249,7 +260,7 @@ const {
 } = useDebtData(d)
 
 const overMsg = computed(() =>
-  isOver.value ? `Vượt hạn mức +${hz('alert') ? '•••' : fV(todaySpent.value - dayLimit.value)}` : ''
+  isOver.value ? `${t('app.alert.over')}${hz('alert') ? '•••' : fCurrFull(todaySpent.value - dayLimit.value)}` : ''
 )
 
 // ─── Animation keys ───────────────────────────────────────────────────────
@@ -323,18 +334,18 @@ onUnmounted(() => {
 
 // ─── Setup composable ─────────────────────────────────────────────────────
 // Payments is wired first so cleanupPastPaid can be passed to useAppSetup
-const payments = usePayments(d, async () => { try { await api.push(d.value); return true } catch { return false } }, toast, tStr, findDebtId)
+const payments = usePayments(d, async () => { try { await api.push(d.value); return true } catch { return false } }, toastFn, tStr, findDebtId)
 const { togglePaid, recPay, addOneTime, saveEdit, deleteUpcoming, handlePopupSaveUpcoming } = payments
 
 const { loading, sErr, pushData, pullData, handleSetup, reconnect, hardReload, logout } = useAppSetup(
-  d, appState, api, toast, () => payments.cleanupPastPaid()
+  d, appState, api, toastFn, () => payments.cleanupPastPaid()
 )
 
 // ─── Transaction composable ───────────────────────────────────────────────
-const { copyTxData, addExp, addInc, deleteTx, handlePopupSaveTx } = useTransactions(d, pushData, toast, tStr, findDebtId)
+const { copyTxData, addExp, addInc, deleteTx, handlePopupSaveTx } = useTransactions(d, pushData, toastFn, tStr, findDebtId)
 
 // ─── Debt action composable ───────────────────────────────────────────────
-const { updateCardDirect, addCash, updLimit, importNewJson } = useDebtActions(d, pushData, toast, tStr)
+const { updateCardDirect, addCash, updLimit, importNewJson } = useDebtActions(d, pushData, toastFn, tStr)
 
 // ─── Popup state ──────────────────────────────────────────────────────────
 const popupItem = ref<Record<string, unknown> | null>(null)
