@@ -1,6 +1,7 @@
 import { computed } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
 import type { AppData, LimitStatus, TrendDirection } from '@/types/data'
+import { i18n } from '../../i18n'
 import { useFormatters } from '../ui/useFormatters'
 import { useDailyLimit } from './useDailyLimit'
 import { useCashData } from './useCashData'
@@ -49,14 +50,13 @@ export function useDebtData(d: Ref<AppData>) {
     ].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)
   )
 
-  const today = computed((): string =>
-    new Date().toLocaleDateString('vi-VN', {
-      weekday: 'short',
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    })
-  )
+  const today = computed((): string => {
+    const locale = (i18n.global.locale as { value: string }).value
+    const now = new Date()
+    if (locale === 'en') return now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
+    if (locale === 'ja') return now.toLocaleDateString('ja-JP', { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' })
+    return now.toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })
+  })
 
   // ─── Daily / monthly spending ─────────────────────────────────────────
   // Loại trừ _obTag để không tính kép thanh toán nghĩa vụ vào chi tiêu hàng ngày/tháng
