@@ -3,10 +3,9 @@
     <div>
       <div class="cash-hero__label">
         {{ $t('cash.label') }}
-        <span class="trend-ico" :class="cashTrend">
+        <span v-if="cashTrend !== 'neutral'" :key="cashTrend" class="trend-ico" :class="cashTrend">
           <Icon v-if="cashTrend === 'up'" name="trending-up" :size="12" />
-          <Icon v-else-if="cashTrend === 'down'" name="trending-down" :size="12" />
-          <Icon v-else name="minus" :size="12" />
+          <Icon v-else name="trending-down" :size="12" />
         </span>
       </div>
       <div

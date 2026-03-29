@@ -20,7 +20,7 @@ export function useDebtData(d: Ref<AppData>) {
 
   // ─── Sub-composables ──────────────────────────────────────────────────
   const { actualPayDate, dToSalary, afterSalary, dayLimit } = useDailyLimit(d)
-  const { spentSinceSnapshot, availCash, unpaidObsToPayday, cashDaysLeft } = useCashData(d, dayLimit, actualPayDate)
+  const { spentSinceSnapshot, availCash, unpaidObsToPayday, unpaidObsAmounts, cashDaysLeft } = useCashData(d, dayLimit, actualPayDate)
   const { findDebtId, minPaidByCard, debtCards, smallLoans, totalDebt, origDebt, repayPct, debtBreakdown, debtTrend } = useDebtCards(d)
   const { upcomingLabel, upcoming } = useUpcoming(d)
   const { milestones } = useTimeline(d)
@@ -103,6 +103,51 @@ export function useDebtData(d: Ref<AppData>) {
 
   const txTrend: ComputedRef<TrendDirection> = computed(() => cashTrend.value)
 
+  // ─── Smart daily limit ────────────────────────────────────────────────
+  /**
+   * Hạn mức chi tiêu thực tế = min(baseDayLimit, tiền mặt còn sau nghĩa vụ).
+   * Nếu tiền không đủ trang trải tất cả nghĩa vụ: chọn greedy (nhỏ trước) và lấy phần dư.
+   * custom_daily_limit > 0 bỏ qua logic này.
+   */
+  const effectiveDayLimit: ComputedRef<number> = computed((): number => {
+    const baseLimit = dayLimit.value
+    if (d.value.custom_daily_limit > 0) return baseLimit
+    const cash = availCash.value
+    const cashAfterObs = cash - unpaidObsToPayday.value
+    if (cashAfterObs >= 0) return Math.min(baseLimit, cashAfterObs)
+    // Không đủ trả tất cả: greedy chọn khoản nhỏ nhất trước
+    const amounts = unpaidObsAmounts.value.slice().sort((a, b) => a - b)
+    let remaining = cash
+    for (const amt of amounts) {
+      if (remaining >= amt) remaining -= amt
+      else break
+    }
+    return Math.min(baseLimit, Math.max(0, remaining))
+  })
+
+  /**
+   * Số ngày còn đủ tiền mặt dựa trên effectiveDayLimit.
+   */
+  const smartCashDaysLeft: ComputedRef<number | null> = computed((): number | null => {
+    const lim = effectiveDayLimit.value
+    if (lim <= 0) return 0
+    const cash = availCash.value
+    const obsTotal = unpaidObsToPayday.value
+    const cashAfterObs = cash - obsTotal
+    if (cashAfterObs >= 0) {
+      return Math.floor(cashAfterObs / lim)
+    }
+    // Greedy: tính lại phần dư sau khi trả các khoản nhỏ nhất
+    const amounts = unpaidObsAmounts.value.slice().sort((a, b) => a - b)
+    let remaining = cash
+    for (const amt of amounts) {
+      if (remaining >= amt) remaining -= amt
+      else break
+    }
+    if (remaining <= 0) return 0
+    return Math.floor(remaining / lim)
+  })
+
   return {
     expenses,
     incomes,
@@ -114,12 +159,12 @@ export function useDebtData(d: Ref<AppData>) {
     monthSpent,
     dToSalary,
     afterSalary,
-    dayLimit,
+    dayLimit: effectiveDayLimit,
     isOver,
     limPct,
     limSt,
     availCash,
-    cashDaysLeft,
+    cashDaysLeft: smartCashDaysLeft,
     spentSinceSnapshot,
     unpaidObsToPayday,
     debtCards,
