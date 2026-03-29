@@ -89,6 +89,7 @@
                   <input class="popup-input" v-model.number="editBal" type="number" inputmode="numeric" :placeholder="fN(editCard.balance)" @input="onEditBalInput" />
                   <span class="debt-overview__input-suffix">₫</span>
                 </div>
+                <span class="debt-overview__dual-sep">≈</span>
                 <div class="debt-overview__input-wrap">
                   <input class="popup-input" v-model.number="editBalDisplay" type="number" inputmode="numeric" :placeholder="String(displayVal(editCard.balance) ?? '')" @input="onEditBalDisplayInput" />
                   <span class="debt-overview__input-suffix">{{ currSymbol }}</span>
@@ -107,6 +108,7 @@
                   <input class="popup-input" v-model.number="editMin" type="number" inputmode="numeric" :placeholder="fN(editCard.min)" @input="onEditMinInput" />
                   <span class="debt-overview__input-suffix">₫</span>
                 </div>
+                <span class="debt-overview__dual-sep">≈</span>
                 <div class="debt-overview__input-wrap">
                   <input class="popup-input" v-model.number="editMinDisplay" type="number" inputmode="numeric" :placeholder="String(displayVal(editCard.min) ?? '')" @input="onEditMinDisplayInput" />
                   <span class="debt-overview__input-suffix">{{ currSymbol }}</span>
@@ -308,8 +310,9 @@ function saveEdit() {
 .debt-overview__input-wrap { position: relative; display: flex; align-items: center; }
 .debt-overview__input-wrap .popup-input { flex: 1; padding-right: 44px; min-width: 0; }
 .debt-overview__input-suffix { position: absolute; right: 8px; font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: rgba(var(--accent-rgb),.12); color: var(--accent); pointer-events: none; }
-.debt-overview__dual-inputs { display: flex; gap: 8px; }
+.debt-overview__dual-inputs { display: flex; gap: 6px; align-items: center; }
 .debt-overview__dual-inputs .debt-overview__input-wrap { flex: 1; min-width: 0; }
+.debt-overview__dual-sep { font-family: var(--mono); font-size: 10px; color: var(--muted); flex-shrink: 0; }
 /* Animation xoay 720deg cho icon toggle khi chuyển mode */
 @keyframes spin2 { from { transform: rotate(0deg); } to { transform: rotate(720deg); } }
 .debt-overview__prog-toggle--spin :deep(svg) { animation: spin2 .6s ease; }
