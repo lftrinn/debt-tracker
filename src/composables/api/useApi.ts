@@ -22,7 +22,7 @@ export function useApi() {
   const fmtTime = (): string => {
     const locale = (i18n.global.locale as { value: string }).value
     const bcp = locale === 'en' ? 'en-US' : locale === 'ja' ? 'ja-JP' : 'vi-VN'
-    return new Date().toLocaleTimeString(bcp, { hour: '2-digit', minute: '2-digit' })
+    return new Date().toLocaleTimeString(bcp, { hour: '2-digit', minute: '2-digit', hour12: false })
   }
 
   const H = (): Record<string, string> => ({
