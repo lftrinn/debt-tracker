@@ -119,7 +119,7 @@
             </div>
             <div class="popup-field">
               <label class="popup-label">{{ $t('debt.dueDateLabel') }}</label>
-              <input class="popup-input" v-model="editDueDate" type="date" :placeholder="editCard.minDueDate || $t('debt.dueDatePlaceholder')" />
+              <input class="popup-input" v-model="editDueDate" type="date" :disabled="hide.amounts" :placeholder="editCard.minDueDate || $t('debt.dueDatePlaceholder')" />
             </div>
           </div>
           <div v-if="!hide.amounts && (!hide.cardBal || !hide.minPay)" class="popup-actions">
