@@ -398,6 +398,16 @@ function handleSave() {
   if (props.item._variant === 'tx' && buf.value.date > tStr()) buf.value.date = tStr()
   const i = props.item
   const currentLang = locale.value
+
+  // Nếu tên/mô tả không thay đổi so với giá trị đã hiển thị → không cần review bản dịch
+  const originalName = i._variant === 'upcoming'
+    ? getLocalized(i, 'name')
+    : getLocalized(i, 'desc', currentLang)
+  if (buf.value.name === originalName) {
+    doSave({})
+    return
+  }
+
   const { i18n: existingI18n, meta } = getItemI18nFields(i)
 
   // Tìm ngôn ngữ cần review:
