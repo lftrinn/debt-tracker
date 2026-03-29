@@ -55,6 +55,10 @@ export function useTransactions(
   ): void {
     if (!desc.trim()) return
     translateToAll(desc, lang).then(async (translations) => {
+      // Guard: nếu item đã được edit (desc thay đổi) kể từ khi translate bắt đầu,
+      // bỏ qua bản dịch stale này để tránh overwrite descI18n mới hơn.
+      const current = (d.value[listKey] as Array<{ id: number; desc?: string }>).find((x) => x.id === id)
+      if (!current || current.desc !== desc) return
       d.value = {
         ...d.value,
         [listKey]: (d.value[listKey] as Array<{ id: number; descI18n?: unknown }>).map((x) =>
