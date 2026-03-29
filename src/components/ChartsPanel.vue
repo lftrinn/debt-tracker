@@ -1,11 +1,11 @@
 <template>
   <div class="card">
     <!-- Chart type tabs -->
-    <div class="chart-tabs">
+    <div class="charts__tabs">
       <button
         v-for="t in tabs"
         :key="t.key"
-        :class="['chart-tab-btn', { active: activeTab === t.key }]"
+        :class="['charts__tab', { 'charts__tab--active': activeTab === t.key }]"
         @click="activeTab = t.key"
       >
         <Icon :name="t.icon" :size="12" />
@@ -15,32 +15,32 @@
 
     <!-- Thu/Chi -->
     <div v-show="activeTab === 'spend'">
-      <div class="range-tabs">
+      <div class="charts__ranges">
         <button
           v-for="r in ranges"
           :key="r.key"
-          :class="['range-tab-btn', { active: spendRange === r.key }]"
+          :class="['charts__range', { 'charts__range--active': spendRange === r.key }]"
           @click="spendRange = r.key"
         >{{ r.label }}</button>
       </div>
-      <div class="chart-wrap"><canvas ref="chartRef"></canvas></div>
+      <div class="charts__canvas"><canvas ref="chartRef"></canvas></div>
     </div>
 
     <!-- Lộ trình giảm nợ -->
     <div v-show="activeTab === 'debt'">
-      <div class="chart-wrap"><canvas ref="debtChartRef"></canvas></div>
+      <div class="charts__canvas"><canvas ref="debtChartRef"></canvas></div>
     </div>
 
     <!-- Cơ cấu nợ -->
     <div v-show="activeTab === 'pie'">
-      <div class="pie-wrap"><canvas ref="pieChartRef"></canvas></div>
-      <div class="legend">
-        <div class="legend-item" v-for="s in debtBreakdown" :key="s.name">
-          <div class="legend-dot" :style="{ background: s.color }"></div>
-          <span class="legend-name">{{ s.name }}</span>
-          <span class="legend-val">
+      <div class="charts__pie"><canvas ref="pieChartRef"></canvas></div>
+      <div class="charts__legend">
+        <div class="charts__legend-item" v-for="s in debtBreakdown" :key="s.name">
+          <div class="charts__legend-dot" :style="{ background: s.color }"></div>
+          <span class="charts__legend-name">{{ s.name }}</span>
+          <span class="charts__legend-val">
             <template v-if="hide.pie">{{ pct(s.val) }}%</template>
-            <template v-else>₫{{ fS(s.val) }}</template>
+            <template v-else>{{ fCurr(s.val) }}</template>
           </span>
         </div>
       </div>
@@ -53,12 +53,12 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Chart, registerables } from 'chart.js'
 import Icon from './Icon.vue'
-import { useFormatters } from '../composables/useFormatters'
 import { useColors } from '../composables/useColors'
+import { useCurrency } from '../composables/useCurrency'
 
 Chart.register(...registerables)
 
-const { fS } = useFormatters()
+const { fCurr } = useCurrency()
 const { colors, rgba, chartGrid, chartTick, chartFont } = useColors()
 const { t, locale } = useI18n()
 
@@ -345,7 +345,7 @@ function buildPieChart() {
               const p = total > 0 ? Math.round(ctx.parsed / total * 100) : 0
               return h
                 ? ctx.label + ': ' + p + '%'
-                : ctx.label + ': ₫' + ctx.parsed.toLocaleString('vi-VN') + ' (' + p + '%)'
+                : ctx.label + ': ' + ctx.parsed.toLocaleString('vi-VN') + 'đ (' + p + '%)'
             },
           },
         },
@@ -389,3 +389,19 @@ watch(locale, () => setTimeout(buildAll, 50))
 
 defineExpose({ buildAll })
 </script>
+
+<style scoped>
+.charts__tabs { display: flex; gap: 4px; background: var(--surface2); border-radius: 9px; padding: 3px; margin-bottom: 14px; }
+.charts__tab { flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 8px; border: none; border-radius: 7px; background: transparent; color: var(--muted); font-family: var(--sans); font-size: 10px; font-weight: 600; cursor: pointer; transition: all .2s; -webkit-tap-highlight-color: transparent; }
+.charts__tab--active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+.charts__ranges { display: flex; gap: 4px; justify-content: center; margin-top: 6px; }
+.charts__range { padding: 3px 12px; border: 1px solid var(--border); border-radius: 12px; background: transparent; color: var(--muted); font-family: var(--sans); font-size: 9px; font-weight: 600; cursor: pointer; transition: all .2s; -webkit-tap-highlight-color: transparent; }
+.charts__range--active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.charts__canvas { margin-top: 12px; height: 160px; position: relative; }
+.charts__pie { margin: 12px auto 0; height: 180px; max-width: 200px; position: relative; }
+.charts__legend { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+.charts__legend-item { display: flex; align-items: center; gap: 8px; }
+.charts__legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.charts__legend-name { font-size: 11px; flex: 1; }
+.charts__legend-val { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+</style>

@@ -14,29 +14,29 @@
     <div v-if="txType === 'exp'">
       <div class="c-title" style="margin-bottom:10px">{{ $t('addTx.expense.title') }}</div>
       <div class="add-form">
-        <input class="inp" v-model="nDesc" :placeholder="$t('addTx.expense.descPlaceholder')" />
-        <div class="form-row" style="gap:6px">
-          <select class="cat-sel" style="flex:1" v-model="nCat">
+        <input class="add-form__input" v-model="nDesc" :placeholder="$t('addTx.expense.descPlaceholder')" />
+        <div class="add-form__row" style="gap:6px">
+          <select class="add-form__select" style="flex:1" v-model="nCat">
             <option v-for="c in expenseCategories" :key="c.key" :value="c.key">{{ c.label }}</option>
           </select>
-          <select class="cat-sel" style="flex:1" v-model="nPayMethod">
+          <select class="add-form__select" style="flex:1" v-model="nPayMethod">
             <option v-for="m in payMethods" :key="m.key" :value="m.key">{{ m.label }}</option>
           </select>
         </div>
-        <div class="form-row">
-          <div class="inp-amount-wrap">
-            <input class="inp inp-amount" v-model.number="nAmt" type="number" inputmode="numeric" :placeholder="$t('addTx.expense.amountPlaceholder')" />
-            <div v-if="topExpAmounts.length" class="quick-amounts">
+        <div class="add-form__row">
+          <div class="add-form__amount-wrap">
+            <input class="add-form__input add-form__amount" v-model.number="nAmt" type="number" inputmode="numeric" :placeholder="$t('addTx.expense.amountPlaceholder')" />
+            <div v-if="topExpAmounts.length" class="add-form__quick-amounts">
               <button
                 v-for="a in topExpAmounts"
                 :key="a.value"
-                class="quick-amt-btn"
+                class="add-form__quick-btn"
                 @click="nAmt = a.value"
               >{{ a.label }}</button>
             </div>
           </div>
         </div>
-        <button class="btn-add" @click="addExp" :disabled="syncing || !nDesc.trim() || !nAmt">
+        <button class="add-form__submit" @click="addExp" :disabled="syncing || !nDesc.trim() || !nAmt">
           {{ syncing ? $t('addTx.saving') : $t('addTx.add') }} <Icon name="arrow-right" :size="14" />
         </button>
       </div>
@@ -46,24 +46,24 @@
     <div v-if="txType === 'inc'">
       <div class="c-title" style="margin-bottom:10px">{{ $t('addTx.income.title') }}</div>
       <div class="add-form">
-        <input class="inp" v-model="iDesc" :placeholder="$t('addTx.income.descPlaceholder')" />
-        <div class="form-row">
-          <div class="inp-amount-wrap">
-            <input class="inp inp-amount" v-model.number="iAmt" type="number" inputmode="numeric" placeholder="Số tiền (VNĐ)" />
-            <div v-if="topIncAmounts.length" class="quick-amounts">
+        <input class="add-form__input" v-model="iDesc" :placeholder="$t('addTx.income.descPlaceholder')" />
+        <div class="add-form__row">
+          <div class="add-form__amount-wrap">
+            <input class="add-form__input add-form__amount" v-model.number="iAmt" type="number" inputmode="numeric" placeholder="Số tiền (VNĐ)" />
+            <div v-if="topIncAmounts.length" class="add-form__quick-amounts">
               <button
                 v-for="a in topIncAmounts"
                 :key="a.value"
-                class="quick-amt-btn"
+                class="add-form__quick-btn"
                 @click="iAmt = a.value"
               >{{ a.label }}</button>
             </div>
           </div>
-          <select class="cat-sel" v-model="iCat">
+          <select class="add-form__select" v-model="iCat">
             <option v-for="c in incomeCategories" :key="c.key" :value="c.key">{{ c.label }}</option>
           </select>
         </div>
-        <button class="btn-add" style="background:var(--accent3);color:var(--bg)" @click="addInc" :disabled="syncing || !iDesc.trim() || !iAmt">
+        <button class="add-form__submit" style="background:var(--accent3);color:var(--bg)" @click="addInc" :disabled="syncing || !iDesc.trim() || !iAmt">
           {{ syncing ? $t('addTx.saving') : $t('addTx.add') }} <Icon name="arrow-right" :size="14" />
         </button>
       </div>
@@ -178,3 +178,21 @@ function addInc() {
   iAmt.value = null
 }
 </script>
+
+<style scoped>
+.add-form { display: flex; flex-direction: column; gap: 8px; margin-top: 11px; }
+.add-form__row { display: flex; gap: 7px; }
+.add-form__input { flex: 1; background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; padding: 10px 11px; color: var(--text); font-family: var(--sans); font-size: 12px; outline: none; transition: border-color .2s; }
+.add-form__input::placeholder { color: var(--muted); }
+.add-form__input:focus { border-color: var(--accent); }
+.add-form__select { background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; padding: 10px 8px; color: var(--text); font-family: var(--sans); font-size: 12px; outline: none; cursor: pointer; }
+.add-form__amount-wrap { flex: 1; position: relative; }
+.add-form__amount { width: 100%; padding-right: 120px; box-sizing: border-box; }
+.add-form__amount::placeholder { font-size: 10px; }
+.add-form__quick-amounts { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); display: flex; gap: 4px; }
+.add-form__quick-btn { background: rgba(var(--accent-rgb),.1); border: 1px solid rgba(var(--accent-rgb),.2); border-radius: 5px; padding: 3px 7px; font-family: var(--mono); font-size: 9px; font-weight: 700; color: var(--accent); cursor: pointer; transition: all .15s; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+.add-form__quick-btn:active { background: rgba(var(--accent-rgb),.25); transform: scale(.95); }
+.add-form__submit { background: var(--accent); color: var(--bg); border: none; border-radius: 9px; padding: 11px; font-family: var(--sans); font-size: 13px; font-weight: 800; cursor: pointer; letter-spacing: .05em; transition: all .2s; }
+.add-form__submit:hover { opacity: .9; transform: translateY(-1px); }
+.add-form__submit:disabled { opacity: .3; cursor: not-allowed; transform: none; }
+</style>
