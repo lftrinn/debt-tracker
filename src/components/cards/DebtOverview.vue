@@ -78,16 +78,36 @@
           </div>
           <div class="popup-body">
             <div class="popup-field">
-              <label class="popup-label">{{ hide.cardBal ? $t('debt.balanceHiddenLabel') : $t('debt.balanceLabel') }}</label>
-              <div v-if="hide.cardBal" class="popup-input" style="display:flex;align-items:center;color:var(--muted);font-size:12px">{{ balPct(editCard) }}{{ $t('debt.balanceHiddenValue') }}</div>
+              <label class="popup-label">{{ (hide.cardBal || hide.amounts) ? $t('debt.balanceHiddenLabel') : $t('debt.balanceLabel') }}</label>
+              <div v-if="hide.cardBal || hide.amounts" class="popup-input" style="display:flex;align-items:center;color:var(--muted);font-size:12px">{{ balPct(editCard) }}{{ $t('debt.balanceHiddenValue') }}</div>
+              <div v-else-if="useDisplayCur && !ratesLoading" class="debt-overview__dual-inputs">
+                <div class="debt-overview__input-wrap">
+                  <input class="popup-input" v-model.number="editBal" type="number" inputmode="numeric" :placeholder="fN(editCard.balance)" @input="onEditBalInput" />
+                  <span class="debt-overview__input-suffix">₫</span>
+                </div>
+                <div class="debt-overview__input-wrap">
+                  <input class="popup-input" v-model.number="editBalDisplay" type="number" inputmode="numeric" :placeholder="String(displayVal(editCard.balance) ?? '')" @input="onEditBalDisplayInput" />
+                  <span class="debt-overview__input-suffix">{{ currSymbol }}</span>
+                </div>
+              </div>
               <div v-else class="debt-overview__input-wrap">
                 <input class="popup-input" v-model.number="editBal" type="number" inputmode="numeric" :placeholder="fN(editCard.balance)" />
                 <span class="debt-overview__input-suffix">{{ currSymbol }}</span>
               </div>
             </div>
             <div class="popup-field">
-              <label class="popup-label">{{ hide.minPay ? $t('debt.minHiddenLabel') : $t('debt.minLabel2') }}</label>
-              <div v-if="hide.minPay" class="popup-input" style="display:flex;align-items:center;color:var(--muted);font-size:12px">{{ minPct(editCard) }}{{ $t('debt.minHiddenValue') }}</div>
+              <label class="popup-label">{{ (hide.minPay || hide.amounts) ? $t('debt.minHiddenLabel') : $t('debt.minLabel2') }}</label>
+              <div v-if="hide.minPay || hide.amounts" class="popup-input" style="display:flex;align-items:center;color:var(--muted);font-size:12px">{{ minPct(editCard) }}{{ $t('debt.minHiddenValue') }}</div>
+              <div v-else-if="useDisplayCur && !ratesLoading" class="debt-overview__dual-inputs">
+                <div class="debt-overview__input-wrap">
+                  <input class="popup-input" v-model.number="editMin" type="number" inputmode="numeric" :placeholder="fN(editCard.min)" @input="onEditMinInput" />
+                  <span class="debt-overview__input-suffix">₫</span>
+                </div>
+                <div class="debt-overview__input-wrap">
+                  <input class="popup-input" v-model.number="editMinDisplay" type="number" inputmode="numeric" :placeholder="String(displayVal(editCard.min) ?? '')" @input="onEditMinDisplayInput" />
+                  <span class="debt-overview__input-suffix">{{ currSymbol }}</span>
+                </div>
+              </div>
               <div v-else class="debt-overview__input-wrap">
                 <input class="popup-input" v-model.number="editMin" type="number" inputmode="numeric" :placeholder="fN(editCard.min)" />
                 <span class="debt-overview__input-suffix">{{ currSymbol }}</span>
@@ -98,7 +118,7 @@
               <input class="popup-input" v-model="editDueDate" type="date" :placeholder="editCard.minDueDate || $t('debt.dueDatePlaceholder')" />
             </div>
           </div>
-          <div v-if="!hide.cardBal || !hide.minPay" class="popup-actions">
+          <div v-if="!hide.amounts && (!hide.cardBal || !hide.minPay)" class="popup-actions">
             <button class="popup-btn primary" @click="saveEdit" :disabled="editBal == null && editMin == null && !editDueDate">{{ $t('debt.updateButton') }}</button>
           </div>
         </div>
@@ -115,13 +135,48 @@ import { useCurrency } from '../../composables/api/useCurrency'
 import { useDebtSettings } from '../../composables/ui/useDebtSettings'
 
 const { fN } = useFormatters()
-const { fCurr, fCurrFull, displayCurrency } = useCurrency()
+const { fCurr, fCurrFull, displayCurrency, convertBetween, toVnd, ratesLoading } = useCurrency()
 
 /** Ký hiệu tiền tệ hiển thị để hiện suffix trong input */
 const currSymbol = computed(() => {
   const c = displayCurrency.value
   return c === 'USD' ? '$' : c === 'JPY' ? '¥' : '₫'
 })
+
+/** True khi display currency khác VND — cần dual input */
+const useDisplayCur = computed(() => displayCurrency.value !== 'VND')
+
+/** Refs cho giá trị edit theo display currency */
+const editBalDisplay = ref(null)
+const editMinDisplay = ref(null)
+let editBalFromDisplay = false
+let editMinFromDisplay = false
+
+/** Tính giá trị VND → display currency để hiển thị placeholder */
+function displayVal(vnd) {
+  if (!useDisplayCur.value || ratesLoading.value) return null
+  const v = convertBetween(vnd, 'VND', displayCurrency.value)
+  return displayCurrency.value === 'USD' ? Math.round(v * 100) / 100 : Math.round(v)
+}
+
+function onEditBalInput() {
+  if (editBalFromDisplay) return
+  editBalDisplay.value = editBal.value != null ? displayVal(editBal.value) : null
+}
+function onEditBalDisplayInput() {
+  editBalFromDisplay = true
+  if (editBalDisplay.value != null) editBal.value = Math.round(toVnd(editBalDisplay.value, displayCurrency.value))
+  nextTick(() => { editBalFromDisplay = false })
+}
+function onEditMinInput() {
+  if (editMinFromDisplay) return
+  editMinDisplay.value = editMin.value != null ? displayVal(editMin.value) : null
+}
+function onEditMinDisplayInput() {
+  editMinFromDisplay = true
+  if (editMinDisplay.value != null) editMin.value = Math.round(toVnd(editMinDisplay.value, displayCurrency.value))
+  nextTick(() => { editMinFromDisplay = false })
+}
 const { progressMode, setProgressMode } = useDebtSettings()
 
 /** Trạng thái animation xoay icon khi toggle */
@@ -187,6 +242,8 @@ function openEdit(c) {
   editCard.value = c
   editBal.value = null
   editMin.value = null
+  editBalDisplay.value = null
+  editMinDisplay.value = null
   editDueDate.value = c.minDueDate || ''
 }
 
@@ -245,6 +302,8 @@ function saveEdit() {
 .debt-overview__input-wrap { position: relative; display: flex; align-items: center; }
 .debt-overview__input-wrap .popup-input { flex: 1; padding-right: 44px; }
 .debt-overview__input-suffix { position: absolute; right: 8px; font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: rgba(var(--accent-rgb),.12); color: var(--accent); pointer-events: none; }
+.debt-overview__dual-inputs { display: flex; gap: 8px; }
+.debt-overview__dual-inputs .debt-overview__input-wrap { flex: 1; min-width: 0; }
 /* Animation xoay 720deg cho icon toggle khi chuyển mode */
 @keyframes spin2 { from { transform: rotate(0deg); } to { transform: rotate(720deg); } }
 .debt-overview__prog-toggle--spin :deep(svg) { animation: spin2 .6s ease; }
