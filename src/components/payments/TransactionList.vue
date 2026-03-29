@@ -89,8 +89,8 @@ defineEmits(['open-detail'])
 @keyframes si { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 .tx-list__item-icon { font-size: 16px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 50%; }
 .tx-list__item-info { flex: 1; min-width: 0; }
-.tx-list__item-name { font-size: 12px; font-weight: 600; color: rgba(var(--text-rgb),.75); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tx-list__item-meta { font-family: var(--mono); font-size: 9px; color: var(--muted); margin-top: 2px; }
+.tx-list__item-name { font-size: 12px; line-height: 16px; font-weight: 600; color: rgba(var(--text-rgb),.75); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tx-list__item-meta { font-family: var(--mono); font-size: 9px; line-height: 12px; color: var(--muted); margin-top: 2px; }
 .tx-list__empty { text-align: center; padding: 18px; color: var(--muted); font-size: 11px; font-family: var(--mono); }
 .tx-list__item-amt { font-family: var(--mono); font-size: 12px; font-weight: 700; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
 .tx-list__item-equiv { font-size: 9px; font-weight: 400; color: var(--muted); }
