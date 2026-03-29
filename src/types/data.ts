@@ -23,6 +23,8 @@ export interface Expense {
   cat: string
   date: string
   payMethod?: string
+  /** Đơn vị tiền của giao dịch — nếu không có, mặc định là base currency của app */
+  currency?: string
   /** Internal tag linking an expense to a paid obligation. Format: "ob:<key>" */
   _obTag?: string
 }
@@ -33,6 +35,8 @@ export interface Income {
   amount: number
   cat: string
   date: string
+  /** Đơn vị tiền của khoản thu — nếu không có, mặc định là base currency của app */
+  currency?: string
 }
 
 export interface Obligation {
