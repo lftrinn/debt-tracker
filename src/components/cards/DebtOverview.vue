@@ -33,7 +33,7 @@
         <!-- Row 2: balance + rate -->
         <div class="debt-overview__card-r2">
           <!-- Mode 'đã trả': hiện số tiền khả dụng (credit_limit - balance), màu xanh -->
-          <span class="debt-overview__card-bal" :class="{ 'debt-overview__card-bal--avail': progressMode === 'repaid' }">
+          <span class="debt-overview__card-bal" :class="'debt-overview__card-bal--' + progLevel(c)">
             <template v-if="hide.cardBal">•••••</template>
             <template v-else>{{ progressMode === 'repaid' ? fCurr(c.limit - c.balance) : fCurr(c.balance) }}</template>
           </span>
@@ -234,10 +234,13 @@ function saveEdit() {
 .debt-overview__card-prog--normal { background: var(--accent2); }
 .debt-overview__card-prog--high { background: linear-gradient(90deg, var(--accent2), var(--accent6)); }
 .debt-overview__card-prog--critical { background: linear-gradient(90deg, var(--accent6), var(--danger)); }
-/* Mode 'đã trả': thanh tiến độ gradient xanh lá tương tự style gradient cam/đỏ của mode 'đã dùng' */
-.debt-overview__card-prog--repaid { background: linear-gradient(90deg, var(--accent3), #86efac); }
-/* Mode 'đã trả': số tiền khả dụng (credit_limit - balance) hiển thị màu xanh */
-.debt-overview__card-bal--avail { color: var(--accent3); }
+/* Mode 'đã trả': thanh tiến độ gradient xanh — từ accent sang accent3 */
+.debt-overview__card-prog--repaid { background: linear-gradient(90deg, var(--accent), var(--accent3)); }
+/* Màu số tiền card-bal theo progLevel */
+.debt-overview__card-bal--repaid { color: var(--accent3); }
+.debt-overview__card-bal--normal { color: var(--accent2); }
+.debt-overview__card-bal--high { color: var(--accent6); }
+.debt-overview__card-bal--critical { color: var(--danger); }
 /* Input với suffix ký hiệu tiền tệ bên phải */
 .debt-overview__input-wrap { position: relative; display: flex; align-items: center; }
 .debt-overview__input-wrap .popup-input { flex: 1; padding-right: 30px; }
