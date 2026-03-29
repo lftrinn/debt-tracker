@@ -310,6 +310,17 @@ export default {
     categoryIncome: 'Khoản thu',
     saveButton: 'Lưu thay đổi',
     cancelButton: 'Huỷ',
+    review: {
+      title: 'Cập nhật bản dịch',
+      subtitle: 'Bạn vừa chỉnh sửa nội dung. Chọn cách xử lý các ngôn ngữ đã nhập thủ công trước đó:',
+      autoTranslate: 'Dịch tự động',
+      manual: 'Sửa thủ công',
+      keep: 'Giữ nguyên',
+      saveAll: 'Lưu',
+      cancel: 'Huỷ',
+      translating: 'Đang dịch...',
+      langLabel: { vi: 'Tiếng Việt', en: 'English', ja: '日本語' },
+    },
   },
   categories: {
     expense: {

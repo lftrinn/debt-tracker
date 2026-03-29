@@ -310,6 +310,17 @@ export default {
     categoryIncome: 'Income',
     saveButton: 'Save changes',
     cancelButton: 'Cancel',
+    review: {
+      title: 'Update translations',
+      subtitle: 'You just edited the content. Choose how to handle languages that were previously entered manually:',
+      autoTranslate: 'Auto-translate',
+      manual: 'Edit manually',
+      keep: 'Keep as-is',
+      saveAll: 'Save',
+      cancel: 'Cancel',
+      translating: 'Translating...',
+      langLabel: { vi: 'Vietnamese', en: 'English', ja: 'Japanese' },
+    },
   },
   categories: {
     expense: {

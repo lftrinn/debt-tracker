@@ -2,7 +2,9 @@ import type { Ref } from 'vue'
 import type { AppData, DebtRef } from '@/types/data'
 import type { ToastType } from '../ui/useToast'
 import { i18n } from '../../i18n'
+import { translateToAll, translateText, ALL_LANGS } from '../api/useTranslation'
 import type { AppLang } from '../api/useTranslation'
+import type { TranslationDecision } from './useTransactions'
 
 /**
  * Xử lý thanh toán nghĩa vụ, thêm/sửa/xóa khoản chi một lần, và dọn dẹp dữ liệu đã qua hạn.
@@ -80,46 +82,186 @@ export function usePayments(
     ;(await pushData()) ? toast('toast.debtPaid') : toast('toast.debtPaidErr', 'err')
   }
 
+  /** Locale hiện tại của app */
+  function currentLang(): AppLang {
+    return (i18n.global.locale as { value: string }).value as AppLang
+  }
+
+  /**
+   * Dịch tất cả ngôn ngữ còn lại trong background sau khi tạo một one_time_expense.
+   * Cập nhật nameI18n và nameI18nMeta; thất bại im lặng.
+   */
+  function backgroundTranslateOneTime(id: number, name: string, from: AppLang): void {
+    if (!name.trim()) return
+    translateToAll(name, from).then(async (translations) => {
+      const current = (d.value.one_time_expenses || []).find((e) => e.id === id)
+      if (!current || current.name !== name) return
+      const meta: Partial<Record<AppLang, 'auto' | 'manual'>> = {}
+      for (const l of ALL_LANGS) {
+        if (translations[l]) meta[l] = l === from ? 'manual' : 'auto'
+      }
+      d.value = {
+        ...d.value,
+        one_time_expenses: (d.value.one_time_expenses || []).map((e) =>
+          e.id === id ? { ...e, nameI18n: translations, nameI18nMeta: meta } : e
+        ),
+      }
+      await pushData()
+    })
+  }
+
+  /**
+   * Dịch lại một số ngôn ngữ cụ thể cho one_time_expense (sau khi edit).
+   */
+  function backgroundTranslateOneTimePartial(id: number, name: string, from: AppLang, targetLangs: AppLang[]): void {
+    if (!name.trim() || targetLangs.length === 0) return
+    Promise.all(targetLangs.map((lang) => translateText(name, from, lang).then((r) => ({ lang, result: r })))).then(
+      async (results) => {
+        const current = (d.value.one_time_expenses || []).find((e) => e.id === id)
+        if (!current || current.name !== name) return
+        const i18nUpdates: Partial<Record<AppLang, string>> = {}
+        const metaUpdates: Partial<Record<AppLang, 'auto' | 'manual'>> = {}
+        for (const { lang, result } of results) {
+          if (result) { i18nUpdates[lang] = result; metaUpdates[lang] = 'auto' }
+        }
+        d.value = {
+          ...d.value,
+          one_time_expenses: (d.value.one_time_expenses || []).map((e) =>
+            e.id === id
+              ? { ...e, nameI18n: { ...(e.nameI18n || {}), ...i18nUpdates }, nameI18nMeta: { ...(e.nameI18nMeta || {}), ...metaUpdates } }
+              : e
+          ),
+        }
+        await pushData()
+      },
+    )
+  }
+
+  /**
+   * Dịch lại một số ngôn ngữ cho monthly_plan obligation (sau khi edit).
+   */
+  function backgroundTranslateObligationPartial(mo: string, key: string, name: string, from: AppLang, targetLangs: AppLang[]): void {
+    if (!name.trim() || targetLangs.length === 0) return
+    Promise.all(targetLangs.map((lang) => translateText(name, from, lang).then((r) => ({ lang, result: r })))).then(
+      async (results) => {
+        const plan = d.value.monthly_plans?.[mo]
+        if (!plan) return
+        const ob = plan.obligations.find((o) => (o.date || '') + ':' + o.name === key)
+        if (!ob || ob.name !== name) return
+        const i18nUpdates: Partial<Record<AppLang, string>> = {}
+        const metaUpdates: Partial<Record<AppLang, 'auto' | 'manual'>> = {}
+        for (const { lang, result } of results) {
+          if (result) { i18nUpdates[lang] = result; metaUpdates[lang] = 'auto' }
+        }
+        d.value = {
+          ...d.value,
+          monthly_plans: {
+            ...d.value.monthly_plans,
+            [mo]: {
+              ...plan,
+              obligations: plan.obligations.map((o) =>
+                (o.date || '') + ':' + o.name === key
+                  ? { ...o, nameI18n: { ...(o.nameI18n || {}), ...i18nUpdates }, nameI18nMeta: { ...(o.nameI18nMeta || {}), ...metaUpdates } }
+                  : o
+              ),
+            },
+          },
+        }
+        await pushData()
+      },
+    )
+  }
+
   /**
    * Thêm khoản chi một lần vào danh sách sắp tới (chưa thực hiện).
+   * Ghi nhận ngôn ngữ nguồn và dịch sang các ngôn ngữ còn lại trong background.
    * @param name - Tên khoản chi
    * @param date - Ngày dự kiến dạng 'YYYY-MM-DD'
    * @param amount - Số tiền (VND)
    */
   async function addOneTime({ name, date, amount }: { name: string; date: string; amount: number }): Promise<void> {
     if (!name || !date || !amount) return
-    const ev = { id: Date.now(), name, date, amount }
+    const lang = currentLang()
+    const id = Date.now()
+    const ev = {
+      id,
+      name,
+      date,
+      amount,
+      nameLang: lang,
+      nameI18n: { [lang]: name } as Partial<Record<AppLang, string>>,
+      nameI18nMeta: { [lang]: 'manual' as const } as Partial<Record<AppLang, 'auto' | 'manual'>>,
+    }
     d.value = { ...d.value, one_time_expenses: [...(d.value.one_time_expenses || []), ev] }
     ;(await pushData()) ? toast('toast.expenseAdded') : toast('toast.expenseAddedErr', 'err')
+    backgroundTranslateOneTime(id, name, lang)
   }
 
   /**
    * Lưu chỉnh sửa một khoản sắp tới từ popup. Cập nhật paid_obligations nếu key thay đổi do đổi tên/ngày.
-   * @param p - Đối tượng khoản thanh toán với dữ liệu chỉnh sửa trong _buf
+   * Xử lý quyết định dịch từ review step: 'auto' langs dịch lại background, 'manual' dùng giá trị user nhập, 'keep' giữ nguyên.
+   * @param p - Đối tượng khoản thanh toán với dữ liệu chỉnh sửa trong _buf và _translations từ review step
    */
-  async function saveEdit(p: { source: string; _id?: number; _mo?: string; _key: string; _buf?: { name: string; date: string; amt: number }; name?: string; nameI18n?: Partial<Record<AppLang, string>> }): Promise<void> {
+  async function saveEdit(p: {
+    source: string
+    _id?: number
+    _mo?: string
+    _key: string
+    _buf?: { name: string; date: string; amt: number }
+    name?: string
+    nameI18n?: Partial<Record<AppLang, string>>
+    nameI18nMeta?: Partial<Record<AppLang, 'auto' | 'manual'>>
+    _translations?: Partial<Record<AppLang, TranslationDecision>>
+  }): Promise<void> {
     const buf = p._buf
     if (!buf?.name || !buf.date || !buf.amt) return
-    const currentLocale = ((i18n.global.locale as { value: string }).value) as AppLang
+    const currentLocale = currentLang()
     const nd: AppData = { ...d.value }
 
-    // Xác định raw name và nameI18n cần ghi:
-    // - Nếu item có nameI18n → ghi buf.name vào nameI18n[locale]; giữ nguyên raw name (chỉ cập nhật nếu locale = 'vi')
-    // - Nếu không có nameI18n → ghi vào name như cũ
+    // Xác định rawName, updatedNameI18n và updatedNameI18nMeta
     let rawName: string
     let updatedNameI18n: Partial<Record<AppLang, string>> | undefined
+    let updatedNameI18nMeta: Partial<Record<AppLang, 'auto' | 'manual'>> | undefined
+    const autoLangs: AppLang[] = []
+
     if (p.nameI18n) {
-      updatedNameI18n = { ...p.nameI18n, [currentLocale]: buf.name }
+      const newI18n: Partial<Record<AppLang, string>> = { ...p.nameI18n, [currentLocale]: buf.name }
+      const newMeta: Partial<Record<AppLang, 'auto' | 'manual'>> = { ...(p.nameI18nMeta || {}), [currentLocale]: 'manual' }
       rawName = currentLocale === 'vi' ? buf.name : (p.name ?? buf.name)
+
+      // Áp dụng decisions từ review step
+      for (const otherLang of ALL_LANGS.filter((l) => l !== currentLocale)) {
+        const decision = p._translations?.[otherLang]
+        if (decision) {
+          if (decision.action === 'auto' && decision.value) {
+            newI18n[otherLang] = decision.value
+            newMeta[otherLang] = 'auto'
+          } else if (decision.action === 'manual' && decision.value) {
+            newI18n[otherLang] = decision.value
+            newMeta[otherLang] = 'manual'
+          }
+          // 'keep': giữ nguyên existing (đã copy ở trên)
+        } else if ((p.nameI18nMeta?.[otherLang] === 'auto') || !p.nameI18nMeta?.[otherLang]) {
+          autoLangs.push(otherLang)
+        }
+      }
+      updatedNameI18n = newI18n
+      updatedNameI18nMeta = newMeta
     } else {
       rawName = buf.name
-      updatedNameI18n = undefined
     }
 
     if (p.source === 'one_time') {
       nd.one_time_expenses = (nd.one_time_expenses || []).map((e) =>
         e.id === p._id
-          ? { ...e, name: rawName, ...(updatedNameI18n !== undefined ? { nameI18n: updatedNameI18n } : {}), date: buf.date, amount: buf.amt }
+          ? {
+              ...e,
+              name: rawName,
+              ...(updatedNameI18n !== undefined ? { nameI18n: updatedNameI18n } : {}),
+              ...(updatedNameI18nMeta !== undefined ? { nameI18nMeta: updatedNameI18nMeta } : {}),
+              date: buf.date,
+              amount: buf.amt,
+            }
           : e
       )
     } else {
@@ -135,7 +277,15 @@ export function usePayments(
               const newCat = (rawName || '').toLowerCase().includes('minimum')
                 ? 'debt_minimum'
                 : (ob.category === 'debt_minimum' ? null : ob.category)
-              return { ...ob, name: rawName, ...(updatedNameI18n !== undefined ? { nameI18n: updatedNameI18n } : {}), date: buf.date, amount: buf.amt, category: newCat }
+              return {
+                ...ob,
+                name: rawName,
+                ...(updatedNameI18n !== undefined ? { nameI18n: updatedNameI18n } : {}),
+                ...(updatedNameI18nMeta !== undefined ? { nameI18nMeta: updatedNameI18nMeta } : {}),
+                date: buf.date,
+                amount: buf.amt,
+                category: newCat,
+              }
             }),
           },
         }
@@ -150,6 +300,15 @@ export function usePayments(
     }
     d.value = nd
     ;(await pushData()) ? toast('toast.upcomingUpdated') : toast('toast.upcomingUpdatedErr', 'err')
+
+    // Dịch lại background các auto langs
+    if (autoLangs.length > 0) {
+      if (p.source === 'one_time' && p._id) {
+        backgroundTranslateOneTimePartial(p._id, rawName, currentLocale, autoLangs)
+      } else if (p._mo) {
+        backgroundTranslateObligationPartial(p._mo, newKey, rawName, currentLocale, autoLangs)
+      }
+    }
   }
 
   /**
@@ -251,7 +410,7 @@ export function usePayments(
     ;(await pushData()) ? toast(wasPaid ? 'toast.paid' : 'toast.undoPaid') : toast('toast.payErr', 'err')
   }
 
-  async function handlePopupSaveUpcoming(p: { _buf: { name: string; date: string; amt: number }; source: string; _id?: number; _mo?: string; _key: string; name?: string; nameI18n?: Partial<Record<AppLang, string>> }): Promise<void> {
+  async function handlePopupSaveUpcoming(p: { _buf: { name: string; date: string; amt: number }; source: string; _id?: number; _mo?: string; _key: string; name?: string; nameI18n?: Partial<Record<AppLang, string>>; nameI18nMeta?: Partial<Record<AppLang, 'auto' | 'manual'>>; _translations?: Partial<Record<AppLang, TranslationDecision>> }): Promise<void> {
     await saveEdit(p)
   }
 
