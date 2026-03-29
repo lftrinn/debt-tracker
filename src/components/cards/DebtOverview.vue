@@ -9,8 +9,8 @@
       </span>
       <!-- Toggle kiểu thanh tiến độ — icon xoay 2 vòng khi click -->
       <button class="debt-overview__prog-toggle" :class="{ 'debt-overview__prog-toggle--spin': spinning }" @click="toggleProgressMode" :title="progressMode === 'repaid' ? $t('debt.progressModeUsed') : $t('debt.progressModeRepaid')">
-        <Icon name="refresh-cw" :size="9" :strokeWidth="3" />
         <span>{{ progressMode === 'repaid' ? $t('debt.progressModeRepaid') : $t('debt.progressModeUsed') }}</span>
+        <Icon name="refresh-cw" :size="9" :strokeWidth="3" />
       </button>
     </div>
     <div class="debt-overview__total num-flash" :key="'debt' + debtAnimKey">
@@ -318,7 +318,7 @@ function saveEdit() {
 .debt-overview__dual-inputs .debt-overview__input-wrap { flex: 1; min-width: 0; }
 .debt-overview__dual-sep { font-family: var(--mono); font-size: 10px; color: var(--muted); flex-shrink: 0; }
 /* Animation xoay 720deg cho icon toggle khi chuyển mode */
-@keyframes spin2 { from { transform: rotate(0deg); } to { transform: rotate(540deg); } }
+@keyframes spin2 { from { transform: rotate(0deg); } to { transform: rotate(180deg); } }
 .debt-overview__prog-toggle--spin :deep(svg) { animation: spin2 .6s ease; }
 .debt-overview__card-r4 { display: flex; align-items: center; justify-content: space-between; font-family: var(--mono); font-size: 9.5px; padding-top: 6px; margin-top: 2px; border-top: 1px solid rgba(var(--text-rgb),.05); }
 .debt-overview__min-label { font-weight: 700; letter-spacing: .02em; color: var(--muted); flex-shrink: 0; }
