@@ -1,46 +1,46 @@
 <template>
   <div>
-    <div class="cfg-list">
-      <div class="cfg-item" @click="open = 'lim'">
-        <span class="cfg-item-ico"><Icon name="chart-no-axes-column" :size="16" /></span>
-        <span class="cfg-item-label">{{ $t('settings.menu.limit') }}</span>
-        <span class="cfg-item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
+    <div class="settings__list">
+      <div class="settings__item" @click="open = 'lim'">
+        <span class="settings__item-ico"><Icon name="chart-no-axes-column" :size="16" /></span>
+        <span class="settings__item-label">{{ $t('settings.menu.limit') }}</span>
+        <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
       </div>
-      <div class="cfg-item" @click="open = 'hz'">
-        <span class="cfg-item-ico"><Icon name="lock" :size="16" /></span>
-        <span class="cfg-item-label">{{ $t('settings.menu.hideZones') }}</span>
-        <span class="cfg-item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
+      <div class="settings__item" @click="open = 'hz'">
+        <span class="settings__item-ico"><Icon name="lock" :size="16" /></span>
+        <span class="settings__item-label">{{ $t('settings.menu.hideZones') }}</span>
+        <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
       </div>
-      <div class="cfg-item" @click="open = 'rules'">
-        <span class="cfg-item-ico"><Icon name="list" :size="16" /></span>
-        <span class="cfg-item-label">{{ $t('settings.menu.rules') }}</span>
-        <span class="cfg-item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
+      <div class="settings__item" @click="open = 'rules'">
+        <span class="settings__item-ico"><Icon name="list" :size="16" /></span>
+        <span class="settings__item-label">{{ $t('settings.menu.rules') }}</span>
+        <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
       </div>
-      <div class="cfg-item" @click="open = 'json'">
-        <span class="cfg-item-ico"><Icon name="refresh-ccw" :size="16" /></span>
-        <span class="cfg-item-label">{{ $t('settings.menu.json') }}</span>
-        <span class="cfg-item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
+      <div class="settings__item" @click="open = 'json'">
+        <span class="settings__item-ico"><Icon name="refresh-ccw" :size="16" /></span>
+        <span class="settings__item-label">{{ $t('settings.menu.json') }}</span>
+        <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
       </div>
-      <div class="cfg-item" @click="open = 'lang'">
-        <span class="cfg-item-ico"><Icon name="globe" :size="16" /></span>
-        <span class="cfg-item-label">{{ $t('settings.menu.language') }}</span>
-        <span class="cfg-item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
+      <div class="settings__item" @click="open = 'lang'">
+        <span class="settings__item-ico"><Icon name="globe" :size="16" /></span>
+        <span class="settings__item-label">{{ $t('settings.menu.language') }}</span>
+        <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
       </div>
-      <div class="cfg-item" @click="openCurrency">
-        <span class="cfg-item-ico"><Icon name="dollar-sign" :size="16" /></span>
-        <span class="cfg-item-label">{{ $t('settings.menu.currency') }}</span>
-        <span class="cfg-item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
+      <div class="settings__item" @click="openCurrency">
+        <span class="settings__item-ico"><Icon name="dollar-sign" :size="16" /></span>
+        <span class="settings__item-label">{{ $t('settings.menu.currency') }}</span>
+        <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
       </div>
-      <div class="cfg-sep"></div>
-      <div class="cfg-item cfg-item--danger" @click="open = 'logout'">
-        <span class="cfg-item-ico cfg-item-ico--danger"><Icon name="log-out" :size="16" /></span>
-        <span class="cfg-item-label cfg-item-label--danger">{{ $t('settings.menu.logout') }}</span>
+      <div class="settings__sep"></div>
+      <div class="settings__item settings__item--danger" @click="open = 'logout'">
+        <span class="settings__item-ico settings__item-ico--danger"><Icon name="log-out" :size="16" /></span>
+        <span class="settings__item-label settings__item-label--danger">{{ $t('settings.menu.logout') }}</span>
       </div>
     </div>
 
     <!-- Sync info -->
     <div style="text-align:center;padding:6px 0">
-      <span class="small-n">{{ syncMsg }}<template v-if="syncTime"> · {{ syncTime }}</template></span>
+      <span class="settings__sync-note">{{ syncMsg }}<template v-if="syncTime"> · {{ syncTime }}</template></span>
     </div>
 
     <!-- POPUP -->
@@ -65,13 +65,13 @@
           <!-- DAILY LIMIT -->
           <template v-if="open === 'lim'">
             <div class="popup-body">
-              <div class="lim-bar-w">
-                <div class="lim-bar">
-                  <div class="lim-fill" :class="limSt" :style="{ width: Math.min(limPct, 100) + '%' }"></div>
+              <div class="settings__lim-wrap">
+                <div class="settings__lim-bar">
+                  <div class="settings__lim-fill" :class="'settings__lim-fill--' + limSt" :style="{ width: Math.min(limPct, 100) + '%' }"></div>
                 </div>
-                <span class="small-n">{{ limPct }}%</span>
+                <span class="settings__sync-note">{{ limPct }}%</span>
               </div>
-              <div class="small-n" style="margin-bottom:4px">
+              <div class="settings__sync-note" style="margin-bottom:4px">
                 <template v-if="hide.dailyLim">••••• / •••••</template>
                 <template v-else>{{ fCurrFull(todaySpent) }} / {{ fCurrFull(dayLimit) }}</template>
               </div>
@@ -89,27 +89,27 @@
           <template v-if="open === 'hz'">
             <div class="popup-body">
               <div class="hint" style="margin-bottom:8px">{{ $t('settings.hideZones.hint') }}</div>
-              <div class="hz-tree">
-                <div v-for="g in zoneTree" :key="g.label" class="hz-group" :class="{ expanded: expandedGroups[g.label] }">
-                  <div class="hz-parent" :class="{ checked: parentState(g) === 'all', partial: parentState(g) === 'some' }">
-                    <label class="hz-parent-check" @click.stop>
+              <div class="settings__hz-tree">
+                <div v-for="g in zoneTree" :key="g.label" class="settings__hz-group" :class="{ 'settings__hz-group--expanded': expandedGroups[g.label] }">
+                  <div class="settings__hz-parent" :class="{ 'settings__hz-parent--checked': parentState(g) === 'all', 'settings__hz-parent--partial': parentState(g) === 'some' }">
+                    <label class="settings__hz-parent-check" @click.stop>
                       <input type="checkbox"
                         :checked="parentState(g) === 'all'"
                         :indeterminate.prop="parentState(g) === 'some'"
                         @change="toggleParent(g, $event.target.checked)" />
                     </label>
-                    <span class="hz-icon"><Icon :name="g.icon" :size="14" /></span>
-                    <span class="hz-name" style="flex:1">{{ g.label }}</span>
-                    <button v-if="g.children.length > 1" class="hz-toggle" @click="expandedGroups[g.label] = !expandedGroups[g.label]">
-                      <span class="hz-arrow" :class="{ open: expandedGroups[g.label] }"><Icon name="chevron-right" :size="12" /></span>
+                    <span class="settings__hz-icon"><Icon :name="g.icon" :size="14" /></span>
+                    <span class="settings__hz-name" style="flex:1">{{ g.label }}</span>
+                    <button v-if="g.children.length > 1" class="settings__hz-toggle" @click="expandedGroups[g.label] = !expandedGroups[g.label]">
+                      <span class="settings__hz-arrow" :class="{ 'settings__hz-arrow--open': expandedGroups[g.label] }"><Icon name="chevron-right" :size="12" /></span>
                     </button>
                   </div>
-                  <div v-if="g.children.length <= 1 || expandedGroups[g.label]" class="hz-children">
-                    <label v-for="c in g.children" :key="c.key" class="hz-child" :class="{ checked: hideZones[c.key] }">
+                  <div v-if="g.children.length <= 1 || expandedGroups[g.label]" class="settings__hz-children">
+                    <label v-for="c in g.children" :key="c.key" class="settings__hz-child" :class="{ 'settings__hz-child--checked': hideZones[c.key] }">
                       <input type="checkbox"
                         :checked="hideZones[c.key]"
                         @change="$emit('set-hide-zone', { key: c.key, val: $event.target.checked })" />
-                      <span class="hz-child-name">{{ c.name }}</span>
+                      <span class="settings__hz-child-name">{{ c.name }}</span>
                     </label>
                   </div>
                 </div>
@@ -121,8 +121,8 @@
           <template v-if="open === 'rules'">
             <div class="popup-body">
               <div v-if="!rules.length" class="empty">{{ $t('settings.rules.empty') }}</div>
-              <div v-for="r in rules" :key="r" class="rule-item">
-                <div class="rule-dot"></div><span>{{ r }}</span>
+              <div v-for="r in rules" :key="r" class="settings__rule">
+                <div class="settings__rule-dot"></div><span>{{ r }}</span>
               </div>
             </div>
           </template>
@@ -144,16 +144,16 @@
           <!-- LANGUAGE SELECTOR -->
           <template v-if="open === 'lang'">
             <div class="popup-body">
-              <div class="lang-list">
+              <div class="settings__lang-list">
                 <button
                   v-for="loc in LOCALES"
                   :key="loc"
-                  class="lang-item"
-                  :class="{ active: currentLocale === loc }"
+                  class="settings__lang-item"
+                  :class="{ 'settings__lang-item--active': currentLocale === loc }"
                   @click="selectLocale(loc)"
                 >
-                  <span class="lang-name">{{ $t('settings.language.' + loc) }}</span>
-                  <Icon v-if="currentLocale === loc" name="check" :size="14" class="lang-check" />
+                  <span class="settings__lang-name">{{ $t('settings.language.' + loc) }}</span>
+                  <Icon v-if="currentLocale === loc" name="check" :size="14" class="settings__lang-check" />
                 </button>
               </div>
             </div>
@@ -163,16 +163,16 @@
           <template v-if="open === 'currency'">
             <div class="popup-body">
               <div class="hint" style="margin-bottom:8px">{{ $t('settings.currency.display') }}</div>
-              <div class="lang-list">
+              <div class="settings__lang-list">
                 <button
                   v-for="cur in CURRENCIES"
                   :key="cur"
-                  class="lang-item"
-                  :class="{ active: currentCurrency === cur }"
+                  class="settings__lang-item"
+                  :class="{ 'settings__lang-item--active': currentCurrency === cur }"
                   @click="selectCurrency(cur)"
                 >
-                  <span class="lang-name">{{ $t('settings.currency.' + cur) }}</span>
-                  <Icon v-if="currentCurrency === cur" name="check" :size="14" class="lang-check" />
+                  <span class="settings__lang-name">{{ $t('settings.currency.' + cur) }}</span>
+                  <Icon v-if="currentCurrency === cur" name="check" :size="14" class="settings__lang-check" />
                 </button>
               </div>
               <div v-if="currentCurrency === 'JPY'" style="margin-top:12px">
@@ -182,7 +182,7 @@
                   <button :class="['tab-btn', currentJpyNotation === 'kanji' ? 'active' : '']" style="flex:1" @click="selectJpyNotation('kanji')">{{ $t('settings.currency.jpyKanji') }}</button>
                 </div>
               </div>
-              <div v-if="currentCurrency !== 'VND'" style="margin-top:10px;text-align:center" class="small-n">
+              <div v-if="currentCurrency !== 'VND'" style="margin-top:10px;text-align:center" class="settings__sync-note">
                 <template v-if="ratesLoading">{{ $t('settings.currency.rateLoading') }}</template>
                 <template v-else-if="ratesError">{{ $t('settings.currency.rateError') }}</template>
                 <template v-else>{{ $t('settings.currency.rateInfo') }}</template>
@@ -193,15 +193,15 @@
           <!-- LOGOUT CONFIRM -->
           <template v-if="open === 'logout'">
             <div class="popup-body">
-              <div class="logout-confirm-icon">
+              <div class="settings__logout-icon">
                 <Icon name="log-out" :size="32" color="var(--danger)" />
               </div>
-              <p class="logout-confirm-msg">{{ $t('settings.logout.confirm') }}</p>
-              <p class="logout-confirm-hint">{{ $t('settings.logout.hint') }}</p>
+              <p class="settings__logout-msg">{{ $t('settings.logout.confirm') }}</p>
+              <p class="settings__logout-hint">{{ $t('settings.logout.hint') }}</p>
             </div>
-            <div class="popup-actions popup-actions--gap">
+            <div class="popup-actions settings__popup-actions--gap">
               <button class="popup-btn" @click="closePopup">{{ $t('settings.logout.cancel') }}</button>
-              <button class="popup-btn popup-btn--danger" @click="$emit('logout')">{{ $t('settings.logout.button') }}</button>
+              <button class="popup-btn settings__popup-btn--danger" @click="$emit('logout')">{{ $t('settings.logout.button') }}</button>
             </div>
           </template>
 
@@ -458,3 +458,81 @@ function onTouchEnd(e) {
 
 defineExpose({})
 </script>
+
+<style scoped>
+/* Menu list */
+.settings__list { display: flex; flex-direction: column; gap: 6px; }
+.settings__item { display: flex; align-items: center; gap: 12px; padding: 13px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: background .12s; -webkit-tap-highlight-color: transparent; }
+.settings__item:active { background: var(--surface2); }
+.settings__item-ico { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
+.settings__item-label { flex: 1; font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--text); }
+.settings__item-arrow { font-size: 13px; color: var(--muted); flex-shrink: 0; }
+.settings__sep { height: 1px; background: var(--border); margin: 4px 0; }
+.settings__item--danger { border-color: rgba(var(--danger-rgb),.2); }
+.settings__item--danger:active { background: rgba(var(--danger-rgb),.08); }
+.settings__item-ico--danger { color: var(--danger); }
+.settings__item-label--danger { color: var(--danger); }
+
+/* Sync note */
+.settings__sync-note { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+
+/* Limit bar */
+.settings__lim-wrap { display: flex; align-items: center; gap: 8px; margin: 9px 0 5px; }
+.settings__lim-bar { flex: 1; height: 5px; background: var(--surface2); border-radius: 99px; overflow: hidden; }
+.settings__lim-fill { height: 100%; border-radius: 99px; transition: width .4s; }
+.settings__lim-fill--safe { background: var(--accent3); }
+.settings__lim-fill--warn { background: var(--accent); }
+.settings__lim-fill--over { background: var(--accent2); }
+
+/* Rules */
+.settings__rule { display: flex; align-items: flex-start; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+.settings__rule:last-child { border-bottom: none; }
+.settings__rule-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent2); margin-top: 5px; flex-shrink: 0; }
+
+/* Language / Currency selector */
+.settings__lang-list { display: flex; flex-direction: column; gap: 6px; }
+.settings__lang-item { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: all .15s; font-family: var(--sans); font-size: 14px; color: var(--text); }
+.settings__lang-item:active { background: rgba(var(--accent-rgb),.08); }
+.settings__lang-item--active { border-color: var(--accent); background: rgba(var(--accent-rgb),.06); }
+.settings__lang-name { font-weight: 500; }
+.settings__lang-check { color: var(--accent); }
+
+/* Hide zones treeview */
+.settings__hz-tree { display: flex; flex-direction: column; gap: 4px; }
+.settings__hz-group { margin-bottom: 2px; }
+.settings__hz-parent { display: flex; align-items: center; gap: 9px; padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; user-select: none; transition: all .15s; }
+.settings__hz-group--expanded .settings__hz-parent { border-radius: 9px 9px 4px 4px; }
+.settings__hz-parent:hover { border-color: var(--muted); }
+.settings__hz-parent--checked { border-color: var(--accent); background: rgba(var(--accent-rgb),.04); }
+.settings__hz-parent--partial { border-color: rgba(var(--accent-rgb),.35); background: rgba(var(--accent-rgb),.02); }
+.settings__hz-parent-check { display: flex; align-items: center; cursor: pointer; }
+.settings__hz-toggle { background: none; border: none; padding: 2px 4px; cursor: pointer; color: var(--muted); font-size: 13px; line-height: 1; transition: color .15s; }
+.settings__hz-toggle:hover { color: var(--text); }
+.settings__hz-arrow { display: inline-block; transition: transform .2s ease; }
+.settings__hz-arrow--open { transform: rotate(90deg); }
+.settings__hz-children { display: flex; flex-direction: column; gap: 0; padding-left: 20px; }
+.settings__hz-child { display: flex; align-items: center; gap: 9px; padding: 6px 12px; background: var(--bg); border: 1px solid var(--border); border-top: none; cursor: pointer; user-select: none; transition: all .15s; }
+.settings__hz-child:last-child { border-radius: 0 0 9px 9px; }
+.settings__hz-child:hover { background: var(--surface2); }
+.settings__hz-child--checked { background: rgba(var(--accent-rgb),.03); }
+.settings__hz-child-name { font-size: 11px; color: var(--muted); }
+.settings__hz-child--checked .settings__hz-child-name { color: var(--text); }
+.settings__hz-tree input[type=checkbox] { appearance: none; -webkit-appearance: none; width: 15px; height: 15px; border: 2px solid var(--muted); border-radius: 4px; background: transparent; cursor: pointer; flex-shrink: 0; position: relative; transition: all .15s; }
+.settings__hz-tree input[type=checkbox]:checked { background: var(--accent); border-color: var(--accent); }
+.settings__hz-tree input[type=checkbox]:checked::after { content: '✓'; position: absolute; top: -1px; left: 1.5px; font-size: 10px; font-weight: 700; color: var(--bg); }
+.settings__hz-tree input[type=checkbox]:indeterminate { border-color: var(--accent); background: transparent; }
+.settings__hz-tree input[type=checkbox]:indeterminate::after { content: '—'; position: absolute; top: -2px; left: 2px; font-size: 11px; font-weight: 700; color: var(--accent); }
+.settings__hz-icon { font-size: 14px; flex-shrink: 0; }
+.settings__hz-name { font-size: 12px; font-weight: 600; color: var(--text); }
+
+/* Logout confirm */
+.settings__logout-icon { display: flex; justify-content: center; padding: 12px 0 8px; }
+.settings__logout-msg { text-align: center; font-family: var(--sans); font-size: 14px; font-weight: 700; color: var(--text); margin: 0 0 8px; }
+.settings__logout-hint { text-align: center; font-family: var(--sans); font-size: 12px; color: var(--muted); margin: 0; line-height: 1.5; }
+
+/* Popup modifiers (only used here) */
+.settings__popup-btn--danger { background: rgba(var(--danger-rgb),.12); color: var(--danger); border: 1px solid rgba(var(--danger-rgb),.25); }
+.settings__popup-btn--danger:hover { background: rgba(var(--danger-rgb),.2); opacity: 1; }
+.settings__popup-actions--gap { flex-direction: row; gap: 10px; }
+.settings__popup-actions--gap .popup-btn { flex: 1; }
+</style>
