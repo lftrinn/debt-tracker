@@ -8,7 +8,10 @@
     "build": "vue-tsc --noEmit && vite build",
     "build:nocheck": "vite build",
     "preview": "vite preview",
-    "type-check": "vue-tsc --noEmit"
+    "type-check": "vue-tsc --noEmit",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "chart.js": "^4.4.0",
@@ -17,8 +20,12 @@
   "devDependencies": {
     "@types/node": "^25.5.0",
     "@vitejs/plugin-vue": "^5.0.0",
+    "@vitest/coverage-v8": "^4.1.2",
+    "@vue/test-utils": "^2.4.6",
+    "jsdom": "^29.0.1",
     "typescript": "^6.0.2",
     "vite": "^6.0.0",
+    "vitest": "^4.1.2",
     "vue-tsc": "^3.2.6"
   }
 }
