@@ -3,6 +3,9 @@
  * These values MUST match the CSS variables in styles.css :root.
  * Use CSS variables (var(--accent2)) in templates/styles; use this composable in JS logic only.
  */
+
+type RgbColorName = 'accent' | 'accent2' | 'accent3' | 'danger' | 'text'
+
 export function useColors() {
   const colors = {
     bg: '#0a0a0f',
@@ -21,7 +24,7 @@ export function useColors() {
   }
 
   // RGB channel values for rgba() in JS
-  const rgb = {
+  const rgb: Record<RgbColorName, string> = {
     accent: '232,255,71',
     accent2: '255,107,74',
     accent3: '74,239,184',
@@ -30,7 +33,7 @@ export function useColors() {
   }
 
   /** Create rgba string from a design token name */
-  function rgba(name, alpha) {
+  function rgba(name: RgbColorName, alpha: number): string {
     return `rgba(${rgb[name]},${alpha})`
   }
 

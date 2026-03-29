@@ -1,4 +1,5 @@
 import { ref } from 'vue'
+import type { AppData, SyncStatus } from '@/types/data'
 
 const BASE = 'https://api.jsonbin.io/v3'
 
@@ -11,26 +12,26 @@ export function useApi() {
   const binId = ref(localStorage.getItem('dt_b') || '')
   const isConfigured = ref(!!(apiKey.value && binId.value))
 
-  const syncSt = ref('synced')
+  const syncSt = ref<SyncStatus>('synced')
   const syncMsg = ref('Đã đồng bộ')
   const syncTime = ref('')
   const syncing = ref(false)
 
-  const fmtTime = () =>
+  const fmtTime = (): string =>
     new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
 
-  const H = () => ({
+  const H = (): Record<string, string> => ({
     'Content-Type': 'application/json',
     'X-Master-Key': apiKey.value,
   })
 
-  async function readBin() {
+  async function readBin(): Promise<AppData> {
     const r = await fetch(`${BASE}/b/${binId.value}/latest`, { headers: H() })
     if (!r.ok) throw new Error('Lỗi đọc dữ liệu')
-    return (await r.json()).record
+    return (await r.json()).record as AppData
   }
 
-  async function writeBin(data) {
+  async function writeBin(data: AppData): Promise<void> {
     const r = await fetch(`${BASE}/b/${binId.value}`, {
       method: 'PUT',
       headers: H(),
@@ -39,7 +40,7 @@ export function useApi() {
     if (!r.ok) throw new Error('Lỗi ghi dữ liệu')
   }
 
-  async function createBin(data, key) {
+  async function createBin(data: AppData, key: string): Promise<string> {
     const r = await fetch(`${BASE}/b`, {
       method: 'POST',
       headers: {
@@ -54,10 +55,10 @@ export function useApi() {
       const e = await r.json()
       throw new Error(e.message || 'API Key không hợp lệ')
     }
-    return (await r.json()).metadata.id
+    return (await r.json()).metadata.id as string
   }
 
-  async function push(data) {
+  async function push(data: AppData): Promise<void> {
     syncing.value = true
     syncSt.value = 'syncing'
     syncMsg.value = 'Đang đồng bộ'
@@ -76,7 +77,7 @@ export function useApi() {
     }
   }
 
-  async function pull() {
+  async function pull(): Promise<AppData> {
     syncSt.value = 'syncing'
     syncMsg.value = 'Đang tải'
     syncTime.value = ''
@@ -87,7 +88,7 @@ export function useApi() {
     return data
   }
 
-  function saveCredentials(key, id) {
+  function saveCredentials(key: string, id: string): void {
     apiKey.value = key
     binId.value = id
     localStorage.setItem('dt_k', key)
@@ -95,7 +96,7 @@ export function useApi() {
     isConfigured.value = true
   }
 
-  function clearCredentials() {
+  function clearCredentials(): void {
     localStorage.removeItem('dt_k')
     localStorage.removeItem('dt_b')
     apiKey.value = ''
