@@ -97,13 +97,30 @@ export function usePayments(
    * Lưu chỉnh sửa một khoản sắp tới từ popup. Cập nhật paid_obligations nếu key thay đổi do đổi tên/ngày.
    * @param p - Đối tượng khoản thanh toán với dữ liệu chỉnh sửa trong _buf
    */
-  async function saveEdit(p: { source: string; _id?: number; _mo?: string; _key: string; _buf?: { name: string; date: string; amt: number } }): Promise<void> {
+  async function saveEdit(p: { source: string; _id?: number; _mo?: string; _key: string; _buf?: { name: string; date: string; amt: number }; name?: string; nameI18n?: Partial<Record<AppLang, string>> }): Promise<void> {
     const buf = p._buf
     if (!buf?.name || !buf.date || !buf.amt) return
+    const currentLocale = ((i18n.global.locale as { value: string }).value) as AppLang
     const nd: AppData = { ...d.value }
+
+    // Xác định raw name và nameI18n cần ghi:
+    // - Nếu item có nameI18n → ghi buf.name vào nameI18n[locale]; giữ nguyên raw name (chỉ cập nhật nếu locale = 'vi')
+    // - Nếu không có nameI18n → ghi vào name như cũ
+    let rawName: string
+    let updatedNameI18n: Partial<Record<AppLang, string>> | undefined
+    if (p.nameI18n) {
+      updatedNameI18n = { ...p.nameI18n, [currentLocale]: buf.name }
+      rawName = currentLocale === 'vi' ? buf.name : (p.name ?? buf.name)
+    } else {
+      rawName = buf.name
+      updatedNameI18n = undefined
+    }
+
     if (p.source === 'one_time') {
       nd.one_time_expenses = (nd.one_time_expenses || []).map((e) =>
-        e.id === p._id ? { ...e, name: buf.name, date: buf.date, amount: buf.amt } : e
+        e.id === p._id
+          ? { ...e, name: rawName, ...(updatedNameI18n !== undefined ? { nameI18n: updatedNameI18n } : {}), date: buf.date, amount: buf.amt }
+          : e
       )
     } else {
       const mo = p._mo
@@ -115,17 +132,17 @@ export function usePayments(
             obligations: nd.monthly_plans[mo].obligations.map((ob) => {
               const k = (ob.date || '') + ':' + (ob.name || '')
               if (k !== p._key) return ob
-              const newCat = (buf.name || '').toLowerCase().includes('minimum')
+              const newCat = (rawName || '').toLowerCase().includes('minimum')
                 ? 'debt_minimum'
                 : (ob.category === 'debt_minimum' ? null : ob.category)
-              return { ...ob, name: buf.name, date: buf.date, amount: buf.amt, category: newCat }
+              return { ...ob, name: rawName, ...(updatedNameI18n !== undefined ? { nameI18n: updatedNameI18n } : {}), date: buf.date, amount: buf.amt, category: newCat }
             }),
           },
         }
       }
     }
     const oldKey = p._key
-    const newKey = buf.date + ':' + buf.name
+    const newKey = buf.date + ':' + rawName
     if (oldKey !== newKey) {
       const paid = new Set(nd.paid_obligations || [])
       if (paid.has(oldKey)) { paid.delete(oldKey); paid.add(newKey) }
@@ -234,7 +251,7 @@ export function usePayments(
     ;(await pushData()) ? toast(wasPaid ? 'toast.paid' : 'toast.undoPaid') : toast('toast.payErr', 'err')
   }
 
-  async function handlePopupSaveUpcoming(p: { _buf: { name: string; date: string; amt: number }; source: string; _id?: number; _mo?: string; _key: string }): Promise<void> {
+  async function handlePopupSaveUpcoming(p: { _buf: { name: string; date: string; amt: number }; source: string; _id?: number; _mo?: string; _key: string; name?: string; nameI18n?: Partial<Record<AppLang, string>> }): Promise<void> {
     await saveEdit(p)
   }
 

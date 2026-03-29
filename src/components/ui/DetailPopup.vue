@@ -264,7 +264,7 @@ watch(() => props.item, (v) => {
 function startEdit() {
   const i = props.item
   if (i._variant === 'upcoming') {
-    buf.value = { name: i.name, date: i._date, amt: i.amt }
+    buf.value = { name: getLocalized(i, 'name'), date: i._date, amt: i.amt }
     // Detect CC payment level
     if (isCcItem.value) {
       const n = (i.name || '').toLowerCase()
