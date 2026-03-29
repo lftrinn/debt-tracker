@@ -8,12 +8,20 @@ export interface CreditCard {
   interest_rate_annual: number
   minimum_payment: number
   min_due_date?: string
+  /** Ngôn ngữ gốc của tên thẻ */
+  nameLang?: 'vi' | 'en' | 'ja'
+  /** Bản dịch name sang các ngôn ngữ khác */
+  nameI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
 }
 
 export interface SmallLoan {
   id: string
   name: string
   remaining_balance: number
+  /** Ngôn ngữ gốc của tên khoản vay */
+  nameLang?: 'vi' | 'en' | 'ja'
+  /** Bản dịch name sang các ngôn ngữ khác */
+  nameI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
 }
 
 export interface Expense {
@@ -77,6 +85,15 @@ export interface MonthlyPlan {
   obligations: Obligation[]
 }
 
+/** Một quy tắc trong must_not / must_do — hỗ trợ cả dạng string cũ và object mới có i18n */
+export interface RuleItem {
+  text: string
+  /** Ngôn ngữ gốc của text */
+  textLang?: 'vi' | 'en' | 'ja'
+  /** Bản dịch text sang các ngôn ngữ khác */
+  textI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
+}
+
 // ─── Root app data schema (shape of the JSONBin record) ───────────────────
 
 export interface AppData {
@@ -100,11 +117,17 @@ export interface AppData {
   }
   rules: {
     daily_limit: { until_salary: number; after_salary: number }
-    must_not: string[]
+    must_not: Array<string | RuleItem>
+    must_do?: Array<string | RuleItem>
   }
   payoff_timeline: {
     projected_debt_by_month: Array<{ month: string; total_debt: number }>
-    milestones?: Array<{ month: string; event?: string }>
+    milestones?: Array<{
+      month: string
+      event?: string
+      /** Bản dịch event sang các ngôn ngữ khác */
+      eventI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
+    }>
   }
   fixed_expenses?: Record<string, unknown>
   monthly_plans?: Record<string, MonthlyPlan>
@@ -139,7 +162,10 @@ export interface UpcomingItem {
   _key: string
   day: string
   mo: string
+  /** Tên gốc (ngôn ngữ gốc) — dùng để matching/lookup, KHÔNG dùng để hiển thị trực tiếp */
   name: string
+  /** Bản dịch name — component tự localize khi render */
+  nameI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
   sub: string | null
   amt: number
   paid: boolean

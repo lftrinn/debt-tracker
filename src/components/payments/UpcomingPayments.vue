@@ -22,7 +22,7 @@
           <span class="upcoming__month">/{{ p.mo }}</span>
         </div>
         <div style="flex:1;min-width:0">
-          <div class="upcoming__name" :style="p.paid ? { color: 'var(--muted)', textDecoration: 'line-through' } : {}">{{ p.name }}</div>
+          <div class="upcoming__name" :style="p.paid ? { color: 'var(--muted)', textDecoration: 'line-through' } : {}">{{ getLocalized(p, 'name') }}</div>
           <div v-if="p.sub && !p.paid" class="upcoming__sub" :style="{ marginTop: '2px', color: p.overdueDays > 0 ? 'var(--danger)' : undefined, fontWeight: p.overdueDays > 0 ? '600' : undefined }">{{ p.sub }}</div>
           <div v-if="p.paid" class="upcoming__sub" style="color:var(--accent3);margin-top:2px"><Icon name="check" :size="11" /> {{ $t('upcoming.paid') }}</div>
         </div>
@@ -157,6 +157,7 @@
 import { ref, computed, watch } from 'vue'
 import Icon from '../ui/Icon.vue'
 import { useCurrency } from '../../composables/api/useCurrency'
+import { getLocalized } from '../../composables/data/useI18nData'
 
 const { fCurr } = useCurrency()
 
