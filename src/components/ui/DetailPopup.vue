@@ -105,16 +105,22 @@
               </div>
             </div>
             <div class="popup-field">
-              <label class="popup-label">
-                {{ $t('detail.amountLabel') }}
-                <span v-if="txCurrency" class="detail__cur-badge">{{ txCurrency }}</span>
-              </label>
+              <label class="popup-label">{{ $t('detail.amountLabel') }}</label>
               <!-- Dual mode: 2 inputs cùng 1 hàng khi currency khác nhau -->
               <div v-if="showDisplayEquiv" class="detail__dual-row">
-                <input class="popup-input" v-model.number="buf.amt" type="number" inputmode="numeric" :placeholder="txCurrency || '0'" @input="onNativeAmtInput" />
-                <input class="popup-input" v-model.number="bufDisplayAmt" type="number" inputmode="numeric" :placeholder="'≈ ' + displayCurrency" @input="onDisplayAmtInput" />
+                <div class="detail__input-wrap">
+                  <input class="popup-input" v-model.number="buf.amt" type="number" inputmode="numeric" :placeholder="txCurrency || '0'" @input="onNativeAmtInput" />
+                  <span v-if="txCurrency" class="detail__input-suffix">{{ txCurrency }}</span>
+                </div>
+                <div class="detail__input-wrap">
+                  <input class="popup-input" v-model.number="bufDisplayAmt" type="number" inputmode="numeric" :placeholder="'≈ ' + displayCurrency" @input="onDisplayAmtInput" />
+                  <span class="detail__input-suffix">{{ displayCurrency }}</span>
+                </div>
               </div>
-              <input v-else class="popup-input" v-model.number="buf.amt" type="number" inputmode="numeric" placeholder="0" @input="onNativeAmtInput" />
+              <div v-else class="detail__input-wrap">
+                <input class="popup-input" v-model.number="buf.amt" type="number" inputmode="numeric" placeholder="0" @input="onNativeAmtInput" />
+                <span v-if="txCurrency" class="detail__input-suffix">{{ txCurrency }}</span>
+              </div>
             </div>
             <div v-if="item._variant === 'tx'" class="popup-field">
               <label class="popup-label">{{ $t('detail.categoryLabel') }}</label>
@@ -434,9 +440,11 @@ function onTouchEnd(e) {
 </script>
 
 <style scoped>
-/* Currency badge trong label amount */
-.detail__cur-badge { font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: rgba(var(--accent-rgb),.12); color: var(--accent); margin-left: 6px; vertical-align: middle; }
+/* Input wrap với currency badge bên trong (absolute right) */
+.detail__input-wrap { position: relative; display: flex; align-items: center; }
+.detail__input-wrap .popup-input { flex: 1; padding-right: 44px; }
+.detail__input-suffix { position: absolute; right: 8px; font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: rgba(var(--accent-rgb),.12); color: var(--accent); pointer-events: none; }
 /* Dual input: 2 ô cùng 1 hàng khi currency khác nhau */
 .detail__dual-row { display: flex; gap: 8px; }
-.detail__dual-row .popup-input { flex: 1; min-width: 0; }
+.detail__dual-row .detail__input-wrap { flex: 1; min-width: 0; }
 </style>

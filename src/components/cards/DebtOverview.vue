@@ -9,7 +9,7 @@
       </span>
       <!-- Toggle kiểu thanh tiến độ — icon xoay 2 vòng khi click -->
       <button class="debt-overview__prog-toggle" :class="{ 'debt-overview__prog-toggle--spin': spinning }" @click="toggleProgressMode" :title="progressMode === 'repaid' ? $t('debt.progressModeUsed') : $t('debt.progressModeRepaid')">
-        <Icon name="refresh-cw" :size="9" />
+        <Icon name="refresh-cw" :size="9" :strokeWidth="3" />
         <span>{{ progressMode === 'repaid' ? $t('debt.progressModeRepaid') : $t('debt.progressModeUsed') }}</span>
       </button>
     </div>
