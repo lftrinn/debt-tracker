@@ -76,6 +76,10 @@ export function useDebtData(d: Ref<AppData>) {
     incomes.value.filter((e) => isT(e.date)).reduce((s, e) => s + e.amount, 0)
   )
 
+  const monthIncome = computed((): number =>
+    incomes.value.filter((e) => isTM(e.date)).reduce((s, e) => s + e.amount, 0)
+  )
+
   // ─── Limit status (depends on todaySpent + dayLimit) ─────────────────
   const isOver: ComputedRef<boolean> = computed(() => dayLimit.value > 0 && todaySpent.value > dayLimit.value)
 
@@ -89,11 +93,12 @@ export function useDebtData(d: Ref<AppData>) {
 
   // ─── Trend directions ─────────────────────────────────────────────────
   /**
-   * Chiều hướng tiền mặt trong ngày: 'up' nếu thu > chi, 'down' nếu ngược lại, 'neutral' nếu không có giao dịch.
+   * Chiều hướng tiền mặt trong tháng: 'up' nếu thu > chi, 'down' nếu ngược lại, 'neutral' nếu không có giao dịch.
+   * Reset khi sang tháng mới (dùng isTM), không reset hàng ngày.
    */
   const cashTrend: ComputedRef<TrendDirection> = computed(() => {
-    if (todayOutflow.value === 0 && todayIncome.value === 0) return 'neutral'
-    return todayIncome.value > todayOutflow.value ? 'up' : 'down'
+    if (monthSpent.value === 0 && monthIncome.value === 0) return 'neutral'
+    return monthIncome.value > monthSpent.value ? 'up' : 'down'
   })
 
   const txTrend: ComputedRef<TrendDirection> = computed(() => cashTrend.value)
