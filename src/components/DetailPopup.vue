@@ -14,7 +14,7 @@
 
         <!-- Header -->
         <div class="popup-hdr">
-          <span class="popup-title">{{ editing ? 'Chỉnh sửa' : 'Chi tiết' }}</span>
+          <span class="popup-title">{{ editing ? $t('detail.edit') : $t('detail.view') }}</span>
           <button class="popup-close" @click="$emit('close')"><Icon name="x" :size="18" /></button>
         </div>
 
@@ -24,11 +24,11 @@
             <!-- Icon / urgency indicator -->
             <div class="popup-hero">
               <span v-if="item._variant === 'upcoming'" class="popup-badge" :class="item.paid ? 'ok' : item.urg">
-                <template v-if="item.paid"><Icon name="check" :size="12" /> Đã thanh toán</template>
-                <template v-else>{{ item.urg === 'urgent' ? 'Khẩn cấp' : item.urg === 'soon' ? 'Sắp đến hạn' : 'Bình thường' }}</template>
+                <template v-if="item.paid"><Icon name="check" :size="12" /> {{ $t('detail.paid') }}</template>
+                <template v-else>{{ item.urg === 'urgent' ? $t('detail.urgent') : item.urg === 'soon' ? $t('detail.soon') : $t('detail.normal') }}</template>
               </span>
               <span v-else class="popup-badge" :class="item.type === 'inc' ? 'income' : 'expense'">
-                <Icon :name="resolveCat(item.cat).icon" :size="13" /> · {{ resolveCat(item.cat).label }} · {{ item.type === 'inc' ? 'Khoản thu' : 'Chi tiêu' }}
+                <Icon :name="resolveCat(item.cat).icon" :size="13" /> · {{ resolveCat(item.cat).label }} · {{ item.type === 'inc' ? $t('detail.income') : $t('detail.expense') }}
               </span>
             </div>
 
@@ -47,19 +47,19 @@
             <!-- Details rows -->
             <div class="popup-details">
               <div class="popup-row">
-                <span class="popup-label">Ngày</span>
+                <span class="popup-label">{{ $t('detail.dateLabel') }}</span>
                 <span class="popup-val">{{ fDate(item._date || item.date) }}</span>
               </div>
               <div v-if="item.sub" class="popup-row">
-                <span class="popup-label">Loại</span>
+                <span class="popup-label">{{ $t('detail.typeLabel') }}</span>
                 <span class="popup-val">{{ item.sub }}</span>
               </div>
               <div v-if="item._variant === 'upcoming' && !hide" class="popup-row">
-                <span class="popup-label">Tiền khả dụng</span>
+                <span class="popup-label">{{ $t('detail.availCash') }}</span>
                 <span class="popup-val" :style="availCash < (item.amt || 0) ? { color: 'var(--accent2)' } : {}">₫{{ fN(availCash) }}</span>
               </div>
               <div v-if="item._variant === 'upcoming' && !hide && !item.paid && availCash < (item.amt || 0)" class="popup-row">
-                <span class="popup-label">Còn thiếu</span>
+                <span class="popup-label">{{ $t('detail.shortfall') }}</span>
                 <span class="popup-val" style="color:var(--accent2)">₫{{ fN((item.amt || 0) - availCash) }}</span>
               </div>
             </div>
@@ -68,14 +68,14 @@
           <!-- Actions -->
           <div class="popup-actions">
             <button v-if="item._variant === 'upcoming'" class="popup-btn primary" :class="{ done: item.paid }" :disabled="!item.paid && availCash < (item.amt || 0)" @click="$emit('toggle-paid', item._key, item.amt, item.name)">
-              <template v-if="item.paid"><Icon name="undo-2" :size="14" /> Hoàn tác thanh toán</template>
-              <template v-else><Icon name="check" :size="14" /> Thanh toán</template>
+              <template v-if="item.paid"><Icon name="undo-2" :size="14" /> {{ $t('detail.undoPay') }}</template>
+              <template v-else><Icon name="check" :size="14" /> {{ $t('detail.pay') }}</template>
             </button>
             <div style="display:flex;gap:8px">
-              <button v-if="canCopy" class="popup-btn secondary" style="flex:1" @click="handleCopy"><Icon name="copy" :size="14" /> Sao chép</button>
-              <button class="popup-btn secondary" style="flex:1" @click="startEdit"><Icon name="pencil" :size="14" /> Sửa</button>
+              <button v-if="canCopy" class="popup-btn secondary" style="flex:1" @click="handleCopy"><Icon name="copy" :size="14" /> {{ $t('detail.copy') }}</button>
+              <button class="popup-btn secondary" style="flex:1" @click="startEdit"><Icon name="pencil" :size="14" /> {{ $t('detail.editBtn') }}</button>
             </div>
-            <button v-if="canDelete" class="popup-btn danger" @click="$emit('delete', item)"><Icon name="trash-2" :size="14" /> Xoá</button>
+            <button v-if="canDelete" class="popup-btn danger" @click="$emit('delete', item)"><Icon name="trash-2" :size="14" /> {{ $t('detail.delete') }}</button>
           </div>
         </template>
 
@@ -84,37 +84,37 @@
           <div class="popup-body">
             <!-- CC payment level selector (edit mode) -->
             <div v-if="isCcItem" class="popup-field">
-              <label class="popup-label">Mức trả</label>
+              <label class="popup-label">{{ $t('detail.payLevel') }}</label>
               <div style="display:flex;gap:4px;background:var(--surface2);border-radius:8px;padding:2px">
                 <button :class="['tab-btn', editPayLevel === 'min' ? 'active' : '']" style="flex:1;font-size:10px;padding:5px 0" @click="editPayLevel = 'min'">
-                  Tối thiểu{{ matchedCard && !hide ? ' (₫' + fS(matchedCard.min) + ')' : '' }}
+                  {{ $t('detail.minimum') }}{{ matchedCard && !hide ? ' (₫' + fS(matchedCard.min) + ')' : '' }}
                 </button>
                 <button :class="['tab-btn', editPayLevel === 'custom' ? 'active' : '']" style="flex:1;font-size:10px;padding:5px 0" @click="editPayLevel = 'custom'">
-                  Trả nhiều hơn
+                  {{ $t('detail.custom') }}
                 </button>
               </div>
             </div>
             <div class="popup-field">
-              <label class="popup-label">{{ item._variant === 'upcoming' ? 'Tên khoản' : 'Mô tả' }}</label>
-              <input class="popup-input" v-model="buf.name" :readonly="isCcItem" :style="isCcItem ? { opacity: '.7' } : {}" placeholder="Nhập tên..." />
+              <label class="popup-label">{{ item._variant === 'upcoming' ? $t('detail.nameUpcoming') : $t('detail.nameDesc') }}</label>
+              <input class="popup-input" v-model="buf.name" :readonly="isCcItem" :style="isCcItem ? { opacity: '.7' } : {}" :placeholder="$t('detail.namePlaceholder')" />
             </div>
             <div class="popup-field">
-              <label class="popup-label">Ngày</label>
+              <label class="popup-label">{{ $t('detail.dateLabel') }}</label>
               <div class="date-wrap">
                 <input type="date" class="popup-input popup-input--date" v-model="buf.date" :max="item._variant === 'tx' ? tStr() : undefined" placeholder="dd/mm/yyyy" />
               </div>
             </div>
             <div class="popup-field">
-              <label class="popup-label">Số tiền (₫)</label>
+              <label class="popup-label">{{ $t('detail.amountLabel') }}</label>
               <input class="popup-input" v-model.number="buf.amt" type="number" inputmode="numeric" placeholder="0" />
             </div>
             <div v-if="item._variant === 'tx'" class="popup-field">
-              <label class="popup-label">Danh mục</label>
+              <label class="popup-label">{{ $t('detail.categoryLabel') }}</label>
               <select class="popup-input" v-model="buf.cat" style="font-family:var(--sans);font-size:12px">
-                <optgroup label="Chi tiêu">
+                <optgroup :label="$t('detail.categoryExpense')">
                   <option v-for="c in expenseCategories" :key="c.key" :value="c.key">{{ c.label }}</option>
                 </optgroup>
-                <optgroup label="Khoản thu">
+                <optgroup :label="$t('detail.categoryIncome')">
                   <option v-for="c in incomeCategories" :key="c.key" :value="c.key">{{ c.label }}</option>
                 </optgroup>
               </select>
@@ -122,8 +122,8 @@
           </div>
 
           <div class="popup-actions">
-            <button class="popup-btn primary" @click="handleSave">Lưu thay đổi</button>
-            <button class="popup-btn secondary" @click="editing = false">Huỷ</button>
+            <button class="popup-btn primary" @click="handleSave">{{ $t('detail.saveButton') }}</button>
+            <button class="popup-btn secondary" @click="editing = false">{{ $t('detail.cancelButton') }}</button>
           </div>
         </template>
       </div>

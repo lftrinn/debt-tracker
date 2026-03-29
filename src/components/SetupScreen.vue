@@ -2,41 +2,41 @@
   <div class="setup-screen">
     <div class="setup-card">
       <div class="s-title-big"><Icon name="credit-card" :size="24" /> Debt Tracker</div>
-      <div class="s-sub">Kết nối JSONBin.io để sync dữ liệu giữa các thiết bị.</div>
+      <div class="s-sub">{{ $t('setup.subtitle') }}</div>
       <div class="s-tabs">
-        <button class="s-tab" :class="{ active: mode === 'import' }" @click="mode = 'import'">Import JSON</button>
-        <button class="s-tab" :class="{ active: mode === 'existing' }" @click="mode = 'existing'">Đã có Bin</button>
-        <button class="s-tab" :class="{ active: mode === 'new' }" @click="mode = 'new'">Mới</button>
+        <button class="s-tab" :class="{ active: mode === 'import' }" @click="mode = 'import'">{{ $t('setup.tabs.import') }}</button>
+        <button class="s-tab" :class="{ active: mode === 'existing' }" @click="mode = 'existing'">{{ $t('setup.tabs.existing') }}</button>
+        <button class="s-tab" :class="{ active: mode === 'new' }" @click="mode = 'new'">{{ $t('setup.tabs.new') }}</button>
       </div>
 
       <!-- Import -->
       <div v-if="mode === 'import'">
-        <div class="hint">Paste JSON tài chính vào đây — app upload lên JSONBin và dùng làm dữ liệu ban đầu.</div>
-        <input class="inp-s" v-model="key" type="password" placeholder="API Key ($2b$...)" />
-        <textarea class="inp-s" v-model="json" placeholder="Paste JSON tài chính ở đây..."></textarea>
+        <div class="hint">{{ $t('setup.import.hint') }}</div>
+        <input class="inp-s" v-model="key" type="password" :placeholder="$t('setup.import.keyPlaceholder')" />
+        <textarea class="inp-s" v-model="json" :placeholder="$t('setup.import.jsonPlaceholder')"></textarea>
         <button class="btn-p" @click="$emit('setup', { mode: 'import', key, json })" :disabled="!key || !json || loading">
-          {{ loading ? 'Đang import...' : 'IMPORT & BẮT ĐẦU' }} <Icon v-if="!loading" name="arrow-right" :size="14" />
+          {{ loading ? $t('setup.import.loading') : $t('setup.import.button') }} <Icon v-if="!loading" name="arrow-right" :size="14" />
         </button>
       </div>
 
       <!-- Existing -->
       <div v-if="mode === 'existing'">
-        <div class="hint">Kết nối lại trên thiết bị mới.</div>
-        <input class="inp-s" v-model="key" type="password" placeholder="API Key ($2b$...)" />
-        <input class="inp-s" v-model="bid" placeholder="Bin ID" />
+        <div class="hint">{{ $t('setup.existing.hint') }}</div>
+        <input class="inp-s" v-model="key" type="password" :placeholder="$t('setup.existing.keyPlaceholder')" />
+        <input class="inp-s" v-model="bid" :placeholder="$t('setup.existing.binIdPlaceholder')" />
         <button class="btn-p" @click="$emit('setup', { mode: 'existing', key, binId: bid })" :disabled="!key || !bid || loading">
-          {{ loading ? 'Đang kết nối...' : 'KẾT NỐI' }} <Icon v-if="!loading" name="arrow-right" :size="14" />
+          {{ loading ? $t('setup.existing.loading') : $t('setup.existing.button') }} <Icon v-if="!loading" name="arrow-right" :size="14" />
         </button>
       </div>
 
       <!-- New -->
       <div v-if="mode === 'new'">
-        <div class="hint">Tạo Bin trống, điền thông tin nợ sau.</div>
-        <input class="inp-s" v-model="key" type="password" placeholder="API Key ($2b$...)" />
-        <input class="inp-s" v-model.number="debt" type="number" placeholder="Tổng nợ (VNĐ)" />
-        <input class="inp-s" v-model.number="limit" type="number" placeholder="Hạn mức chi ngày (VNĐ)" />
+        <div class="hint">{{ $t('setup.new.hint') }}</div>
+        <input class="inp-s" v-model="key" type="password" :placeholder="$t('setup.new.keyPlaceholder')" />
+        <input class="inp-s" v-model.number="debt" type="number" :placeholder="$t('setup.new.debtPlaceholder')" />
+        <input class="inp-s" v-model.number="limit" type="number" :placeholder="$t('setup.new.limitPlaceholder')" />
         <button class="btn-p" @click="$emit('setup', { mode: 'new', key, debt, limit })" :disabled="!key || loading">
-          {{ loading ? 'Đang tạo...' : 'TẠO & BẮT ĐẦU' }} <Icon v-if="!loading" name="arrow-right" :size="14" />
+          {{ loading ? $t('setup.new.loading') : $t('setup.new.button') }} <Icon v-if="!loading" name="arrow-right" :size="14" />
         </button>
       </div>
 

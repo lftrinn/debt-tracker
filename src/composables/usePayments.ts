@@ -57,14 +57,14 @@ export function usePayments(
       nd.debts = { ...nd.debts, small_loans: nd.debts.small_loans.map((l) => l.id === id ? { ...l, remaining_balance: Math.max(0, (l.remaining_balance || 0) - amount) } : l) }
     }
     d.value = nd
-    ;(await pushData()) ? toast('Đã ghi nhận trả nợ') : toast('Lỗi ghi nhận trả nợ', 'err')
+    ;(await pushData()) ? toast('toast.debtPaid') : toast('toast.debtPaidErr', 'err')
   }
 
   async function addOneTime({ name, date, amount }: { name: string; date: string; amount: number }): Promise<void> {
     if (!name || !date || !amount) return
     const ev = { id: Date.now(), name, date, amount }
     d.value = { ...d.value, one_time_expenses: [...(d.value.one_time_expenses || []), ev] }
-    ;(await pushData()) ? toast('Đã thêm khoản chi') : toast('Lỗi thêm khoản chi', 'err')
+    ;(await pushData()) ? toast('toast.expenseAdded') : toast('toast.expenseAddedErr', 'err')
   }
 
   async function saveEdit(p: { source: string; _id?: number; _mo?: string; _key: string; _buf?: { name: string; date: string; amt: number } }): Promise<void> {
@@ -102,7 +102,7 @@ export function usePayments(
       nd.paid_obligations = [...paid]
     }
     d.value = nd
-    ;(await pushData()) ? toast('Đã cập nhật khoản thanh toán') : toast('Lỗi cập nhật', 'err')
+    ;(await pushData()) ? toast('toast.upcomingUpdated') : toast('toast.upcomingUpdatedErr', 'err')
   }
 
   async function deleteUpcoming(p: { source: string; _id?: number; _mo?: string; _key: string }): Promise<void> {
@@ -124,7 +124,7 @@ export function usePayments(
     } else {
       return
     }
-    ;(await pushData()) ? toast('Đã xoá khoản chi') : toast('Lỗi xoá khoản chi', 'err')
+    ;(await pushData()) ? toast('toast.upcomingDeleted') : toast('toast.upcomingDeletedErr', 'err')
   }
 
   async function togglePaid(key: string, amt: number, obName?: string): Promise<void> {
@@ -178,7 +178,7 @@ export function usePayments(
     nd.paid_obligations = [...paid]
     d.value = nd
     const wasPaid = paid.has(key)
-    ;(await pushData()) ? toast(wasPaid ? 'Đã thanh toán' : 'Đã hoàn tác thanh toán') : toast('Lỗi cập nhật', 'err')
+    ;(await pushData()) ? toast(wasPaid ? 'toast.paid' : 'toast.undoPaid') : toast('toast.payErr', 'err')
   }
 
   async function handlePopupSaveUpcoming(p: { _buf: { name: string; date: string; amt: number }; source: string; _id?: number; _mo?: string; _key: string }): Promise<void> {

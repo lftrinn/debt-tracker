@@ -1,5 +1,8 @@
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
 /**
- * Category icon mapping — maps category keys to Lucide icon names and Vietnamese labels.
+ * Category icon mapping — maps category keys to Lucide icon names and i18n labels.
  * Used in AddTransaction, TransactionList, DetailPopup for consistent category display.
  */
 
@@ -9,40 +12,53 @@ export interface Category {
   label: string
 }
 
+const EXPENSE_ICONS: Record<string, string> = {
+  an: 'utensils',
+  cafe: 'coffee',
+  mua: 'shopping-cart',
+  dilai: 'bus',
+  yte: 'pill',
+  giaitri: 'gamepad-2',
+  hd: 'lightbulb',
+  khac: 'package',
+  thanhToan: 'credit-card',
+}
+
+const INCOME_ICONS: Record<string, string> = {
+  luong: 'briefcase',
+  freelance: 'laptop',
+  thuong: 'gift',
+  hoantien: 'undo',
+  dautu: 'bar-chart-3',
+  khac_thu: 'coins',
+}
+
+// Legacy emoji → new key mapping (for backward compatibility with existing data)
+const emojiToKey: Record<string, string> = {
+  '🍜': 'an', '☕': 'cafe', '🛒': 'mua', '🚌': 'dilai',
+  '💊': 'yte', '🎮': 'giaitri', '💡': 'hd', '📦': 'khac',
+  '💼': 'luong', '💻': 'freelance', '🎁': 'thuong',
+  '↩️': 'hoantien', '📈': 'dautu', '💰': 'khac_thu',
+}
+
 export function useCategories() {
-  const expenseCategories: Category[] = [
-    { key: 'an', icon: 'utensils', label: 'Ăn' },
-    { key: 'cafe', icon: 'coffee', label: 'Cafe' },
-    { key: 'mua', icon: 'shopping-cart', label: 'Mua' },
-    { key: 'dilai', icon: 'bus', label: 'Đi lại' },
-    { key: 'yte', icon: 'pill', label: 'Y tế' },
-    { key: 'giaitri', icon: 'gamepad-2', label: 'Giải trí' },
-    { key: 'hd', icon: 'lightbulb', label: 'HĐ' },
-    { key: 'khac', icon: 'package', label: 'Khác' },
-    { key: 'thanhToan', icon: 'credit-card', label: 'Thanh toán nợ' },
-  ]
+  const { t } = useI18n()
 
-  const incomeCategories: Category[] = [
-    { key: 'luong', icon: 'briefcase', label: 'Lương' },
-    { key: 'freelance', icon: 'laptop', label: 'Freelance' },
-    { key: 'thuong', icon: 'gift', label: 'Thưởng' },
-    { key: 'hoantien', icon: 'undo', label: 'Hoàn tiền' },
-    { key: 'dautu', icon: 'bar-chart-3', label: 'Đầu tư' },
-    { key: 'khac_thu', icon: 'coins', label: 'Khác' },
-  ]
+  const expenseCategories = computed<Category[]>(() =>
+    Object.keys(EXPENSE_ICONS).map((key) => ({
+      key,
+      icon: EXPENSE_ICONS[key],
+      label: t(`categories.expense.${key}`),
+    }))
+  )
 
-  // Map from key → { icon, label }
-  const catMap: Record<string, Category> = {}
-  expenseCategories.forEach(c => { catMap[c.key] = c })
-  incomeCategories.forEach(c => { catMap[c.key] = c })
-
-  // Legacy emoji → new key mapping (for backward compatibility with existing data)
-  const emojiToKey: Record<string, string> = {
-    '🍜': 'an', '☕': 'cafe', '🛒': 'mua', '🚌': 'dilai',
-    '💊': 'yte', '🎮': 'giaitri', '💡': 'hd', '📦': 'khac',
-    '💼': 'luong', '💻': 'freelance', '🎁': 'thuong',
-    '↩️': 'hoantien', '📈': 'dautu', '💰': 'khac_thu',
-  }
+  const incomeCategories = computed<Category[]>(() =>
+    Object.keys(INCOME_ICONS).map((key) => ({
+      key,
+      icon: INCOME_ICONS[key],
+      label: t(`categories.income.${key}`),
+    }))
+  )
 
   /**
    * Resolve a category value (new key or legacy emoji) to { icon, label, key }.
@@ -50,16 +66,19 @@ export function useCategories() {
    */
   function resolveCat(val: string | undefined | null): Category {
     if (!val) return { icon: 'package', label: '?', key: 'unknown' }
-    if (catMap[val]) return catMap[val]
+    if (EXPENSE_ICONS[val]) return { key: val, icon: EXPENSE_ICONS[val], label: t(`categories.expense.${val}`) }
+    if (INCOME_ICONS[val]) return { key: val, icon: INCOME_ICONS[val], label: t(`categories.income.${val}`) }
     const mapped = emojiToKey[val]
-    if (mapped && catMap[mapped]) return catMap[mapped]
+    if (mapped) {
+      if (EXPENSE_ICONS[mapped]) return { key: mapped, icon: EXPENSE_ICONS[mapped], label: t(`categories.expense.${mapped}`) }
+      if (INCOME_ICONS[mapped]) return { key: mapped, icon: INCOME_ICONS[mapped], label: t(`categories.income.${mapped}`) }
+    }
     return { icon: 'package', label: val, key: val }
   }
 
   return {
     expenseCategories,
     incomeCategories,
-    catMap,
     emojiToKey,
     resolveCat,
   }

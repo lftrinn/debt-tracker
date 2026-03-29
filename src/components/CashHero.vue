@@ -2,7 +2,7 @@
   <div class="cash-hero">
     <div>
       <div class="ch-label">
-        // Tiền mặt
+        {{ $t('cash.label') }}
         <span class="trend-ico" :class="cashTrend">
           <Icon v-if="cashTrend === 'up'" name="trending-up" :size="12" />
           <Icon v-else-if="cashTrend === 'down'" name="trending-down" :size="12" />
@@ -16,10 +16,10 @@
         <span v-if="hide.balance" class="masked">•••••••</span>
         <template v-else>{{ fS(availCash) }}</template>
       </div>
-      <div class="ch-sub">{{ dToSalary }} ngày đến lương</div>
+      <div class="ch-sub">{{ $t('cash.daysToSalary', { n: dToSalary }) }}</div>
     </div>
     <div>
-      <div class="ch-label">// Chi hôm nay</div>
+      <div class="ch-label">{{ $t('cash.todayLabel') }}</div>
       <div
         :class="['ch-val', 'num-flash', hide.todaySpent ? '' : isOver ? 'red' : 'yellow']"
         :key="'spent' + spentAnimKey"
@@ -27,7 +27,7 @@
         <span v-if="hide.todaySpent" class="masked">•••••••</span>
         <template v-else>{{ fS(todaySpent) }}</template>
       </div>
-      <div class="ch-sub">Tháng này: <span v-if="hide.monthSpent" class="masked">•••</span><template v-else>{{ fS(monthSpent) }}</template></div>
+      <div class="ch-sub">{{ $t('cash.monthly') }} <span v-if="hide.monthSpent" class="masked">•••</span><template v-else>{{ fS(monthSpent) }}</template></div>
     </div>
   </div>
 </template>

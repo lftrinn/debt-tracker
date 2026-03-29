@@ -17,10 +17,10 @@
         </transition>
       </div>
       <div class="hdr-r">
-        <button class="btn-ico btn-eye" :class="{ active: hideAmounts }" @click="$emit('toggle-hide')" :title="hideAmounts ? 'Hiện số tiền' : 'Ẩn số tiền'">
+        <button class="btn-ico btn-eye" :class="{ active: hideAmounts }" @click="$emit('toggle-hide')" :title="hideAmounts ? $t('header.showAmounts') : $t('header.hideAmounts')">
           <Icon :name="hideAmounts ? 'eye-off' : 'eye'" :size="18" />
         </button>
-        <button class="btn-ico" @click="$emit('reload')" title="Cập nhật phiên bản mới">
+        <button class="btn-ico" @click="$emit('reload')" :title="$t('header.reload')">
           <Icon name="refresh-cw" :size="16" />
         </button>
       </div>

@@ -35,14 +35,14 @@ export function useTransactions(
       }
     }
     d.value = nd
-    ;(await pushData()) ? toast('Đã thêm chi tiêu') : toast('Lỗi lưu chi tiêu', 'err')
+    ;(await pushData()) ? toast('toast.expAdded') : toast('toast.expAddedErr', 'err')
   }
 
   async function addInc({ desc, amount, cat }: { desc: string; amount: number; cat: string }): Promise<void> {
     const e = { id: Date.now(), desc, amount, cat, date: tStr() }
     d.value = { ...d.value, incomes: [e, ...(d.value.incomes || [])] }
     d.value = { ...d.value, current_cash: { ...d.value.current_cash, balance: (d.value.current_cash?.balance || 0) + amount } }
-    ;(await pushData()) ? toast('Đã thêm thu nhập') : toast('Lỗi lưu thu nhập', 'err')
+    ;(await pushData()) ? toast('toast.incAdded') : toast('toast.incAddedErr', 'err')
   }
 
   async function deleteTx(e: { id: number; type: string }): Promise<void> {
@@ -65,7 +65,7 @@ export function useTransactions(
       }
       d.value = nd
     }
-    ;(await pushData()) ? toast('Đã xoá giao dịch') : toast('Lỗi xoá giao dịch', 'err')
+    ;(await pushData()) ? toast('toast.txDeleted') : toast('toast.txDeletedErr', 'err')
   }
 
   async function handlePopupSaveTx(item: { id: number; type: string; _buf: { name: string; date: string; amt: number; cat: string } }): Promise<void> {
@@ -88,7 +88,7 @@ export function useTransactions(
         ),
       }
     }
-    ;(await pushData()) ? toast('Đã cập nhật giao dịch') : toast('Lỗi cập nhật', 'err')
+    ;(await pushData()) ? toast('toast.txUpdated') : toast('toast.txUpdatedErr', 'err')
   }
 
   return { copyTxData, addExp, addInc, deleteTx, handlePopupSaveTx }

@@ -32,7 +32,7 @@ export function useAppSetup(
       onAfterPull()
     } catch {
       api.syncSt.value = 'error'
-      api.syncMsg.value = 'Lỗi'
+      api.syncMsg.value = 'sync.error'
       api.syncTime.value = ''
       appState.value = d.value.debts ? 'error' : 'setup'
     }
@@ -103,7 +103,6 @@ export function useAppSetup(
   }
 
   function logout(): void {
-    if (!confirm('Đăng xuất? Dữ liệu vẫn còn trên JSONBin.')) return
     api.clearCredentials()
     appState.value = 'setup'
   }

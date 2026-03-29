@@ -162,6 +162,14 @@ textarea.inp-s { height: 130px; resize: none; font-size: 10px; line-height: 1.5;
 .logout-confirm-msg { text-align: center; font-family: var(--sans); font-size: 14px; font-weight: 700; color: var(--text); margin: 0 0 8px; }
 .logout-confirm-hint { text-align: center; font-family: var(--sans); font-size: 12px; color: var(--muted); margin: 0; line-height: 1.5; }
 
+/* Language selector */
+.lang-list { display: flex; flex-direction: column; gap: 6px; }
+.lang-item { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: all .15s; font-family: var(--sans); font-size: 14px; color: var(--text); }
+.lang-item:active { background: rgba(var(--accent-rgb),.08); }
+.lang-item.active { border-color: var(--accent); background: rgba(var(--accent-rgb),.06); }
+.lang-name { font-weight: 500; }
+.lang-check { color: var(--accent); }
+
 /* Hide zones treeview */
 .hz-tree { display: flex; flex-direction: column; gap: 4px; }
 .hz-group { margin-bottom: 2px; }

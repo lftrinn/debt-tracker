@@ -3,18 +3,18 @@
     <!-- Chi / Thu toggle -->
     <div style="display:flex;gap:4px;background:var(--surface2);border-radius:9px;padding:3px;margin-bottom:14px;">
       <button :class="['tab-btn', txType === 'exp' ? 'active' : '']" style="flex:1;font-size:11px" @click="txType = 'exp'">
-        <Icon name="minus" :size="12" /> Chi tiêu
+        <Icon name="minus" :size="12" /> {{ $t('addTx.tabs.expense') }}
       </button>
       <button :class="['tab-btn', txType === 'inc' ? 'active' : '']" style="flex:1;font-size:11px" @click="txType = 'inc'">
-        <Icon name="plus" :size="12" /> Khoản thu
+        <Icon name="plus" :size="12" /> {{ $t('addTx.tabs.income') }}
       </button>
     </div>
 
     <!-- CHI -->
     <div v-if="txType === 'exp'">
-      <div class="c-title" style="margin-bottom:10px">Ghi khoản chi</div>
+      <div class="c-title" style="margin-bottom:10px">{{ $t('addTx.expense.title') }}</div>
       <div class="add-form">
-        <input class="inp" v-model="nDesc" placeholder="Mô tả (vd: Cơm tối, Cà phê...)" />
+        <input class="inp" v-model="nDesc" :placeholder="$t('addTx.expense.descPlaceholder')" />
         <div class="form-row" style="gap:6px">
           <select class="cat-sel" style="flex:1" v-model="nCat">
             <option v-for="c in expenseCategories" :key="c.key" :value="c.key">{{ c.label }}</option>
@@ -25,7 +25,7 @@
         </div>
         <div class="form-row">
           <div class="inp-amount-wrap">
-            <input class="inp inp-amount" v-model.number="nAmt" type="number" inputmode="numeric" placeholder="Số tiền (VNĐ)" />
+            <input class="inp inp-amount" v-model.number="nAmt" type="number" inputmode="numeric" :placeholder="$t('addTx.expense.amountPlaceholder')" />
             <div v-if="topExpAmounts.length" class="quick-amounts">
               <button
                 v-for="a in topExpAmounts"
@@ -37,16 +37,16 @@
           </div>
         </div>
         <button class="btn-add" @click="addExp" :disabled="syncing || !nDesc.trim() || !nAmt">
-          {{ syncing ? 'Đang lưu...' : 'THÊM' }} <Icon name="arrow-right" :size="14" />
+          {{ syncing ? $t('addTx.saving') : $t('addTx.add') }} <Icon name="arrow-right" :size="14" />
         </button>
       </div>
     </div>
 
     <!-- THU -->
     <div v-if="txType === 'inc'">
-      <div class="c-title" style="margin-bottom:10px">Ghi khoản thu</div>
+      <div class="c-title" style="margin-bottom:10px">{{ $t('addTx.income.title') }}</div>
       <div class="add-form">
-        <input class="inp" v-model="iDesc" placeholder="Mô tả (vd: Lương tháng 4, Freelance...)" />
+        <input class="inp" v-model="iDesc" :placeholder="$t('addTx.income.descPlaceholder')" />
         <div class="form-row">
           <div class="inp-amount-wrap">
             <input class="inp inp-amount" v-model.number="iAmt" type="number" inputmode="numeric" placeholder="Số tiền (VNĐ)" />
@@ -64,7 +64,7 @@
           </select>
         </div>
         <button class="btn-add" style="background:var(--accent3);color:var(--bg)" @click="addInc" :disabled="syncing || !iDesc.trim() || !iAmt">
-          {{ syncing ? 'Đang lưu...' : 'THÊM' }} <Icon name="arrow-right" :size="14" />
+          {{ syncing ? $t('addTx.saving') : $t('addTx.add') }} <Icon name="arrow-right" :size="14" />
         </button>
       </div>
     </div>
@@ -73,9 +73,11 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Icon from './Icon.vue'
 import { useCategories } from '../composables/useCategories'
 
+const { t } = useI18n()
 const { expenseCategories, incomeCategories } = useCategories()
 
 const props = defineProps({
@@ -151,7 +153,7 @@ function getTopAmounts(items) {
 }
 
 const payMethods = computed(() => {
-  const methods = [{ key: 'cash', label: 'Tiền mặt' }]
+  const methods = [{ key: 'cash', label: t('addTx.payMethod.cash') }]
   ;(props.creditCards || []).forEach((c) => {
     const shortName = c.name.replace(' — Techcombank', '').replace(' — ', '')
     methods.push({ key: c.id, label: shortName })

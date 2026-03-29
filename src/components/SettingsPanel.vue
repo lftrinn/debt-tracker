@@ -3,28 +3,33 @@
     <div class="cfg-list">
       <div class="cfg-item" @click="open = 'lim'">
         <span class="cfg-item-ico"><Icon name="chart-no-axes-column" :size="16" /></span>
-        <span class="cfg-item-label">Hạn mức chi hàng ngày</span>
+        <span class="cfg-item-label">{{ $t('settings.menu.limit') }}</span>
         <span class="cfg-item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
       </div>
       <div class="cfg-item" @click="open = 'hz'">
         <span class="cfg-item-ico"><Icon name="lock" :size="16" /></span>
-        <span class="cfg-item-label">Vùng ẩn số tiền</span>
+        <span class="cfg-item-label">{{ $t('settings.menu.hideZones') }}</span>
         <span class="cfg-item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
       </div>
       <div class="cfg-item" @click="open = 'rules'">
         <span class="cfg-item-ico"><Icon name="list" :size="16" /></span>
-        <span class="cfg-item-label">Quy tắc</span>
+        <span class="cfg-item-label">{{ $t('settings.menu.rules') }}</span>
         <span class="cfg-item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
       </div>
       <div class="cfg-item" @click="open = 'json'">
         <span class="cfg-item-ico"><Icon name="refresh-ccw" :size="16" /></span>
-        <span class="cfg-item-label">Cập nhật dữ liệu JSON</span>
+        <span class="cfg-item-label">{{ $t('settings.menu.json') }}</span>
+        <span class="cfg-item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
+      </div>
+      <div class="cfg-item" @click="open = 'lang'">
+        <span class="cfg-item-ico"><Icon name="globe" :size="16" /></span>
+        <span class="cfg-item-label">{{ $t('settings.menu.language') }}</span>
         <span class="cfg-item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
       </div>
       <div class="cfg-sep"></div>
       <div class="cfg-item cfg-item--danger" @click="open = 'logout'">
         <span class="cfg-item-ico cfg-item-ico--danger"><Icon name="log-out" :size="16" /></span>
-        <span class="cfg-item-label cfg-item-label--danger">Đăng xuất</span>
+        <span class="cfg-item-label cfg-item-label--danger">{{ $t('settings.menu.logout') }}</span>
       </div>
     </div>
 
@@ -66,19 +71,19 @@
                 <template v-else>₫{{ fN(todaySpent) }} / ₫{{ fN(dayLimit) }}</template>
               </div>
               <div v-if="!hide.dailyLim" class="popup-field">
-                <label class="popup-label">Hạn mức mới (₫)</label>
+                <label class="popup-label">{{ $t('debt.balanceLabel') }}</label>
                 <input class="popup-input" v-model.number="nLimit" type="number" inputmode="numeric" :placeholder="String(dayLimit)" />
               </div>
             </div>
             <div v-if="!hide.dailyLim" class="popup-actions">
-              <button class="popup-btn primary" @click="saveLimit" :disabled="!nLimit">Lưu hạn mức</button>
+              <button class="popup-btn primary" @click="saveLimit" :disabled="!nLimit">{{ $t('settings.limit.saveButton') }}</button>
             </div>
           </template>
 
           <!-- HIDE ZONES -->
           <template v-if="open === 'hz'">
             <div class="popup-body">
-              <div class="hint" style="margin-bottom:8px">Chọn mục chịu ảnh hưởng khi bấm nút ẩn. Bỏ chọn để luôn hiện.</div>
+              <div class="hint" style="margin-bottom:8px">{{ $t('settings.hideZones.hint') }}</div>
               <div class="hz-tree">
                 <div v-for="g in zoneTree" :key="g.label" class="hz-group" :class="{ expanded: expandedGroups[g.label] }">
                   <div class="hz-parent" :class="{ checked: parentState(g) === 'all', partial: parentState(g) === 'some' }">
@@ -110,7 +115,7 @@
           <!-- RULES -->
           <template v-if="open === 'rules'">
             <div class="popup-body">
-              <div v-if="!rules.length" class="empty">Chưa có quy tắc nào</div>
+              <div v-if="!rules.length" class="empty">{{ $t('settings.rules.empty') }}</div>
               <div v-for="r in rules" :key="r" class="rule-item">
                 <div class="rule-dot"></div><span>{{ r }}</span>
               </div>
@@ -120,16 +125,32 @@
           <!-- IMPORT JSON -->
           <template v-if="open === 'json'">
             <div class="popup-body">
-              <div class="hint" style="margin-bottom:6px">
-                Paste JSON mới vào đây để ghi đè lên Bin hiện tại. Lịch sử chi tiêu và khoản thu sẽ được giữ lại.
-              </div>
-              <textarea class="popup-input" v-model="importJson" placeholder="Paste JSON mới ở đây..." style="height:120px;resize:none;font-size:10px;line-height:1.5"></textarea>
+              <div class="hint" style="margin-bottom:6px">{{ $t('settings.json.hint') }}</div>
+              <textarea class="popup-input" v-model="importJson" :placeholder="$t('settings.json.placeholder')" style="height:120px;resize:none;font-size:10px;line-height:1.5"></textarea>
               <div v-if="importErr" class="err" style="margin-top:4px">{{ importErr }}</div>
             </div>
             <div class="popup-actions">
               <button class="popup-btn primary" style="background:var(--accent)" @click="$emit('import-json', importJson)" :disabled="!importJson || syncing">
-                {{ syncing ? 'Đang cập nhật...' : 'Cập nhật dữ liệu' }}
+                {{ syncing ? $t('settings.json.updating') : $t('settings.json.button') }}
               </button>
+            </div>
+          </template>
+
+          <!-- LANGUAGE SELECTOR -->
+          <template v-if="open === 'lang'">
+            <div class="popup-body">
+              <div class="lang-list">
+                <button
+                  v-for="loc in LOCALES"
+                  :key="loc"
+                  class="lang-item"
+                  :class="{ active: currentLocale === loc }"
+                  @click="selectLocale(loc)"
+                >
+                  <span class="lang-name">{{ $t('settings.language.' + loc) }}</span>
+                  <Icon v-if="currentLocale === loc" name="check" :size="14" class="lang-check" />
+                </button>
+              </div>
             </div>
           </template>
 
@@ -139,12 +160,12 @@
               <div class="logout-confirm-icon">
                 <Icon name="log-out" :size="32" color="var(--danger)" />
               </div>
-              <p class="logout-confirm-msg">Bạn có chắc muốn đăng xuất không?</p>
-              <p class="logout-confirm-hint">Dữ liệu của bạn vẫn được lưu trên JSONBin. Bạn có thể đăng nhập lại bất cứ lúc nào.</p>
+              <p class="logout-confirm-msg">{{ $t('settings.logout.confirm') }}</p>
+              <p class="logout-confirm-hint">{{ $t('settings.logout.hint') }}</p>
             </div>
             <div class="popup-actions popup-actions--gap">
-              <button class="popup-btn" @click="closePopup">Huỷ</button>
-              <button class="popup-btn popup-btn--danger" @click="$emit('logout')">Đăng xuất</button>
+              <button class="popup-btn" @click="closePopup">{{ $t('settings.logout.cancel') }}</button>
+              <button class="popup-btn popup-btn--danger" @click="$emit('logout')">{{ $t('settings.logout.button') }}</button>
             </div>
           </template>
 
@@ -156,10 +177,20 @@
 
 <script setup>
 import { ref, reactive, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Icon from './Icon.vue'
 import { useFormatters } from '../composables/useFormatters'
+import { LOCALES, setLocale } from '../i18n'
 
 const { fN } = useFormatters()
+const { t, locale: i18nLocale } = useI18n()
+
+const currentLocale = computed(() => i18nLocale.value)
+
+function selectLocale(loc) {
+  setLocale(loc)
+  closePopup()
+}
 
 const props = defineProps({
   dayLimit: Number,
@@ -182,51 +213,52 @@ const emit = defineEmits([
   'logout',
 ])
 
-const titles = {
-  lim: 'Hạn mức chi hàng ngày',
-  hz: 'Vùng ẩn số tiền',
-  rules: 'Quy tắc',
-  json: 'Cập nhật dữ liệu JSON',
-  logout: 'Đăng xuất',
-}
+const titles = computed(() => ({
+  lim: t('settings.menu.limit'),
+  hz: t('settings.menu.hideZones'),
+  rules: t('settings.menu.rules'),
+  json: t('settings.menu.json'),
+  lang: t('settings.menu.language'),
+  logout: t('settings.menu.logout'),
+}))
 
-const zoneTree = [
-  { icon: 'alert-triangle', label: 'Cảnh báo hạn mức', children: [{ key: 'alert', name: 'Số tiền vượt / còn lại' }] },
-  { icon: 'banknote', label: 'Tiền mặt & chi tiêu', children: [
-    { key: 'cash.balance', name: 'Tiền mặt khả dụng' },
-    { key: 'cash.todaySpent', name: 'Chi hôm nay' },
-    { key: 'cash.monthSpent', name: 'Chi tháng này' },
+const zoneTree = computed(() => [
+  { icon: 'alert-triangle', label: t('settings.hideZones.zones.alert'), children: [{ key: 'alert', name: t('settings.hideZones.zones.alertChild') }] },
+  { icon: 'banknote', label: t('settings.hideZones.zones.cash'), children: [
+    { key: 'cash.balance', name: t('settings.hideZones.zones.cashBalance') },
+    { key: 'cash.todaySpent', name: t('settings.hideZones.zones.cashToday') },
+    { key: 'cash.monthSpent', name: t('settings.hideZones.zones.cashMonth') },
   ]},
-  { icon: 'credit-card', label: 'Tổng nợ còn lại', children: [
-    { key: 'debt.total', name: 'Tổng nợ' },
-    { key: 'debt.cardBal', name: 'Dư nợ từng thẻ' },
-    { key: 'debt.minPay', name: 'Minimum payment' },
+  { icon: 'credit-card', label: t('settings.hideZones.zones.debtGroup'), children: [
+    { key: 'debt.total', name: t('settings.hideZones.zones.debtTotal') },
+    { key: 'debt.cardBal', name: t('settings.hideZones.zones.debtCard') },
+    { key: 'debt.minPay', name: t('settings.hideZones.zones.debtMin') },
   ]},
-  { icon: 'trending-down', label: 'Tiến độ thoát nợ', children: [
-    { key: 'progress.origDebt', name: 'Nợ gốc' },
-    { key: 'progress.remaining', name: 'Nợ còn lại' },
+  { icon: 'trending-down', label: t('settings.hideZones.zones.progress'), children: [
+    { key: 'progress.origDebt', name: t('settings.hideZones.zones.progressOrig') },
+    { key: 'progress.remaining', name: t('settings.hideZones.zones.progressRem') },
   ]},
-  { icon: 'calendar', label: 'Thanh toán sắp đến', children: [
-    { key: 'upcoming.amount', name: 'Số tiền khoản thanh toán' },
-    { key: 'upcoming.shortage', name: 'Cảnh báo thiếu tiền' },
+  { icon: 'calendar', label: t('settings.hideZones.zones.upcoming'), children: [
+    { key: 'upcoming.amount', name: t('settings.hideZones.zones.upcomingAmt') },
+    { key: 'upcoming.shortage', name: t('settings.hideZones.zones.upcomingShortage') },
   ]},
-  { icon: 'receipt', label: 'Lịch sử giao dịch', children: [{ key: 'transactions', name: 'Số tiền giao dịch' }] },
-  { icon: 'bar-chart-3', label: 'Biểu đồ', children: [
-    { key: 'charts.spend', name: 'Thu / Chi 7 ngày' },
-    { key: 'charts.debtLine', name: 'Lộ trình giảm nợ' },
-    { key: 'charts.pie', name: 'Cơ cấu nợ (legend)' },
+  { icon: 'receipt', label: t('settings.hideZones.zones.txGroup'), children: [{ key: 'transactions', name: t('settings.hideZones.zones.txAmt') }] },
+  { icon: 'bar-chart-3', label: t('settings.hideZones.zones.chartsGroup'), children: [
+    { key: 'charts.spend', name: t('settings.hideZones.zones.chartsSpend') },
+    { key: 'charts.debtLine', name: t('settings.hideZones.zones.chartsDebt') },
+    { key: 'charts.pie', name: t('settings.hideZones.zones.chartsPie') },
   ]},
-  { icon: 'clock', label: 'Lộ trình thoát nợ', children: [
-    { key: 'timeline.debt', name: 'Tổng nợ mỗi mốc' },
-    { key: 'timeline.eventAmt', name: 'Số tiền trong sự kiện' },
+  { icon: 'clock', label: t('settings.hideZones.zones.timelineGroup'), children: [
+    { key: 'timeline.debt', name: t('settings.hideZones.zones.timelineDebt') },
+    { key: 'timeline.eventAmt', name: t('settings.hideZones.zones.timelineEvent') },
   ]},
-  { icon: 'settings', label: 'Cài đặt', children: [
-    { key: 'settings.cardInfo', name: 'Sao kê thẻ tín dụng' },
-    { key: 'settings.dailyLim', name: 'Hạn mức chi' },
-    { key: 'settings.dropdown', name: 'Dropdown trả nợ' },
-    { key: 'settings.cashInfo', name: 'Quỹ tiền mặt' },
+  { icon: 'settings', label: t('settings.hideZones.zones.settingsGroup'), children: [
+    { key: 'settings.cardInfo', name: t('settings.hideZones.zones.settingsCard') },
+    { key: 'settings.dailyLim', name: t('settings.hideZones.zones.settingsLimit') },
+    { key: 'settings.dropdown', name: t('settings.hideZones.zones.settingsDropdown') },
+    { key: 'settings.cashInfo', name: t('settings.hideZones.zones.settingsCash') },
   ]},
-]
+])
 
 function parentState(g) {
   const vals = g.children.map((c) => !!props.hideZones?.[c.key])

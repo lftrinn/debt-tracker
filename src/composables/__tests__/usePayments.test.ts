@@ -104,7 +104,7 @@ describe('usePayments', () => {
         current_cash: { balance: 1_000_000, reserved: 0, as_of: '2026-03-01' },
       })
       await togglePaid('2026-03-29:X', 100_000)
-      expect(toast).toHaveBeenCalledWith('Đã thanh toán')
+      expect(toast).toHaveBeenCalledWith('toast.paid')
     })
   })
 
@@ -154,7 +154,7 @@ describe('usePayments', () => {
         debts: { credit_cards: [{ ...VISA1, balance: 1_000_000 }], small_loans: [] },
       })
       await recPay({ target: 'cc:visa1', amount: 500_000 })
-      expect(toast).toHaveBeenCalledWith('Đã ghi nhận trả nợ')
+      expect(toast).toHaveBeenCalledWith('toast.debtPaid')
     })
   })
 
@@ -189,7 +189,7 @@ describe('usePayments', () => {
     it('toast thành công', async () => {
       const { toast, addOneTime } = setup()
       await addOneTime({ name: 'Trả thẻ', date: '2026-04-15', amount: 500_000 })
-      expect(toast).toHaveBeenCalledWith('Đã thêm khoản chi')
+      expect(toast).toHaveBeenCalledWith('toast.expenseAdded')
     })
   })
 

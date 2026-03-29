@@ -1,7 +1,7 @@
 <template>
   <div class="debt-ov">
     <div class="do-label">
-      // Tổng nợ còn lại
+      {{ $t('debt.label') }}
       <span class="trend-ico" :class="debtTrend === 'down' ? 'up' : debtTrend === 'up' ? 'down' : 'neutral'">
         <Icon v-if="debtTrend === 'down'" name="trending-down" :size="12" />
         <Icon v-else-if="debtTrend === 'up'" name="trending-up" :size="12" />
@@ -17,14 +17,14 @@
         <!-- Row 1: name + edit -->
         <div class="do-r1">
           <div class="do-card-name">{{ c.name }}</div>
-          <button class="do-card-edit" @click.stop="openEdit(c)" title="Cập nhật sao kê">
+          <button class="do-card-edit" @click.stop="openEdit(c)" :title="$t('debt.editTooltip')">
             <Icon name="pencil" :size="11" />
           </button>
         </div>
         <!-- Row 2: balance + rate -->
         <div class="do-r2">
           <span class="do-card-bal"><template v-if="hide.cardBal">₫•••••</template><template v-else>₫{{ fS(c.balance) }}</template></span>
-          <span class="do-card-rate">{{ c.rate }}%/năm</span>
+          <span class="do-card-rate">{{ c.rate }}{{ $t('debt.ratePerYear') }}</span>
         </div>
         <!-- Row 3: progress + pct -->
         <div class="do-r3">
@@ -33,7 +33,7 @@
         </div>
         <!-- Row 4: min or planned payment | amount/check | Xd | warn | date -->
         <div class="do-r4" :class="'do-r4--' + c.minUrg">
-          <span class="do-min-label">{{ c.plannedPayment && !c.plannedPayment.isMin ? 'trả' : 'min' }}</span>
+          <span class="do-min-label">{{ c.plannedPayment && !c.plannedPayment.isMin ? $t('debt.paidLabel') : $t('debt.minLabel') }}</span>
           <template v-if="c.minPaid">
             <span v-if="!hide.minPay" class="do-min-val" style="color:var(--accent3)">₫{{ fS(c.plannedPayment ? c.plannedPayment.amount : c.min) }}</span>
             <Icon name="check" :size="11" class="do-min-ico--ok" />
@@ -60,27 +60,27 @@
         <div class="popup-sheet">
           <div class="popup-handle"><div class="popup-handle-bar"></div></div>
           <div class="popup-hdr">
-            <span class="popup-title">Cập nhật {{ editCard.name }}</span>
+            <span class="popup-title">{{ $t('debt.editTitle', { name: editCard.name }) }}</span>
             <button class="popup-close" @click="editCard = null"><Icon name="x" :size="18" /></button>
           </div>
           <div class="popup-body">
             <div class="popup-field">
-              <label class="popup-label">{{ hide.cardBal ? 'Dư nợ (%)' : 'Dư nợ mới (₫)' }}</label>
-              <div v-if="hide.cardBal" class="popup-input" style="display:flex;align-items:center;color:var(--muted);font-size:12px">{{ balPct(editCard) }}% tổng nợ</div>
+              <label class="popup-label">{{ hide.cardBal ? $t('debt.balanceHiddenLabel') : $t('debt.balanceLabel') }}</label>
+              <div v-if="hide.cardBal" class="popup-input" style="display:flex;align-items:center;color:var(--muted);font-size:12px">{{ balPct(editCard) }}{{ $t('debt.balanceHiddenValue') }}</div>
               <input v-else class="popup-input" v-model.number="editBal" type="number" inputmode="numeric" :placeholder="fN(editCard.balance)" />
             </div>
             <div class="popup-field">
-              <label class="popup-label">{{ hide.minPay ? 'Tối thiểu (%)' : 'Trả tối thiểu (₫)' }}</label>
-              <div v-if="hide.minPay" class="popup-input" style="display:flex;align-items:center;color:var(--muted);font-size:12px">{{ minPct(editCard) }}% dư nợ</div>
+              <label class="popup-label">{{ hide.minPay ? $t('debt.minHiddenLabel') : $t('debt.minLabel2') }}</label>
+              <div v-if="hide.minPay" class="popup-input" style="display:flex;align-items:center;color:var(--muted);font-size:12px">{{ minPct(editCard) }}{{ $t('debt.minHiddenValue') }}</div>
               <input v-else class="popup-input" v-model.number="editMin" type="number" inputmode="numeric" :placeholder="fN(editCard.min)" />
             </div>
             <div class="popup-field">
-              <label class="popup-label">Hạn thanh toán tối thiểu</label>
-              <input class="popup-input" v-model="editDueDate" type="date" :placeholder="editCard.minDueDate || 'Chọn ngày'" />
+              <label class="popup-label">{{ $t('debt.dueDateLabel') }}</label>
+              <input class="popup-input" v-model="editDueDate" type="date" :placeholder="editCard.minDueDate || $t('debt.dueDatePlaceholder')" />
             </div>
           </div>
           <div v-if="!hide.cardBal || !hide.minPay" class="popup-actions">
-            <button class="popup-btn primary" @click="saveEdit" :disabled="editBal == null && editMin == null && !editDueDate">Cập nhật</button>
+            <button class="popup-btn primary" @click="saveEdit" :disabled="editBal == null && editMin == null && !editDueDate">{{ $t('debt.updateButton') }}</button>
           </div>
         </div>
       </div>

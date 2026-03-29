@@ -2,7 +2,7 @@
   <div class="card">
     <div class="c-hdr" style="margin-bottom:12px">
       <span class="c-title">
-        Lịch sử giao dịch
+        {{ $t('transactions.title') }}
         <span class="trend-ico" :class="txTrend">
           <Icon v-if="txTrend === 'up'" name="trending-up" :size="12" />
           <Icon v-else-if="txTrend === 'down'" name="trending-down" :size="12" />
@@ -17,7 +17,7 @@
       <template v-else>Chi -{{ fS(todaySpent) }} · Thu +{{ fS(todayIncome) }}</template>
     </div>
     <div class="exp-list" :class="{ 'exp-list--scroll': transactions.length > 4 }">
-      <div v-if="!transactions.length" class="empty">Chưa có giao dịch nào</div>
+      <div v-if="!transactions.length" class="empty">{{ $t('transactions.empty') }}</div>
       <div
         v-for="e in transactions"
         :key="e.id"
@@ -28,7 +28,7 @@
         <div class="exp-ico"><Icon :name="resolveCat(e.cat).icon" :size="16" /></div>
         <div class="exp-info">
           <div class="exp-name">{{ e.desc }}</div>
-          <div class="exp-meta">{{ fDate(e.date) }} · {{ e.type === 'inc' ? 'Khoản thu' : 'Chi tiêu' }}{{ e.payMethod && e.payMethod !== 'cash' ? ' · 💳' : '' }}</div>
+          <div class="exp-meta">{{ fDate(e.date) }} · {{ e.type === 'inc' ? $t('transactions.income') : $t('transactions.expense') }}{{ e.payMethod && e.payMethod !== 'cash' ? ' · 💳' : '' }}</div>
         </div>
         <div :style="{
           fontFamily: 'var(--mono)',

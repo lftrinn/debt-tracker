@@ -50,6 +50,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Chart, registerables } from 'chart.js'
 import Icon from './Icon.vue'
 import { useFormatters } from '../composables/useFormatters'
@@ -59,6 +60,7 @@ Chart.register(...registerables)
 
 const { fS } = useFormatters()
 const { colors, rgba, chartGrid, chartTick, chartFont } = useColors()
+const { t, locale } = useI18n()
 
 const props = defineProps({
   expenses: Array,
@@ -68,20 +70,20 @@ const props = defineProps({
   hide: Object,
 })
 
-const tabs = [
-  { key: 'spend', label: 'Thu/Chi', icon: 'bar-chart-2' },
-  { key: 'debt', label: 'Giảm nợ', icon: 'trending-down' },
-  { key: 'pie', label: 'Cơ cấu nợ', icon: 'pie-chart' },
-]
+const tabs = computed(() => [
+  { key: 'spend', label: t('charts.tabs.spend'), icon: 'bar-chart-2' },
+  { key: 'debt', label: t('charts.tabs.debt'), icon: 'trending-down' },
+  { key: 'pie', label: t('charts.tabs.pie'), icon: 'pie-chart' },
+])
 
 const activeTab = ref('spend')
 const spendRange = ref('week')
 
-const ranges = [
-  { key: 'week', label: '7 ngày' },
-  { key: 'month', label: 'Tháng' },
-  { key: 'year', label: 'Năm' },
-]
+const ranges = computed(() => [
+  { key: 'week', label: t('charts.ranges.week') },
+  { key: 'month', label: t('charts.ranges.month') },
+  { key: 'year', label: t('charts.ranges.year') },
+])
 
 const chartRef = ref(null)
 const debtChartRef = ref(null)
@@ -189,7 +191,7 @@ function buildSpendChart() {
       labels,
       datasets: [
         {
-          label: 'Chi',
+          label: t('charts.datasets.expense'),
           data: expData,
           backgroundColor: rgba('accent2', .65),
           borderColor: rgba('accent2', .9),
@@ -197,7 +199,7 @@ function buildSpendChart() {
           borderRadius: 4,
         },
         {
-          label: 'Thu',
+          label: t('charts.datasets.income'),
           data: incData,
           backgroundColor: rgba('accent3', .55),
           borderColor: rgba('accent3', .9),
@@ -382,6 +384,8 @@ watch(
   buildAll,
   { deep: true }
 )
+
+watch(locale, () => setTimeout(buildAll, 50))
 
 defineExpose({ buildAll })
 </script>

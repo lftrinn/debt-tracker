@@ -1,11 +1,11 @@
 <template>
   <div class="upcoming">
     <div class="c-hdr" style="position:sticky;top:0;background:var(--surface);padding:15px 20px;margin:-15px -20px 0;z-index:1;border-radius:16px 16px 0 0;">
-      <span class="c-title">Thanh toán sắp đến</span>
+      <span class="c-title">{{ $t('upcoming.title') }}</span>
       <span style="flex:1"></span>
       <span class="badge" style="margin-right:4px">{{ paidCount }}/{{ items.length }}</span>
       <span class="badge" style="margin-right:4px">{{ label }}</span>
-      <button class="up-edit-btn" @click="showAdd = true" title="Thêm khoản thanh toán">
+      <button class="up-edit-btn" @click="showAdd = true" :title="$t('upcoming.addTooltip')">
         <Icon name="plus" :size="14" />
       </button>
     </div>
@@ -24,7 +24,7 @@
         <div style="flex:1;min-width:0">
           <div class="up-name" :style="p.paid ? { color: 'var(--muted)', textDecoration: 'line-through' } : {}">{{ p.name }}</div>
           <div v-if="p.sub && !p.paid" class="up-sub" :style="{ marginTop: '2px', color: p.overdueDays > 0 ? 'var(--danger)' : undefined, fontWeight: p.overdueDays > 0 ? '600' : undefined }">{{ p.sub }}</div>
-          <div v-if="p.paid" class="up-sub" style="color:var(--accent3);margin-top:2px"><Icon name="check" :size="11" /> Đã thanh toán</div>
+          <div v-if="p.paid" class="up-sub" style="color:var(--accent3);margin-top:2px"><Icon name="check" :size="11" /> {{ $t('upcoming.paid') }}</div>
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">
           <div class="up-amt-col">
@@ -33,7 +33,7 @@
               <template v-else>{{ fS(p.amt) }}</template>
             </div>
             <div v-if="!p.paid && !hide.shortage && availCash < p.amt" class="up-shortage">
-              Thiếu {{ fS(p.amt - availCash) }}
+              {{ $t('upcoming.shortage', { amount: fS(p.amt - availCash) }) }}
             </div>
           </div>
           <button
@@ -42,7 +42,7 @@
             :class="{ disabled: availCash < p.amt }"
             :disabled="availCash < p.amt"
             @click.stop="$emit('toggle-paid', p._key, p.amt, p.name)"
-            :title="availCash < p.amt ? 'Không đủ tiền' : 'Thanh toán nhanh'"
+            :title="availCash < p.amt ? $t('upcoming.notEnough') : $t('upcoming.payQuick')"
           >
             <Icon name="check" :size="13" />
           </button>
@@ -50,7 +50,7 @@
             v-else
             class="up-check-btn done"
             @click.stop="$emit('toggle-paid', p._key, p.amt, p.name)"
-            title="Hoàn tác thanh toán"
+            :title="$t('upcoming.undoPay')"
           >
             <Icon name="undo-2" :size="13" />
           </button>
@@ -64,60 +64,60 @@
         <div class="popup-sheet">
           <div class="popup-handle"><div class="popup-handle-bar"></div></div>
           <div class="popup-hdr">
-            <span class="popup-title">Thêm khoản thanh toán</span>
+            <span class="popup-title">{{ $t('upcoming.addPopup.title') }}</span>
             <button class="popup-close" @click="showAdd = false"><Icon name="x" :size="18" /></button>
           </div>
           <div class="popup-body">
             <div style="display:flex;gap:4px;background:var(--surface2);border-radius:9px;padding:3px;margin-bottom:12px">
               <button :class="['tab-btn', addType === 'pay' ? 'active' : '']" style="flex:1;font-size:11px" @click="addType = 'pay'">
-                <Icon name="hand-coins" :size="12" /> Trả nợ
+                <Icon name="hand-coins" :size="12" /> {{ $t('upcoming.addPopup.tabPay') }}
               </button>
               <button :class="['tab-btn', addType === 'oneTime' ? 'active' : '']" style="flex:1;font-size:11px" @click="addType = 'oneTime'">
-                <Icon name="pin" :size="12" /> Chi thêm
+                <Icon name="pin" :size="12" /> {{ $t('upcoming.addPopup.tabOneTime') }}
               </button>
             </div>
 
             <!-- Trả nợ -->
             <template v-if="addType === 'pay'">
               <div class="popup-field">
-                <label class="popup-label">Chọn khoản nợ</label>
+                <label class="popup-label">{{ $t('upcoming.addPopup.selectDebt') }}</label>
                 <select class="popup-input popup-input--sm" v-model="payTarget">
-                  <option value="">— Chọn khoản nợ —</option>
+                  <option value="">{{ $t('upcoming.addPopup.selectDebtPlaceholder') }}</option>
                   <option v-for="c in debtCards" :key="c.id" :value="'cc:' + c.id">{{ c.name }}{{ hide.amount ? '' : ' (còn ₫' + fS(c.balance) + ')' }}</option>
                   <option v-for="l in availableLoans" :key="l.id" :value="'sl:' + l.id">{{ l.name.split('—')[0].trim() }}{{ hide.amount ? '' : ' (còn ₫' + fS(l.remaining_balance) + ')' }}</option>
                 </select>
               </div>
               <!-- Loan installment selector -->
               <div v-if="loanInstallments.length" class="popup-field">
-                <label class="popup-label">Chọn kỳ</label>
+                <label class="popup-label">{{ $t('upcoming.addPopup.selectPeriod') }}</label>
                 <select class="popup-input popup-input--sm" v-model="payInstallment">
-                  <option value="">— Chọn kỳ —</option>
+                  <option value="">{{ $t('upcoming.addPopup.selectPeriodPlaceholder') }}</option>
                   <option v-for="inst in loanInstallments" :key="inst.key" :value="inst.key">{{ inst.name }} — {{ inst.dateLabel }}{{ hide.amount ? '' : ' (₫' + fS(inst.amount) + ')' }}</option>
                 </select>
               </div>
               <!-- Credit card payment level -->
               <div v-if="isCcTarget" class="popup-field">
-                <label class="popup-label">Mức trả</label>
+                <label class="popup-label">{{ $t('upcoming.addPopup.payLevel') }}</label>
                 <div style="display:flex;gap:4px;background:var(--surface2);border-radius:8px;padding:2px">
                   <button :class="['tab-btn', payLevel === 'min' ? 'active' : '']" style="flex:1;font-size:10px;padding:5px 0" @click="payLevel = 'min'">
-                    Tối thiểu{{ selectedCard && !hide.amount ? ' (₫' + fS(selectedCard.min) + ')' : '' }}
+                    {{ $t('upcoming.addPopup.minimum') }}{{ selectedCard && !hide.amount ? ' (₫' + fS(selectedCard.min) + ')' : '' }}
                   </button>
                   <button :class="['tab-btn', payLevel === 'custom' ? 'active' : '']" style="flex:1;font-size:10px;padding:5px 0" @click="payLevel = 'custom'">
-                    Trả nhiều hơn
+                    {{ $t('upcoming.addPopup.custom') }}
                   </button>
                 </div>
               </div>
               <div v-if="payName" class="popup-field">
-                <label class="popup-label">Tên</label>
+                <label class="popup-label">{{ $t('upcoming.addPopup.nameLabel') }}</label>
                 <input class="popup-input popup-input--sm" v-model="payName" readonly style="font-family:var(--sans);opacity:.7" />
               </div>
               <div class="popup-row-2col">
                 <div class="popup-field" style="flex:1">
-                  <label class="popup-label">Ngày</label>
+                  <label class="popup-label">{{ $t('upcoming.addPopup.dateLabel') }}</label>
                   <input type="date" class="popup-input popup-input--sm popup-input--date" v-model="payDate" placeholder="dd/mm/yyyy" />
                 </div>
                 <div class="popup-field" style="flex:1">
-                  <label class="popup-label">Số tiền (₫)</label>
+                  <label class="popup-label">{{ $t('upcoming.addPopup.amountLabel') }}</label>
                   <input class="popup-input popup-input--sm" v-model.number="payAmt" type="number" inputmode="numeric" placeholder="0" />
                 </div>
               </div>
@@ -126,16 +126,16 @@
             <!-- Chi thêm -->
             <template v-if="addType === 'oneTime'">
               <div class="popup-field">
-                <label class="popup-label">Tên khoản chi</label>
-                <input class="popup-input popup-input--sm" v-model="oneTimeName" placeholder="Đám cưới đồng nghiệp..." style="font-family:var(--sans)" />
+                <label class="popup-label">{{ $t('upcoming.addPopup.expenseNameLabel') }}</label>
+                <input class="popup-input popup-input--sm" v-model="oneTimeName" :placeholder="$t('upcoming.addPopup.expensePlaceholder')" style="font-family:var(--sans)" />
               </div>
               <div class="popup-row-2col">
                 <div class="popup-field" style="flex:1">
-                  <label class="popup-label">Ngày</label>
+                  <label class="popup-label">{{ $t('upcoming.addPopup.dateLabel') }}</label>
                   <input type="date" class="popup-input popup-input--sm popup-input--date" v-model="oneTimeDate" placeholder="dd/mm/yyyy" />
                 </div>
                 <div class="popup-field" style="flex:1">
-                  <label class="popup-label">Số tiền (₫)</label>
+                  <label class="popup-label">{{ $t('upcoming.addPopup.amountLabel') }}</label>
                   <input class="popup-input popup-input--sm" v-model.number="oneTimeAmt" type="number" inputmode="numeric" placeholder="0" />
                 </div>
               </div>
@@ -143,9 +143,9 @@
           </div>
           <div class="popup-actions">
             <button v-if="addType === 'pay'" class="popup-btn primary" style="background:var(--accent3)"
-              @click="submitPay" :disabled="!payName || !payDate || !payAmt">Thêm khoản thanh toán</button>
+              @click="submitPay" :disabled="!payName || !payDate || !payAmt">{{ $t('upcoming.addPopup.addPayButton') }}</button>
             <button v-else class="popup-btn primary"
-              @click="submitOneTime" :disabled="!oneTimeName || !oneTimeDate || !oneTimeAmt">Thêm khoản chi</button>
+              @click="submitOneTime" :disabled="!oneTimeName || !oneTimeDate || !oneTimeAmt">{{ $t('upcoming.addPopup.addExpButton') }}</button>
           </div>
         </div>
       </div>

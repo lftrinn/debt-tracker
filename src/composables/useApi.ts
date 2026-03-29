@@ -13,7 +13,7 @@ export function useApi() {
   const isConfigured = ref(!!(apiKey.value && binId.value))
 
   const syncSt = ref<SyncStatus>('synced')
-  const syncMsg = ref('Đã đồng bộ')
+  const syncMsg = ref('sync.done')
   const syncTime = ref('')
   const syncing = ref(false)
 
@@ -61,16 +61,16 @@ export function useApi() {
   async function push(data: AppData): Promise<void> {
     syncing.value = true
     syncSt.value = 'syncing'
-    syncMsg.value = 'Đang đồng bộ'
+    syncMsg.value = 'sync.syncing'
     syncTime.value = ''
     try {
       await writeBin(data)
       syncSt.value = 'synced'
-      syncMsg.value = 'Đã đồng bộ'
+      syncMsg.value = 'sync.done'
       syncTime.value = fmtTime()
     } catch {
       syncSt.value = 'error'
-      syncMsg.value = 'Lỗi'
+      syncMsg.value = 'sync.error'
       syncTime.value = fmtTime()
     } finally {
       syncing.value = false
@@ -79,11 +79,11 @@ export function useApi() {
 
   async function pull(): Promise<AppData> {
     syncSt.value = 'syncing'
-    syncMsg.value = 'Đang tải'
+    syncMsg.value = 'sync.loading'
     syncTime.value = ''
     const data = await readBin()
     syncSt.value = 'synced'
-    syncMsg.value = 'Đã đồng bộ'
+    syncMsg.value = 'sync.done'
     syncTime.value = fmtTime()
     return data
   }

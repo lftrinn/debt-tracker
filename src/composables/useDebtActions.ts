@@ -24,7 +24,7 @@ export function useDebtActions(
         }),
       },
     }
-    ;(await pushData()) ? toast('Đã cập nhật thẻ') : toast('Lỗi cập nhật thẻ', 'err')
+    ;(await pushData()) ? toast('toast.cardUpdated') : toast('toast.cardUpdatedErr', 'err')
   }
 
   async function addCash({ amount }: { amount: number }): Promise<void> {
@@ -37,13 +37,13 @@ export function useDebtActions(
         as_of: tStr(),
       },
     }
-    ;(await pushData()) ? toast('Đã cập nhật tiền mặt') : toast('Lỗi cập nhật tiền mặt', 'err')
+    ;(await pushData()) ? toast('toast.cashUpdated') : toast('toast.cashUpdatedErr', 'err')
   }
 
   async function updLimit(val: number): Promise<void> {
     if (val > 0) {
       d.value.custom_daily_limit = val
-      ;(await pushData()) ? toast('Đã cập nhật hạn mức') : toast('Lỗi cập nhật hạn mức', 'err')
+      ;(await pushData()) ? toast('toast.limitUpdated') : toast('toast.limitUpdatedErr', 'err')
     }
   }
 
@@ -62,7 +62,7 @@ export function useDebtActions(
         current_cash: parsed.current_cash || d.value.current_cash,
       } as AppData
       d.value = merged
-      ;(await pushData()) ? toast('Đã import dữ liệu') : toast('Lỗi import dữ liệu', 'err')
+      ;(await pushData()) ? toast('toast.imported') : toast('toast.importedErr', 'err')
     } catch (e) {
       const err = e as Error
       importErr.value =
