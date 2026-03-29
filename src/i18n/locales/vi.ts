@@ -196,6 +196,7 @@ export default {
     },
     limit: {
       saveButton: 'Lưu hạn mức',
+      inputLabel: 'Hạn mức mới',
     },
     hideZones: {
       hint: 'Chọn mục chịu ảnh hưởng khi bấm nút ẩn. Bỏ chọn để luôn hiện.',

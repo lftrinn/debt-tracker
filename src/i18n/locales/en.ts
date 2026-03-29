@@ -196,6 +196,7 @@ export default {
     },
     limit: {
       saveButton: 'Save limit',
+      inputLabel: 'New limit',
     },
     hideZones: {
       hint: 'Select which sections are affected by the hide toggle. Uncheck to always show.',

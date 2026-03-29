@@ -72,8 +72,15 @@
                 <template v-else>{{ fCurrFull(todaySpent) }} / {{ fCurrFull(dayLimit) }}</template>
               </div>
               <div v-if="!hide.dailyLim" class="popup-field">
-                <label class="popup-label">{{ $t('debt.balanceLabel') }}</label>
-                <input class="popup-input" v-model.number="nLimit" type="number" inputmode="numeric" :placeholder="String(dayLimit)" />
+                <label class="popup-label">{{ $t('settings.limit.inputLabel') }}</label>
+                <div class="settings__input-wrap">
+                  <input class="popup-input" v-model.number="nLimit" type="number" inputmode="numeric" :placeholder="limitPlaceholder" />
+                  <span class="settings__input-suffix">{{ currSymbol }}</span>
+                </div>
+                <!-- Hiển thị tương đương VND khi đang nhập theo display currency -->
+                <span v-if="useDisplayCur && nLimit" class="settings__limit-hint">
+                  ≈ {{ fCurrFull(convertBetween(nLimit, displayCurrency, 'VND')) }}
+                </span>
               </div>
             </div>
             <div v-if="!hide.dailyLim" class="popup-actions">
@@ -230,7 +237,24 @@ import { useCurrency, CURRENCIES } from '../../composables/api/useCurrency'
 
 const { fN } = useFormatters()
 const { t } = useI18n()
-const { displayCurrency, baseCurrency, jpyNotation, ratesLoading, ratesError, fetchRates, setDisplayCurrency, setBaseCurrency, setJpyNotation, fCurrFull } = useCurrency()
+const { displayCurrency, baseCurrency, jpyNotation, ratesLoading, ratesError, fetchRates, setDisplayCurrency, setBaseCurrency, setJpyNotation, fCurrFull, convertBetween } = useCurrency()
+
+/** Ký hiệu tiền tệ hiển thị */
+const currSymbol = computed(() => {
+  const c = displayCurrency.value
+  return c === 'USD' ? '$' : c === 'JPY' ? '¥' : '₫'
+})
+
+/** True khi display currency khác VND và tỷ giá đã load */
+const useDisplayCur = computed(() => displayCurrency.value !== 'VND' && !ratesLoading.value)
+
+/** Placeholder hạn mức theo display currency */
+const limitPlaceholder = computed(() => {
+  const dl = props.dayLimit || 0
+  if (!useDisplayCur.value) return String(dl)
+  const converted = convertBetween(dl, 'VND', displayCurrency.value)
+  return displayCurrency.value === 'USD' ? converted.toFixed(2) : String(Math.round(converted))
+})
 
 const currentCurrency = computed(() => displayCurrency.value)
 const currentBaseCurrency = computed(() => baseCurrency.value)
@@ -360,7 +384,11 @@ watch(open, (v) => {
 
 function saveLimit() {
   if (nLimit.value > 0) {
-    emit('update-limit', nLimit.value)
+    // Nếu đang dùng display currency thì convert về VND trước khi lưu
+    const vndValue = useDisplayCur.value
+      ? Math.round(convertBetween(nLimit.value, displayCurrency.value, 'VND'))
+      : nLimit.value
+    emit('update-limit', vndValue)
     nLimit.value = null
     closePopup()
   }
@@ -488,6 +516,12 @@ defineExpose({})
 
 /* Sync note */
 .settings__sync-note { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+
+/* Input với suffix currency */
+.settings__input-wrap { position: relative; display: flex; align-items: center; }
+.settings__input-wrap .popup-input { flex: 1; padding-right: 30px; }
+.settings__input-suffix { position: absolute; right: 11px; font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--muted); pointer-events: none; }
+.settings__limit-hint { display: block; margin-top: 4px; font-family: var(--mono); font-size: 10px; color: var(--muted); }
 
 /* Limit bar */
 .settings__lim-wrap { display: flex; align-items: center; gap: 8px; margin: 9px 0 5px; }

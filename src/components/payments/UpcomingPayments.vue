@@ -118,7 +118,10 @@
                 </div>
                 <div class="popup-field" style="flex:1">
                   <label class="popup-label">{{ $t('upcoming.addPopup.amountLabel') }}</label>
-                  <input class="popup-input popup-input--sm" v-model.number="payAmt" type="number" inputmode="numeric" placeholder="0" />
+                  <div class="upcoming__input-wrap">
+                    <input class="popup-input popup-input--sm" v-model.number="payAmt" type="number" inputmode="numeric" placeholder="0" />
+                    <span class="upcoming__input-suffix">{{ currSymbol }}</span>
+                  </div>
                 </div>
               </div>
             </template>
@@ -136,7 +139,10 @@
                 </div>
                 <div class="popup-field" style="flex:1">
                   <label class="popup-label">{{ $t('upcoming.addPopup.amountLabel') }}</label>
-                  <input class="popup-input popup-input--sm" v-model.number="oneTimeAmt" type="number" inputmode="numeric" placeholder="0" />
+                  <div class="upcoming__input-wrap">
+                    <input class="popup-input popup-input--sm" v-model.number="oneTimeAmt" type="number" inputmode="numeric" placeholder="0" />
+                    <span class="upcoming__input-suffix">{{ currSymbol }}</span>
+                  </div>
                 </div>
               </div>
             </template>
@@ -161,7 +167,29 @@ import { useCurrency } from '../../composables/api/useCurrency'
 import { getLocalized } from '../../composables/data/useI18nData'
 
 const { t } = useI18n()
-const { fCurr } = useCurrency()
+const { fCurr, displayCurrency, convertBetween, ratesLoading } = useCurrency()
+
+/** Ký hiệu tiền tệ hiển thị */
+const currSymbol = computed(() => {
+  const c = displayCurrency.value
+  return c === 'USD' ? '$' : c === 'JPY' ? '¥' : '₫'
+})
+
+/** True khi display currency khác VND và tỷ giá đã load xong */
+const useDisplayCur = computed(() => displayCurrency.value !== 'VND' && !ratesLoading.value)
+
+/** Chuyển VND → display currency để hiển thị trong input */
+function toDisplayAmt(vndAmt) {
+  if (!vndAmt || !useDisplayCur.value) return vndAmt
+  const converted = convertBetween(vndAmt, 'VND', displayCurrency.value)
+  return displayCurrency.value === 'USD' ? Math.round(converted * 100) / 100 : Math.round(converted)
+}
+
+/** Chuyển display currency → VND để lưu trữ */
+function toVndAmt(displayAmt) {
+  if (!displayAmt || !useDisplayCur.value) return displayAmt
+  return Math.round(convertBetween(displayAmt, displayCurrency.value, 'VND'))
+}
 
 const props = defineProps({
   items: Array,
@@ -382,9 +410,9 @@ watch(payTarget, () => {
   payDate.value = ''
   payAmt.value = null
   payLevel.value = 'min'
-  // For credit cards, set default amount and name
+  // For credit cards, set default amount — convert sang display currency nếu cần
   if (isCcTarget.value && selectedCard.value) {
-    payAmt.value = selectedCard.value.min || null
+    payAmt.value = toDisplayAmt(selectedCard.value.min || 0) || null
     buildCcPayName()
   }
 })
@@ -399,7 +427,8 @@ watch(payLevel, () => {
   if (!isCcTarget.value || !selectedCard.value) return
   buildCcPayName()
   if (payLevel.value === 'min') {
-    payAmt.value = selectedCard.value.min || null
+    // Convert min (VND) sang display currency để điền vào input
+    payAmt.value = toDisplayAmt(selectedCard.value.min || 0) || null
   }
   // For custom level, keep whatever amount user has or clear to let them input
 })
@@ -411,13 +440,15 @@ watch(payInstallment, (key) => {
   if (inst) {
     payName.value = inst.name
     payDate.value = inst.date.replace('~', '')
-    payAmt.value = inst.amount
+    // Convert amount (VND) sang display currency để điền vào input
+    payAmt.value = toDisplayAmt(inst.amount) || null
   }
 })
 
 function submitPay() {
   if (!payName.value || !payDate.value || !payAmt.value || payAmt.value <= 0) return
-  emit('add-one-time', { name: payName.value, date: payDate.value, amount: payAmt.value })
+  // Chuyển về VND trước khi lưu (nếu đang nhập theo display currency)
+  emit('add-one-time', { name: payName.value, date: payDate.value, amount: toVndAmt(payAmt.value) })
   payAmt.value = null
   payTarget.value = ''
   payDate.value = ''
@@ -431,7 +462,7 @@ function openWithPrefill(data) {
     addType.value = 'oneTime'
     oneTimeName.value = data.name || ''
     oneTimeDate.value = data.date || ''
-    oneTimeAmt.value = data.amount || null
+    oneTimeAmt.value = toDisplayAmt(data.amount) || null
   } else {
     addType.value = 'pay'
     // Try to auto-detect which debt target this belongs to
@@ -466,11 +497,12 @@ function openWithPrefill(data) {
             const next = getNextCcPayDate(card.name, data.date || '')
             if (next) {
               payDate.value = next.date
-              payAmt.value = isMin ? (card.minimum_payment || card.min || data.amount || null) : (data.amount || null)
+              const rawAmt = isMin ? (card.minimum_payment || card.min || data.amount || null) : (data.amount || null)
+              payAmt.value = toDisplayAmt(rawAmt) || null
               buildCcPayName()
             } else {
               payDate.value = data.date || ''
-              payAmt.value = data.amount || null
+              payAmt.value = toDisplayAmt(data.amount) || null
               buildCcPayName()
             }
           }
@@ -483,7 +515,7 @@ function openWithPrefill(data) {
     } else {
       payName.value = data.name || ''
       payDate.value = data.date || ''
-      payAmt.value = data.amount || null
+      payAmt.value = toDisplayAmt(data.amount) || null
     }
   }
   showAdd.value = true
@@ -493,7 +525,8 @@ defineExpose({ openWithPrefill })
 
 function submitOneTime() {
   if (!oneTimeName.value || !oneTimeDate.value || !oneTimeAmt.value) return
-  emit('add-one-time', { name: oneTimeName.value, date: oneTimeDate.value, amount: oneTimeAmt.value })
+  // Chuyển về VND trước khi lưu (nếu đang nhập theo display currency)
+  emit('add-one-time', { name: oneTimeName.value, date: oneTimeDate.value, amount: toVndAmt(oneTimeAmt.value) })
   oneTimeName.value = ''
   oneTimeDate.value = ''
   oneTimeAmt.value = null
@@ -527,4 +560,8 @@ function submitOneTime() {
 .upcoming__check-btn--done:hover { background: rgba(var(--accent-rgb),.12); border-color: var(--accent); }
 .upcoming__edit-btn { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s; flex-shrink: 0; padding: 0; }
 .upcoming__edit-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--accent); }
+/* Input với suffix ký hiệu tiền tệ bên phải */
+.upcoming__input-wrap { position: relative; display: flex; align-items: center; }
+.upcoming__input-wrap .popup-input { flex: 1; padding-right: 28px; }
+.upcoming__input-suffix { position: absolute; right: 10px; font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--muted); pointer-events: none; }
 </style>

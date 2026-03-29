@@ -58,7 +58,7 @@ import { useCurrency } from '../../composables/api/useCurrency'
 
 Chart.register(...registerables)
 
-const { fCurr } = useCurrency()
+const { fCurr, fCurrFull } = useCurrency()
 const { colors, rgba, chartGrid, chartTick, chartFont } = useColors()
 const { t, locale } = useI18n()
 
@@ -99,11 +99,9 @@ function pct(val) {
   return t > 0 ? Math.round(val / t * 100) : 0
 }
 
+/** Format giá trị trục Y theo display currency (tự convert từ VND) */
 function fmtTick(v) {
-  if (v >= 1e9) return (v / 1e9).toFixed(v % 1e9 === 0 ? 0 : 1) + 'B'
-  if (v >= 1e6) return (v / 1e6).toFixed(v % 1e6 === 0 ? 0 : 1) + 'M'
-  if (v >= 1e3) return Math.round(v / 1e3) + 'K'
-  return String(v)
+  return fCurr(v)
 }
 
 function getSpendBuckets() {
@@ -226,7 +224,7 @@ function buildSpendChart() {
           callbacks: {
             label: (ctx) => h
               ? ctx.dataset.label + ': ' + ctx.parsed.y + '%'
-              : ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString('vi-VN') + 'đ',
+              : ctx.dataset.label + ': ' + fCurrFull(ctx.parsed.y),
           },
         },
       },
@@ -291,7 +289,7 @@ function buildDebtChart() {
           callbacks: {
             label: (ctx) => h
               ? ctx.parsed.y + '%'
-              : ctx.parsed.y.toLocaleString('vi-VN') + 'đ',
+              : fCurrFull(ctx.parsed.y),
           },
         },
       },
@@ -345,7 +343,7 @@ function buildPieChart() {
               const p = total > 0 ? Math.round(ctx.parsed / total * 100) : 0
               return h
                 ? ctx.label + ': ' + p + '%'
-                : ctx.label + ': ' + ctx.parsed.toLocaleString('vi-VN') + 'đ (' + p + '%)'
+                : ctx.label + ': ' + fCurrFull(ctx.parsed) + ' (' + p + '%)'
             },
           },
         },

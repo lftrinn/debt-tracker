@@ -196,6 +196,7 @@ export default {
     },
     limit: {
       saveButton: '上限を保存',
+      inputLabel: '新しい上限',
     },
     hideZones: {
       hint: '非表示トグルの影響を受けるセクションを選択します。チェックを外すと常に表示されます。',
