@@ -10,6 +10,7 @@
       <div class="settings__item" @click="openCurrency">
         <span class="settings__item-ico"><Icon name="dollar-sign" :size="16" /></span>
         <span class="settings__item-label">{{ $t('settings.menu.currency') }}</span>
+        <span class="settings__cur-val">{{ displayCurrency }}</span>
         <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
       </div>
       <div class="settings__item" @click="open = 'hz'">
@@ -239,11 +240,8 @@ const { fN } = useFormatters()
 const { t } = useI18n()
 const { displayCurrency, baseCurrency, jpyNotation, ratesLoading, ratesError, fetchRates, setDisplayCurrency, setBaseCurrency, setJpyNotation, fCurrFull, convertBetween } = useCurrency()
 
-/** Ký hiệu tiền tệ hiển thị */
-const currSymbol = computed(() => {
-  const c = displayCurrency.value
-  return c === 'USD' ? '$' : c === 'JPY' ? '¥' : '₫'
-})
+/** Mã tiền tệ hiển thị trong input suffix (VND / USD / JPY) */
+const currSymbol = computed(() => displayCurrency.value)
 
 /** True khi display currency khác VND và tỷ giá đã load */
 const useDisplayCur = computed(() => displayCurrency.value !== 'VND' && !ratesLoading.value)
@@ -508,6 +506,7 @@ defineExpose({})
 .settings__item-ico { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
 .settings__item-label { flex: 1; font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--text); }
 .settings__item-arrow { font-size: 13px; color: var(--muted); flex-shrink: 0; }
+.settings__cur-val { font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: rgba(var(--accent-rgb),.12); color: var(--accent); flex-shrink: 0; }
 .settings__sep { height: 1px; background: var(--border); margin: 4px 0; }
 .settings__item--danger { border-color: rgba(var(--danger-rgb),.2); }
 .settings__item--danger:active { background: rgba(var(--danger-rgb),.08); }

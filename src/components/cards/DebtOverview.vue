@@ -98,7 +98,7 @@
               <div v-else-if="useDisplayCur && !ratesLoading" class="debt-overview__dual-inputs">
                 <div class="debt-overview__input-wrap">
                   <input class="popup-input" v-model.number="editBal" type="number" inputmode="numeric" :placeholder="fN(editCard.balance)" @input="onEditBalInput" />
-                  <span class="debt-overview__input-suffix">₫</span>
+                  <span class="debt-overview__input-suffix">VND</span>
                 </div>
                 <span class="debt-overview__dual-sep">≈</span>
                 <div class="debt-overview__input-wrap">
@@ -117,7 +117,7 @@
               <div v-else-if="useDisplayCur && !ratesLoading" class="debt-overview__dual-inputs">
                 <div class="debt-overview__input-wrap">
                   <input class="popup-input" v-model.number="editMin" type="number" inputmode="numeric" :placeholder="fN(editCard.min)" @input="onEditMinInput" />
-                  <span class="debt-overview__input-suffix">₫</span>
+                  <span class="debt-overview__input-suffix">VND</span>
                 </div>
                 <span class="debt-overview__dual-sep">≈</span>
                 <div class="debt-overview__input-wrap">
@@ -154,11 +154,8 @@ import { useDebtSettings } from '../../composables/ui/useDebtSettings'
 const { fN } = useFormatters()
 const { fCurr, fCurrFull, displayCurrency, convertBetween, toVnd, ratesLoading } = useCurrency()
 
-/** Ký hiệu tiền tệ hiển thị để hiện suffix trong input */
-const currSymbol = computed(() => {
-  const c = displayCurrency.value
-  return c === 'USD' ? '$' : c === 'JPY' ? '¥' : '₫'
-})
+/** Mã tiền tệ hiển thị trong input suffix (VND / USD / JPY) */
+const currSymbol = computed(() => displayCurrency.value)
 
 /** True khi display currency khác VND — cần dual input */
 const useDisplayCur = computed(() => displayCurrency.value !== 'VND')

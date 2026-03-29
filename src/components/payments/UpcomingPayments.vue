@@ -169,11 +169,8 @@ import { getLocalized } from '../../composables/data/useI18nData'
 const { t } = useI18n()
 const { fCurr, displayCurrency, convertBetween, ratesLoading } = useCurrency()
 
-/** Ký hiệu tiền tệ hiển thị */
-const currSymbol = computed(() => {
-  const c = displayCurrency.value
-  return c === 'USD' ? '$' : c === 'JPY' ? '¥' : '₫'
-})
+/** Mã tiền tệ hiển thị trong input suffix (VND / USD / JPY) */
+const currSymbol = computed(() => displayCurrency.value)
 
 /** True khi display currency khác VND và tỷ giá đã load xong */
 const useDisplayCur = computed(() => displayCurrency.value !== 'VND' && !ratesLoading.value)
