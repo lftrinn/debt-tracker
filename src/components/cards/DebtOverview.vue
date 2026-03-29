@@ -80,12 +80,18 @@
             <div class="popup-field">
               <label class="popup-label">{{ hide.cardBal ? $t('debt.balanceHiddenLabel') : $t('debt.balanceLabel') }}</label>
               <div v-if="hide.cardBal" class="popup-input" style="display:flex;align-items:center;color:var(--muted);font-size:12px">{{ balPct(editCard) }}{{ $t('debt.balanceHiddenValue') }}</div>
-              <input v-else class="popup-input" v-model.number="editBal" type="number" inputmode="numeric" :placeholder="fN(editCard.balance)" />
+              <div v-else class="debt-overview__input-wrap">
+                <input class="popup-input" v-model.number="editBal" type="number" inputmode="numeric" :placeholder="fN(editCard.balance)" />
+                <span class="debt-overview__input-suffix">{{ currSymbol }}</span>
+              </div>
             </div>
             <div class="popup-field">
               <label class="popup-label">{{ hide.minPay ? $t('debt.minHiddenLabel') : $t('debt.minLabel2') }}</label>
               <div v-if="hide.minPay" class="popup-input" style="display:flex;align-items:center;color:var(--muted);font-size:12px">{{ minPct(editCard) }}{{ $t('debt.minHiddenValue') }}</div>
-              <input v-else class="popup-input" v-model.number="editMin" type="number" inputmode="numeric" :placeholder="fN(editCard.min)" />
+              <div v-else class="debt-overview__input-wrap">
+                <input class="popup-input" v-model.number="editMin" type="number" inputmode="numeric" :placeholder="fN(editCard.min)" />
+                <span class="debt-overview__input-suffix">{{ currSymbol }}</span>
+              </div>
             </div>
             <div class="popup-field">
               <label class="popup-label">{{ $t('debt.dueDateLabel') }}</label>
@@ -109,7 +115,13 @@ import { useCurrency } from '../../composables/api/useCurrency'
 import { useDebtSettings } from '../../composables/ui/useDebtSettings'
 
 const { fN } = useFormatters()
-const { fCurr, fCurrFull } = useCurrency()
+const { fCurr, fCurrFull, displayCurrency } = useCurrency()
+
+/** Ký hiệu tiền tệ hiển thị để hiện suffix trong input */
+const currSymbol = computed(() => {
+  const c = displayCurrency.value
+  return c === 'USD' ? '$' : c === 'JPY' ? '¥' : '₫'
+})
 const { progressMode, setProgressMode } = useDebtSettings()
 
 /** Trạng thái animation xoay icon khi toggle */
@@ -222,10 +234,14 @@ function saveEdit() {
 .debt-overview__card-prog--normal { background: var(--accent2); }
 .debt-overview__card-prog--high { background: linear-gradient(90deg, var(--accent2), var(--accent6)); }
 .debt-overview__card-prog--critical { background: linear-gradient(90deg, var(--accent6), var(--danger)); }
-/* Mode 'đã trả': thanh tiến độ màu xanh lá */
-.debt-overview__card-prog--repaid { background: var(--accent3); }
+/* Mode 'đã trả': thanh tiến độ gradient xanh lá tương tự style gradient cam/đỏ của mode 'đã dùng' */
+.debt-overview__card-prog--repaid { background: linear-gradient(90deg, var(--accent3), #86efac); }
 /* Mode 'đã trả': số tiền khả dụng (credit_limit - balance) hiển thị màu xanh */
 .debt-overview__card-bal--avail { color: var(--accent3); }
+/* Input với suffix ký hiệu tiền tệ bên phải */
+.debt-overview__input-wrap { position: relative; display: flex; align-items: center; }
+.debt-overview__input-wrap .popup-input { flex: 1; padding-right: 30px; }
+.debt-overview__input-suffix { position: absolute; right: 11px; font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--muted); pointer-events: none; }
 /* Animation xoay 720deg cho icon toggle khi chuyển mode */
 @keyframes spin2 { from { transform: rotate(0deg); } to { transform: rotate(720deg); } }
 .debt-overview__prog-toggle--spin :deep(svg) { animation: spin2 .6s ease; }
