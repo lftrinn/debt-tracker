@@ -1,12 +1,12 @@
 <template>
-  <div class="setup-screen">
-    <div class="setup-card">
-      <div class="s-title-big"><Icon name="credit-card" :size="24" /> Debt Tracker</div>
-      <div class="s-sub">{{ $t('setup.subtitle') }}</div>
-      <div class="s-tabs">
-        <button class="s-tab" :class="{ active: mode === 'import' }" @click="mode = 'import'">{{ $t('setup.tabs.import') }}</button>
-        <button class="s-tab" :class="{ active: mode === 'existing' }" @click="mode = 'existing'">{{ $t('setup.tabs.existing') }}</button>
-        <button class="s-tab" :class="{ active: mode === 'new' }" @click="mode = 'new'">{{ $t('setup.tabs.new') }}</button>
+  <div class="setup">
+    <div class="setup__card">
+      <div class="setup__title"><Icon name="credit-card" :size="24" /> Debt Tracker</div>
+      <div class="setup__sub">{{ $t('setup.subtitle') }}</div>
+      <div class="setup__tabs">
+        <button class="setup__tab" :class="{ 'setup__tab--active': mode === 'import' }" @click="mode = 'import'">{{ $t('setup.tabs.import') }}</button>
+        <button class="setup__tab" :class="{ 'setup__tab--active': mode === 'existing' }" @click="mode = 'existing'">{{ $t('setup.tabs.existing') }}</button>
+        <button class="setup__tab" :class="{ 'setup__tab--active': mode === 'new' }" @click="mode = 'new'">{{ $t('setup.tabs.new') }}</button>
       </div>
 
       <!-- Import -->
@@ -63,3 +63,14 @@ const json = ref('')
 const debt = ref(null)
 const limit = ref(null)
 </script>
+
+<style scoped>
+.setup { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; position: relative; z-index: 1; }
+.setup__card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 28px 24px; width: 100%; max-width: 420px; position: relative; overflow: hidden; }
+.setup__card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--accent2), var(--accent), var(--accent3)); }
+.setup__title { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+.setup__sub { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-bottom: 18px; line-height: 1.7; }
+.setup__tabs { display: flex; gap: 3px; background: var(--surface2); border-radius: 9px; padding: 3px; margin-bottom: 18px; }
+.setup__tab { flex: 1; background: none; border: none; color: var(--muted); font-family: var(--sans); font-size: 11px; font-weight: 600; padding: 7px 4px; border-radius: 7px; cursor: pointer; transition: all .2s; }
+.setup__tab--active { background: var(--surface); color: var(--text); }
+</style>
