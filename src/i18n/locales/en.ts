@@ -89,6 +89,8 @@ export default {
     dueDatePlaceholder: 'Pick a date',
     updateButton: 'Update',
     remaining: 'Remaining',
+    progressModeRepaid: '% repaid',
+    progressModeUsed: '% used',
   },
   progress: {
     title: 'Debt payoff progress',

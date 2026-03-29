@@ -89,6 +89,8 @@ export default {
     dueDatePlaceholder: '日付を選択',
     updateButton: '更新する',
     remaining: '残り',
+    progressModeRepaid: '% 返済済',
+    progressModeUsed: '% 使用済',
   },
   progress: {
     title: '返済進捗',

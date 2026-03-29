@@ -31,11 +31,6 @@
         <span class="settings__item-label">{{ $t('settings.menu.currency') }}</span>
         <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
       </div>
-      <div class="settings__item" @click="open = 'progressMode'">
-        <span class="settings__item-ico"><Icon name="bar-chart-3" :size="16" /></span>
-        <span class="settings__item-label">{{ $t('settings.menu.progressMode') }}</span>
-        <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
-      </div>
       <div class="settings__sep"></div>
       <div class="settings__item settings__item--danger" @click="open = 'logout'">
         <span class="settings__item-ico settings__item-ico--danger"><Icon name="log-out" :size="16" /></span>
@@ -215,30 +210,6 @@
             </div>
           </template>
 
-          <!-- PROGRESS BAR MODE -->
-          <template v-if="open === 'progressMode'">
-            <div class="popup-body">
-              <div class="settings__lang-list">
-                <button
-                  class="settings__lang-item"
-                  :class="{ 'settings__lang-item--active': currentProgressMode === 'repaid' }"
-                  @click="selectProgressMode('repaid')"
-                >
-                  <span class="settings__lang-name">{{ $t('settings.progressMode.repaid') }}</span>
-                  <Icon v-if="currentProgressMode === 'repaid'" name="check" :size="14" class="settings__lang-check" />
-                </button>
-                <button
-                  class="settings__lang-item"
-                  :class="{ 'settings__lang-item--active': currentProgressMode === 'used' }"
-                  @click="selectProgressMode('used')"
-                >
-                  <span class="settings__lang-name">{{ $t('settings.progressMode.used') }}</span>
-                  <Icon v-if="currentProgressMode === 'used'" name="check" :size="14" class="settings__lang-check" />
-                </button>
-              </div>
-            </div>
-          </template>
-
           <!-- LOGOUT CONFIRM -->
           <template v-if="open === 'logout'">
             <div class="popup-body">
@@ -267,18 +238,15 @@ import Icon from '../ui/Icon.vue'
 import { useFormatters } from '../../composables/ui/useFormatters'
 import { LOCALES, setLocale } from '../../i18n'
 import { useCurrency, CURRENCIES } from '../../composables/api/useCurrency'
-import { useDebtSettings } from '../../composables/ui/useDebtSettings'
 
 const { fN } = useFormatters()
 const { t, locale: i18nLocale } = useI18n()
 const { displayCurrency, baseCurrency, jpyNotation, ratesLoading, ratesError, fetchRates, setDisplayCurrency, setBaseCurrency, setJpyNotation, fCurrFull } = useCurrency()
 
-const { progressMode, setProgressMode } = useDebtSettings()
 const currentLocale = computed(() => i18nLocale.value)
 const currentCurrency = computed(() => displayCurrency.value)
 const currentBaseCurrency = computed(() => baseCurrency.value)
 const currentJpyNotation = computed(() => jpyNotation.value)
-const currentProgressMode = computed(() => progressMode.value)
 
 function selectLocale(loc) {
   setLocale(loc)
@@ -303,10 +271,6 @@ function openCurrency() {
   if (displayCurrency.value !== 'VND') fetchRates()
 }
 
-function selectProgressMode(mode) {
-  setProgressMode(mode)
-  closePopup()
-}
 
 const props = defineProps({
   dayLimit: Number,

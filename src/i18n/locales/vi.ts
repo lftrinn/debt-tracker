@@ -89,6 +89,8 @@ export default {
     dueDatePlaceholder: 'Chọn ngày',
     updateButton: 'Cập nhật',
     remaining: 'Còn',
+    progressModeRepaid: '% đã trả',
+    progressModeUsed: '% đã dùng',
   },
   progress: {
     title: 'Tiến độ thoát nợ',
