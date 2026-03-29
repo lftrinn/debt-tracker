@@ -23,9 +23,12 @@
         <div class="debt-overview__card-r1">
           <div class="debt-overview__card-name">{{ c.name }}</div>
           <div class="debt-overview__card-trend">
-            <!-- UP chỉ hiện khi: có spending VÀ (không phải repaid mode HOẶC chưa thanh toán) -->
-            <Icon v-if="c.thisMonthSpent > 0 && !(progressMode === 'repaid' && c.thisMonthPaid)" name="trending-up" :size="9" class="debt-overview__trend-up" />
-            <Icon v-if="c.thisMonthPaid" name="trending-down" :size="9" class="debt-overview__trend-down" />
+            <!-- used mode: spending → UP đỏ, payment → DOWN xanh -->
+            <Icon v-if="progressMode !== 'repaid' && c.thisMonthSpent > 0" name="trending-up" :size="9" class="debt-overview__trend-up" />
+            <Icon v-if="progressMode !== 'repaid' && c.thisMonthPaid" name="trending-down" :size="9" class="debt-overview__trend-down" />
+            <!-- repaid mode: payment/kế hoạch → UP xanh; chỉ spending (không payment) → DOWN đỏ -->
+            <Icon v-if="progressMode === 'repaid' && (c.thisMonthPaid || c.plannedPayment)" name="trending-up" :size="9" class="debt-overview__trend-down" />
+            <Icon v-if="progressMode === 'repaid' && c.thisMonthSpent > 0 && !c.thisMonthPaid && !c.plannedPayment" name="trending-down" :size="9" class="debt-overview__trend-up" />
           </div>
           <button class="debt-overview__card-edit" @click.stop="openEdit(c)" :title="$t('debt.editTooltip')">
             <Icon name="pencil" :size="11" />
