@@ -15,7 +15,7 @@
 </template>
 
 <script setup>
-import { useCurrency } from '../composables/useCurrency'
+import { useCurrency } from '../../composables/api/useCurrency'
 
 const { fCurr } = useCurrency()
 

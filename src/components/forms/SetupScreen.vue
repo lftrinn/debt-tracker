@@ -47,7 +47,7 @@
 
 <script setup>
 import { ref } from 'vue'
-import Icon from './Icon.vue'
+import Icon from '../ui/Icon.vue'
 
 defineProps({
   loading: Boolean,

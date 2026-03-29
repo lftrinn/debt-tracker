@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { ref } from 'vue'
-import { useTransactions } from '../useTransactions'
+import { useTransactions } from '../actions/useTransactions'
 import { makeData, VISA1, mockPush, mockToast, mockTStr, mockFindDebtId } from './helpers'
 
 function setup(dataOverrides = {}) {

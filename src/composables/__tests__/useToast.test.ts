@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { useToast } from '../useToast'
+import { useToast } from '../ui/useToast'
 
 describe('useToast', () => {
   it('khởi tạo với giá trị mặc định', () => {

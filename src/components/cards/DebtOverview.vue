@@ -90,9 +90,9 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import Icon from './Icon.vue'
-import { useFormatters } from '../composables/useFormatters'
-import { useCurrency } from '../composables/useCurrency'
+import Icon from '../ui/Icon.vue'
+import { useFormatters } from '../../composables/ui/useFormatters'
+import { useCurrency } from '../../composables/api/useCurrency'
 
 const { fN } = useFormatters()
 const { fCurr, fCurrFull } = useCurrency()

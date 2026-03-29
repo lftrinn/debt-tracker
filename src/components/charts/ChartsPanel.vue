@@ -52,9 +52,9 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Chart, registerables } from 'chart.js'
-import Icon from './Icon.vue'
-import { useColors } from '../composables/useColors'
-import { useCurrency } from '../composables/useCurrency'
+import Icon from '../ui/Icon.vue'
+import { useColors } from '../../composables/ui/useColors'
+import { useCurrency } from '../../composables/api/useCurrency'
 
 Chart.register(...registerables)
 

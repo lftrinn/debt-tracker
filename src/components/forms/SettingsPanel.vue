@@ -214,10 +214,10 @@
 <script setup>
 import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import Icon from './Icon.vue'
-import { useFormatters } from '../composables/useFormatters'
-import { LOCALES, setLocale } from '../i18n'
-import { useCurrency, CURRENCIES } from '../composables/useCurrency'
+import Icon from '../ui/Icon.vue'
+import { useFormatters } from '../../composables/ui/useFormatters'
+import { LOCALES, setLocale } from '../../i18n'
+import { useCurrency, CURRENCIES } from '../../composables/api/useCurrency'
 
 const { fN } = useFormatters()
 const { t, locale: i18nLocale } = useI18n()

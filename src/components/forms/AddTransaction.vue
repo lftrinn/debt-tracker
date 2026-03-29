@@ -74,8 +74,8 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import Icon from './Icon.vue'
-import { useCategories } from '../composables/useCategories'
+import Icon from '../ui/Icon.vue'
+import { useCategories } from '../../composables/data/useCategories'
 
 const { t } = useI18n()
 const { expenseCategories, incomeCategories } = useCategories()

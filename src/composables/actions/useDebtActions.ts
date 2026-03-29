@@ -1,6 +1,6 @@
 import type { Ref } from 'vue'
 import type { AppData } from '@/types/data'
-import type { ToastType } from './useToast'
+import type { ToastType } from '../ui/useToast'
 
 export function useDebtActions(
   d: Ref<AppData>,

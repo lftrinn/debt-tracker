@@ -155,8 +155,8 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
-import Icon from './Icon.vue'
-import { useCurrency } from '../composables/useCurrency'
+import Icon from '../ui/Icon.vue'
+import { useCurrency } from '../../composables/api/useCurrency'
 
 const { fCurr } = useCurrency()
 

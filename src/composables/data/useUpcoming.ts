@@ -1,7 +1,7 @@
 import { computed } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
 import type { AppData, UpcomingItem } from '@/types/data'
-import { useFormatters } from './useFormatters'
+import { useFormatters } from '../ui/useFormatters'
 
 export function useUpcoming(d: Ref<AppData>): {
   upcomingLabel: ComputedRef<string>

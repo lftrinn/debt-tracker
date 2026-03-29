@@ -39,7 +39,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import Icon from './Icon.vue'
+import Icon from '../ui/Icon.vue'
 
 const props = defineProps({
   today: String,

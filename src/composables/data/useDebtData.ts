@@ -1,7 +1,7 @@
 import { computed } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
 import type { AppData, LimitStatus, TrendDirection } from '@/types/data'
-import { useFormatters } from './useFormatters'
+import { useFormatters } from '../ui/useFormatters'
 import { useDailyLimit } from './useDailyLimit'
 import { useCashData } from './useCashData'
 import { useDebtCards } from './useDebtCards'

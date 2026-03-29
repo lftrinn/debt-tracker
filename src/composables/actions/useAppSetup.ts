@@ -1,8 +1,8 @@
 import { ref } from 'vue'
 import type { Ref } from 'vue'
 import type { AppData } from '@/types/data'
-import type { useApi } from './useApi'
-import type { ToastType } from './useToast'
+import type { useApi } from '../api/useApi'
+import type { ToastType } from '../ui/useToast'
 
 export type AppState = 'loading' | 'setup' | 'ready' | 'error'
 

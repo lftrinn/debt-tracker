@@ -134,9 +134,9 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import Icon from './Icon.vue'
-import { useFormatters } from '../composables/useFormatters'
-import { useCategories } from '../composables/useCategories'
-import { useCurrency } from '../composables/useCurrency'
+import { useFormatters } from '../../composables/ui/useFormatters'
+import { useCategories } from '../../composables/data/useCategories'
+import { useCurrency } from '../../composables/api/useCurrency'
 
 const { fDate, tStr } = useFormatters()
 const { resolveCat, expenseCategories, incomeCategories } = useCategories()

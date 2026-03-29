@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useHideZones } from '../useHideZones'
+import { useHideZones } from '../ui/useHideZones'
 
 describe('useHideZones', () => {
   beforeEach(() => {

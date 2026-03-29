@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { ref } from 'vue'
-import { useDebtCards } from '../useDebtCards'
+import { useDebtCards } from '../data/useDebtCards'
 import { makeData, VISA1, VISA2 } from './helpers'
 
 describe('useDebtCards', () => {

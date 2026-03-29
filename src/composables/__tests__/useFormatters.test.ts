@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { useFormatters } from '../useFormatters'
+import { useFormatters } from '../ui/useFormatters'
 
 describe('useFormatters', () => {
   const { fN, fS, fV, fDate, tStr, isT, isTM, dDiff } = useFormatters()
