@@ -589,12 +589,12 @@ function onTouchEnd(e) {
 .detail__dual-sep { font-family: var(--mono); font-size: 10px; color: var(--muted); flex-shrink: 0; }
 
 /* Review step */
-.review__subtitle { font-size: 12px; color: var(--muted); margin: 0 0 14px; line-height: 1.5; }
+.review__subtitle { font-size: 12px; color: rgba(var(--text-rgb),.55); margin: 0 0 14px; line-height: 1.5; }
 .review__lang-block { margin-bottom: 16px; }
 .review__lang-block:last-child { margin-bottom: 0; }
 .review__lang-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 .review__lang-label { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .05em; }
 .review__options { display: flex; gap: 4px; }
-.review__opt-btn { font-family: var(--sans); font-size: 10px; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); cursor: pointer; transition: all .15s; }
+.review__opt-btn { font-family: var(--sans); font-size: 10px; padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(var(--text-rgb),.18); background: var(--surface2); color: rgba(var(--text-rgb),.7); cursor: pointer; transition: all .15s; }
 .review__opt-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 </style>
