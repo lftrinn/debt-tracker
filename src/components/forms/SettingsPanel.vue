@@ -519,7 +519,7 @@ defineExpose({})
 
 /* Input với suffix currency */
 .settings__input-wrap { position: relative; display: flex; align-items: center; }
-.settings__input-wrap .popup-input { flex: 1; padding-right: 44px; }
+.settings__input-wrap .popup-input { flex: 1; padding-right: 44px; min-width: 0; }
 .settings__input-suffix { position: absolute; right: 8px; font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: rgba(var(--accent-rgb),.12); color: var(--accent); pointer-events: none; }
 .settings__limit-hint { display: block; margin-top: 4px; font-family: var(--mono); font-size: 10px; color: var(--muted); }
 

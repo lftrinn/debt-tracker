@@ -562,6 +562,6 @@ function submitOneTime() {
 .upcoming__edit-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--accent); }
 /* Input với suffix ký hiệu tiền tệ bên phải */
 .upcoming__input-wrap { position: relative; display: flex; align-items: center; }
-.upcoming__input-wrap .popup-input { flex: 1; padding-right: 44px; }
+.upcoming__input-wrap .popup-input { flex: 1; padding-right: 44px; min-width: 0; }
 .upcoming__input-suffix { position: absolute; right: 8px; font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: rgba(var(--accent-rgb),.12); color: var(--accent); pointer-events: none; }
 </style>

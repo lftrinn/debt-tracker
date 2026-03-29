@@ -223,7 +223,10 @@ export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
   })
 
   /**
-   * Chiều hướng nợ: 'down' nếu đã có thanh toán nợ hoặc trả thêm trong kỳ này, ngược lại 'neutral'.
+   * Chiều hướng nợ:
+   * - 'down' nếu đã có thanh toán nợ hoặc trả thêm trong kỳ này (tốt)
+   * - 'up' nếu có chi tiêu bằng thẻ tín dụng trong tháng mà chưa thanh toán (xấu)
+   * - 'neutral' khi không có hoạt động nào
    */
   const debtTrend = computed((): TrendDirection => {
     const paidObs = d.value.paid_obligations || []
@@ -233,6 +236,11 @@ export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
       return findDebtId(name) !== null
     })
     if (hasDebtPayment || extraPaid > 0) return 'down'
+    const cardIds = new Set((d.value.debts?.credit_cards || []).map((c) => c.id))
+    const hasSpending = (d.value.expenses || []).some(
+      (e) => isTM(e.date) && e.payMethod && cardIds.has(e.payMethod as string)
+    )
+    if (hasSpending) return 'up'
     return 'neutral'
   })
 

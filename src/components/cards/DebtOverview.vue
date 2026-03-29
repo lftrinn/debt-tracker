@@ -23,9 +23,12 @@
         <div class="debt-overview__card-r1">
           <div class="debt-overview__card-name">{{ c.name }}</div>
           <div class="debt-overview__card-trend">
-            <!-- UP chỉ hiện khi: có spending VÀ (không phải repaid mode HOẶC chưa thanh toán) -->
-            <Icon v-if="c.thisMonthSpent > 0 && !(progressMode === 'repaid' && c.thisMonthPaid)" name="trending-up" :size="9" class="debt-overview__trend-up" />
-            <Icon v-if="c.thisMonthPaid" name="trending-down" :size="9" class="debt-overview__trend-down" />
+            <!-- used mode: spending → UP đỏ, payment → DOWN xanh -->
+            <Icon v-if="progressMode !== 'repaid' && c.thisMonthSpent > 0" name="trending-up" :size="9" class="debt-overview__trend-up" />
+            <Icon v-if="progressMode !== 'repaid' && c.thisMonthPaid" name="trending-down" :size="9" class="debt-overview__trend-down" />
+            <!-- repaid mode: payment/kế hoạch → UP xanh; chỉ spending (không payment) → DOWN đỏ -->
+            <Icon v-if="progressMode === 'repaid' && (c.thisMonthPaid || c.plannedPayment)" name="trending-up" :size="9" class="debt-overview__trend-down" />
+            <Icon v-if="progressMode === 'repaid' && c.thisMonthSpent > 0 && !c.thisMonthPaid && !c.plannedPayment" name="trending-down" :size="9" class="debt-overview__trend-up" />
           </div>
           <button class="debt-overview__card-edit" @click.stop="openEdit(c)" :title="$t('debt.editTooltip')">
             <Icon name="pencil" :size="11" />
@@ -116,7 +119,7 @@
             </div>
             <div class="popup-field">
               <label class="popup-label">{{ $t('debt.dueDateLabel') }}</label>
-              <input class="popup-input" v-model="editDueDate" type="date" :placeholder="editCard.minDueDate || $t('debt.dueDatePlaceholder')" />
+              <input class="popup-input" v-model="editDueDate" type="date" :disabled="hide.amounts" :placeholder="editCard.minDueDate || $t('debt.dueDatePlaceholder')" />
             </div>
           </div>
           <div v-if="!hide.amounts && (!hide.cardBal || !hide.minPay)" class="popup-actions">
@@ -301,7 +304,7 @@ function saveEdit() {
 .debt-overview__card-bal--critical { color: var(--danger); }
 /* Input với suffix ký hiệu tiền tệ bên phải */
 .debt-overview__input-wrap { position: relative; display: flex; align-items: center; }
-.debt-overview__input-wrap .popup-input { flex: 1; padding-right: 44px; }
+.debt-overview__input-wrap .popup-input { flex: 1; padding-right: 44px; min-width: 0; }
 .debt-overview__input-suffix { position: absolute; right: 8px; font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: rgba(var(--accent-rgb),.12); color: var(--accent); pointer-events: none; }
 .debt-overview__dual-inputs { display: flex; gap: 8px; }
 .debt-overview__dual-inputs .debt-overview__input-wrap { flex: 1; min-width: 0; }
