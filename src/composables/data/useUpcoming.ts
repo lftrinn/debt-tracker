@@ -3,7 +3,6 @@ import type { Ref, ComputedRef } from 'vue'
 import type { AppData, UpcomingItem } from '@/types/data'
 import { i18n } from '../../i18n'
 import { useFormatters } from '../ui/useFormatters'
-import { getLocalized } from './useI18nData'
 
 /**
  * Tổng hợp danh sách các khoản thanh toán sắp đến hạn từ kế hoạch tháng và chi tiêu một lần.
@@ -35,8 +34,6 @@ export function useUpcoming(d: Ref<AppData>): {
    * Gộp từ monthly_plans (3 tháng hiện tại và tới) và one_time_expenses, sắp xếp theo ngày tăng dần.
    */
   const upcoming = computed((): UpcomingItem[] => {
-    // Đọc locale ở đây để Vue track dependency → recompute khi đổi ngôn ngữ
-    const locale = (i18n.global.locale as { value: string }).value
     const plans = d.value.monthly_plans || {}
     const paid = new Set(d.value.paid_obligations || [])
     const now = new Date()
@@ -65,7 +62,8 @@ export function useUpcoming(d: Ref<AppData>): {
           _key: key,
           day: String(d2.getDate()).padStart(2, '0'),
           mo: String(d2.getMonth() + 1).padStart(2, '0'),
-          name: getLocalized(ob, 'name', locale),
+          name: ob.name,
+          nameI18n: ob.nameI18n,
           sub: overdueDays > 0
             ? i18n.global.t('upcoming.overdueDays', { n: overdueDays })
             : ob.category === 'debt_minimum' ? i18n.global.t('upcoming.minPayLabel') : null,
@@ -94,7 +92,8 @@ export function useUpcoming(d: Ref<AppData>): {
         _key: key,
         day: String(d2.getDate()).padStart(2, '0'),
         mo: String(d2.getMonth() + 1).padStart(2, '0'),
-        name: getLocalized(ev, 'name', locale),
+        name: ev.name,
+        nameI18n: ev.nameI18n,
         sub: overdueDays > 0 ? i18n.global.t('upcoming.overdueDays', { n: overdueDays }) : null,
         amt: ev.amount,
         paid: isPaid,

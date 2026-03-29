@@ -162,7 +162,10 @@ export interface UpcomingItem {
   _key: string
   day: string
   mo: string
+  /** Tên gốc (ngôn ngữ gốc) — dùng để matching/lookup, KHÔNG dùng để hiển thị trực tiếp */
   name: string
+  /** Bản dịch name — component tự localize khi render */
+  nameI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
   sub: string | null
   amt: number
   paid: boolean

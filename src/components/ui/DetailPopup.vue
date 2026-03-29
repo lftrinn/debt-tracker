@@ -33,7 +33,7 @@
             </div>
 
             <!-- Name -->
-            <div class="popup-name">{{ item._variant === 'upcoming' ? item.name : getLocalized(item, 'desc', locale) }}</div>
+            <div class="popup-name">{{ item._variant === 'upcoming' ? getLocalized(item, 'name') : getLocalized(item, 'desc', locale) }}</div>
 
             <!-- Amount -->
             <div class="popup-amt" :class="item._variant === 'tx' ? (item.type === 'inc' ? 'inc' : 'exp') : 'exp'">
