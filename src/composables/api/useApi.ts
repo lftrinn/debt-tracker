@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import type { AppData, SyncStatus } from '@/types/data'
+import { i18n } from '../../i18n'
 
 const BASE = 'https://api.jsonbin.io/v3'
 
@@ -18,8 +19,11 @@ export function useApi() {
   const syncTime = ref('')
   const syncing = ref(false)
 
-  const fmtTime = (): string =>
-    new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+  const fmtTime = (): string => {
+    const locale = (i18n.global.locale as { value: string }).value
+    const bcp = locale === 'en' ? 'en-US' : locale === 'ja' ? 'ja-JP' : 'vi-VN'
+    return new Date().toLocaleTimeString(bcp, { hour: '2-digit', minute: '2-digit' })
+  }
 
   const H = (): Record<string, string> => ({
     'Content-Type': 'application/json',

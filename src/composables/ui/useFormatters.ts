@@ -27,13 +27,17 @@ export function useFormatters() {
   /** Format with ₫ prefix and absolute value */
   const fV = (n: number | null | undefined): string => '₫' + fN(Math.abs(n || 0))
 
-  /** Format ISO date string to vi-VN locale date */
-  const fDate = (ds: string): string =>
-    new Date(ds).toLocaleDateString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    })
+  /**
+   * Format ISO date string theo locale hiện tại.
+   * @param ds - Chuỗi ngày ISO 'YYYY-MM-DD'
+   * @param lang - Locale code ('vi'|'en'|'ja'). Mặc định 'vi'.
+   */
+  const fDate = (ds: string, lang?: string): string => {
+    const d = new Date(ds)
+    if (lang === 'en') return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    if (lang === 'ja') return d.toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
+    return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  }
 
   /** Return today as 'YYYY-MM-DD' (local time) */
   const tStr = (): string => {

@@ -28,7 +28,7 @@
         <div class="tx-list__item-icon"><Icon :name="resolveCat(e.cat).icon" :size="16" /></div>
         <div class="tx-list__item-info">
           <div class="tx-list__item-name">{{ getLocalized(e, 'desc', locale) }}</div>
-          <div class="tx-list__item-meta">{{ fDate(e.date) }} · {{ e.type === 'inc' ? $t('transactions.income') : $t('transactions.expense') }}{{ e.payMethod && e.payMethod !== 'cash' ? ' · 💳' : '' }}</div>
+          <div class="tx-list__item-meta">{{ fDate(e.date, locale) }} · {{ e.type === 'inc' ? $t('transactions.income') : $t('transactions.expense') }}{{ e.payMethod && e.payMethod !== 'cash' ? ' · 💳' : '' }}</div>
         </div>
         <div class="tx-list__item-amt" :style="{ color: e.type === 'inc' ? 'var(--accent3)' : 'var(--accent2)' }">
           <template v-if="hide"><span class="masked">•••••</span></template>
