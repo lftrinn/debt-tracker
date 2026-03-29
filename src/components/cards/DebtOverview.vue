@@ -2,10 +2,14 @@
   <div class="debt-overview">
     <div class="debt-overview__label">
       {{ $t('debt.label') }}
-      <span class="trend-ico" :class="debtTrend === 'down' ? 'up' : debtTrend === 'up' ? 'down' : 'neutral'">
-        <Icon v-if="debtTrend === 'down'" name="trending-down" :size="12" />
-        <Icon v-else-if="debtTrend === 'up'" name="trending-up" :size="12" />
-        <Icon v-else name="minus" :size="12" />
+      <!-- Header: màu luôn semantic (xanh=tốt, cam=xấu); arrow direction đảo theo mode -->
+      <span v-if="debtTrend !== 'neutral'" class="trend-ico" :class="debtTrend === 'down' ? 'up' : 'down'">
+        <!-- repaid: payment>spending → UP (available credit tăng); spending≥payment → DOWN -->
+        <!-- used:   payment>spending → DOWN (nợ giảm); spending≥payment → UP -->
+        <Icon :name="progressMode === 'repaid'
+          ? (debtTrend === 'down' ? 'trending-up' : 'trending-down')
+          : (debtTrend === 'down' ? 'trending-down' : 'trending-up')"
+          :size="12" />
       </span>
       <!-- Toggle kiểu thanh tiến độ — icon xoay 2 vòng khi click -->
       <button class="debt-overview__prog-toggle" :class="{ 'debt-overview__prog-toggle--spin': spinning }" @click="toggleProgressMode" :title="progressMode === 'repaid' ? $t('debt.progressModeUsed') : $t('debt.progressModeRepaid')">
@@ -23,12 +27,19 @@
         <div class="debt-overview__card-r1">
           <div class="debt-overview__card-name">{{ c.name }}</div>
           <div class="debt-overview__card-trend">
-            <!-- used mode: spending → UP cam, payment → DOWN xanh -->
-            <Icon v-if="progressMode !== 'repaid' && c.thisMonthSpent > 0" name="trending-up" :size="9" class="debt-overview__trend-spend" />
-            <Icon v-if="progressMode !== 'repaid' && c.thisMonthPaid" name="trending-down" :size="9" class="debt-overview__trend-pay" />
-            <!-- repaid mode: spending → DOWN cam, payment/kế hoạch → UP xanh -->
-            <Icon v-if="progressMode === 'repaid' && c.thisMonthSpent > 0" name="trending-down" :size="9" class="debt-overview__trend-spend" />
-            <Icon v-if="progressMode === 'repaid' && (c.thisMonthPaid || c.plannedPayment)" name="trending-up" :size="9" class="debt-overview__trend-pay" />
+            <!-- Chỉ hiện khi có activity; so sánh COUNT thanh toán vs chi tiêu -->
+            <template v-if="progressMode === 'repaid'">
+              <!-- repaid: paymentCount > spendingCount → UP xanh (trả nhiều hơn chi) -->
+              <Icon v-if="c.thisMonthPaymentCount > c.thisMonthSpentCount" name="trending-up" :size="9" class="debt-overview__trend-pay" />
+              <!-- repaid: spendingCount > 0 và không trả nhiều hơn → DOWN cam -->
+              <Icon v-else-if="c.thisMonthSpentCount > 0" name="trending-down" :size="9" class="debt-overview__trend-spend" />
+            </template>
+            <template v-else>
+              <!-- used: spendingCount > paymentCount → UP cam (chi nhiều hơn trả) -->
+              <Icon v-if="c.thisMonthSpentCount > c.thisMonthPaymentCount" name="trending-up" :size="9" class="debt-overview__trend-spend" />
+              <!-- used: paymentCount > 0 và không chi nhiều hơn → DOWN xanh -->
+              <Icon v-else-if="c.thisMonthPaymentCount > 0" name="trending-down" :size="9" class="debt-overview__trend-pay" />
+            </template>
           </div>
           <button class="debt-overview__card-edit" @click.stop="openEdit(c)" :title="$t('debt.editTooltip')">
             <Icon name="pencil" :size="11" />
