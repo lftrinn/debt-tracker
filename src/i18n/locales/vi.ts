@@ -88,6 +88,7 @@ export default {
     dueDateLabel: 'Hạn thanh toán tối thiểu',
     dueDatePlaceholder: 'Chọn ngày',
     updateButton: 'Cập nhật',
+    remaining: 'Còn',
   },
   progress: {
     title: 'Tiến độ thoát nợ',

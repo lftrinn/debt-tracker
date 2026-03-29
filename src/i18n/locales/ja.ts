@@ -88,6 +88,7 @@ export default {
     dueDateLabel: '最低支払期限',
     dueDatePlaceholder: '日付を選択',
     updateButton: '更新する',
+    remaining: '残り',
   },
   progress: {
     title: '返済進捗',

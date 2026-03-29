@@ -88,6 +88,7 @@ export default {
     dueDateLabel: 'Minimum payment due date',
     dueDatePlaceholder: 'Pick a date',
     updateButton: 'Update',
+    remaining: 'Remaining',
   },
   progress: {
     title: 'Debt payoff progress',
