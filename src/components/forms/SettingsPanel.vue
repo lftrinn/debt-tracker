@@ -162,7 +162,27 @@
           <!-- CURRENCY SELECTOR -->
           <template v-if="open === 'currency'">
             <div class="popup-body">
-              <div class="hint" style="margin-bottom:8px">{{ $t('settings.currency.display') }}</div>
+              <!-- Tiền tệ gốc (lưu trong data) -->
+              <div class="settings__cur-section-label">{{ $t('settings.currency.base') }}</div>
+              <div class="hint" style="margin-bottom:8px">{{ $t('settings.currency.baseHint') }}</div>
+              <div class="settings__lang-list">
+                <button
+                  v-for="cur in CURRENCIES"
+                  :key="'base-' + cur"
+                  class="settings__lang-item"
+                  :class="{ 'settings__lang-item--active': currentBaseCurrency === cur }"
+                  @click="selectBaseCurrency(cur)"
+                >
+                  <span class="settings__lang-name">{{ $t('settings.currency.' + cur) }}</span>
+                  <Icon v-if="currentBaseCurrency === cur" name="check" :size="14" class="settings__lang-check" />
+                </button>
+              </div>
+
+              <div class="settings__cur-divider"></div>
+
+              <!-- Tiền tệ hiển thị (chỉ ảnh hưởng display) -->
+              <div class="settings__cur-section-label">{{ $t('settings.currency.display') }}</div>
+              <div class="hint" style="margin-bottom:8px">{{ $t('settings.currency.displayHint') }}</div>
               <div class="settings__lang-list">
                 <button
                   v-for="cur in CURRENCIES"
@@ -221,10 +241,11 @@ import { useCurrency, CURRENCIES } from '../../composables/api/useCurrency'
 
 const { fN } = useFormatters()
 const { t, locale: i18nLocale } = useI18n()
-const { displayCurrency, jpyNotation, ratesLoading, ratesError, fetchRates, setDisplayCurrency, setJpyNotation, fCurrFull } = useCurrency()
+const { displayCurrency, baseCurrency, jpyNotation, ratesLoading, ratesError, fetchRates, setDisplayCurrency, setBaseCurrency, setJpyNotation, fCurrFull } = useCurrency()
 
 const currentLocale = computed(() => i18nLocale.value)
 const currentCurrency = computed(() => displayCurrency.value)
+const currentBaseCurrency = computed(() => baseCurrency.value)
 const currentJpyNotation = computed(() => jpyNotation.value)
 
 function selectLocale(loc) {
@@ -234,6 +255,11 @@ function selectLocale(loc) {
 
 function selectCurrency(cur) {
   setDisplayCurrency(cur)
+  if (cur !== 'VND') fetchRates()
+}
+
+function selectBaseCurrency(cur) {
+  setBaseCurrency(cur)
 }
 
 function selectJpyNotation(n) {
@@ -488,6 +514,10 @@ defineExpose({})
 .settings__rule { display: flex; align-items: flex-start; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
 .settings__rule:last-child { border-bottom: none; }
 .settings__rule-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent2); margin-top: 5px; flex-shrink: 0; }
+
+/* Currency section divider + labels */
+.settings__cur-section-label { font-family: var(--sans); font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.settings__cur-divider { height: 1px; background: var(--border); margin: 14px 0; }
 
 /* Language / Currency selector */
 .settings__lang-list { display: flex; flex-direction: column; gap: 6px; }
