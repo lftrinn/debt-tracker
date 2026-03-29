@@ -110,7 +110,7 @@ test('thêm chi tiêu — xuất hiện trong lịch sử', async ({ page }) => 
   await descInput.fill('Cơm tối test')
 
   // Fill in amount
-  const amtInput = page.locator('input.inp-amount')
+  const amtInput = page.locator('input.add-form__amount')
   await amtInput.fill('75000')
 
   // Click THÊM
