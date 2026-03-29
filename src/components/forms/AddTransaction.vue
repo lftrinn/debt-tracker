@@ -28,6 +28,7 @@
           <!-- Dual mode: 2 inputs ngang nhau -->
           <div v-if="showExpEquiv" class="add-form__dual-inputs">
             <input class="add-form__input" v-model.number="nAmt" type="number" inputmode="numeric" :placeholder="nCurrency" @input="onExpAmtInput" />
+            <span class="add-form__dual-sep">≈</span>
             <input class="add-form__input" v-model.number="nAmtDisplay" type="number" inputmode="numeric" :placeholder="'≈ ' + displayCurrency" @input="onExpDisplayInput" />
           </div>
           <!-- Normal mode: amount + quick amounts -->
@@ -63,6 +64,7 @@
           <!-- Dual mode: 2 inputs ngang nhau -->
           <div v-if="showIncEquiv" class="add-form__dual-inputs">
             <input class="add-form__input" v-model.number="iAmt" type="number" inputmode="numeric" :placeholder="iCurrency" @input="onIncAmtInput" />
+            <span class="add-form__dual-sep">≈</span>
             <input class="add-form__input" v-model.number="iAmtDisplay" type="number" inputmode="numeric" :placeholder="'≈ ' + displayCurrency" @input="onIncDisplayInput" />
           </div>
           <!-- Normal mode: amount + quick amounts -->
@@ -307,8 +309,9 @@ function addInc() {
 .add-form__quick-btn { background: rgba(var(--accent-rgb),.1); border: 1px solid rgba(var(--accent-rgb),.2); border-radius: 5px; padding: 3px 7px; font-family: var(--mono); font-size: 9px; font-weight: 700; color: var(--accent); cursor: pointer; transition: all .15s; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
 .add-form__quick-btn:active { background: rgba(var(--accent-rgb),.25); transform: scale(.95); }
 /* Dual input: 2 ô cùng 1 hàng khi currency khác nhau */
-.add-form__dual-inputs { display: flex; gap: 8px; flex: 1; min-width: 0; }
+.add-form__dual-inputs { display: flex; gap: 6px; flex: 1; min-width: 0; align-items: center; }
 .add-form__dual-inputs .add-form__input { flex: 1; min-width: 0; padding-right: 8px; }
+.add-form__dual-sep { font-family: var(--mono); font-size: 10px; color: var(--muted); flex-shrink: 0; }
 .add-form__submit { background: var(--accent); color: var(--bg); border: none; border-radius: 9px; padding: 11px; font-family: var(--sans); font-size: 13px; font-weight: 800; cursor: pointer; letter-spacing: .05em; transition: all .2s; }
 .add-form__submit:hover { opacity: .9; transform: translateY(-1px); }
 .add-form__submit:disabled { opacity: .3; cursor: not-allowed; transform: none; }

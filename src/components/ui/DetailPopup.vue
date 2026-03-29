@@ -112,6 +112,7 @@
                   <input class="popup-input" v-model.number="buf.amt" type="number" inputmode="numeric" :placeholder="txCurrency || '0'" @input="onNativeAmtInput" />
                   <span v-if="txCurrency" class="detail__input-suffix">{{ txCurrency }}</span>
                 </div>
+                <span class="detail__dual-sep">≈</span>
                 <div class="detail__input-wrap">
                   <input class="popup-input" v-model.number="bufDisplayAmt" type="number" inputmode="numeric" :placeholder="'≈ ' + displayCurrency" @input="onDisplayAmtInput" />
                   <span class="detail__input-suffix">{{ displayCurrency }}</span>
@@ -445,6 +446,7 @@ function onTouchEnd(e) {
 .detail__input-wrap .popup-input { flex: 1; padding-right: 44px; min-width: 0; }
 .detail__input-suffix { position: absolute; right: 8px; font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: rgba(var(--accent-rgb),.12); color: var(--accent); pointer-events: none; }
 /* Dual input: 2 ô cùng 1 hàng khi currency khác nhau */
-.detail__dual-row { display: flex; gap: 8px; }
+.detail__dual-row { display: flex; gap: 6px; align-items: center; }
 .detail__dual-row .detail__input-wrap { flex: 1; min-width: 0; }
+.detail__dual-sep { font-family: var(--mono); font-size: 10px; color: var(--muted); flex-shrink: 0; }
 </style>
