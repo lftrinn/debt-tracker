@@ -10,15 +10,18 @@ export interface CashDataResult {
 }
 
 /**
- * Available cash, spending snapshot, and cash runway computations.
+ * Tính toán số dư tiền mặt khả dụng, chi tiêu kể từ snapshot, và số ngày tiền mặt còn đủ dùng.
+ * @param d - Reactive ref chứa toàn bộ dữ liệu ứng dụng
+ * @param dayLimit - Hạn mức chi tiêu mỗi ngày (computed từ useDailyLimit)
+ * @param actualPayDate - Hàm tính ngày lương thực tế (đã điều chỉnh cuối tuần)
+ * @returns spentSinceSnapshot, availCash, unpaidObsToPayday, cashDaysLeft
  */
 export function useCashData(
   d: Ref<AppData>,
   dayLimit: ComputedRef<number>,
   actualPayDate: (year: number, month: number, nominalDay: number) => Date,
 ): CashDataResult {
-  // Total cash expenses since current_cash.as_of
-  // Excludes obligation payments (_obTag) and Visa payments
+  // Chỉ tính chi tiêu tiền mặt (loại trừ thanh toán nghĩa vụ _obTag và giao dịch qua thẻ)
   const spentSinceSnapshot = computed((): number => {
     const asOf = d.value.current_cash?.as_of
     if (!asOf) return 0
@@ -27,13 +30,19 @@ export function useCashData(
       .reduce((s, e) => s + e.amount, 0)
   })
 
+  /**
+   * Tiền mặt thực sự có thể dùng = số dư - dự trữ - đã chi kể từ snapshot.
+   */
   const availCash = computed((): number => {
     const c = d.value.current_cash
     if (!c) return 0
     return (c.balance || 0) - (c.reserved || 0) - spentSinceSnapshot.value
   })
 
-  // Sum of unpaid obligations between today and next payday
+  /**
+   * Tổng các nghĩa vụ chưa thanh toán từ hôm nay đến ngày lương tiếp theo.
+   * Dùng để ước tính tiền cần giữ lại, không nên tiêu vào.
+   */
   const unpaidObsToPayday = computed((): number => {
     const paid = new Set(d.value.paid_obligations || [])
     const now = new Date()
@@ -63,6 +72,10 @@ export function useCashData(
     return total
   })
 
+  /**
+   * Ước tính số ngày tiền mặt còn đủ dùng dựa trên hạn mức chi tiêu ngày.
+   * Trả về null nếu hạn mức chưa được cài đặt.
+   */
   const cashDaysLeft = computed((): number | null => {
     const lim = dayLimit.value
     if (lim <= 0) return null

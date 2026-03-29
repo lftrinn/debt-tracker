@@ -10,6 +10,16 @@ export interface CopyTxData {
   type: 'exp' | 'inc'
 }
 
+/**
+ * Xử lý các hành động thêm, sửa, xóa giao dịch chi tiêu và thu nhập.
+ * Tự động cập nhật số dư thẻ tín dụng nếu giao dịch được thực hiện qua thẻ.
+ * @param d - Reactive ref chứa toàn bộ dữ liệu ứng dụng
+ * @param pushData - Hàm đẩy dữ liệu lên JSONBin, trả về true nếu thành công
+ * @param toast - Hàm hiển thị thông báo ngắn
+ * @param tStr - Hàm trả về ngày hôm nay dạng 'YYYY-MM-DD'
+ * @param findDebtId - Hàm tra cứu ID nợ từ tên nghĩa vụ
+ * @returns copyTxData, addExp, addInc, deleteTx, handlePopupSaveTx
+ */
 export function useTransactions(
   d: Ref<AppData>,
   pushData: () => Promise<boolean>,
@@ -19,6 +29,13 @@ export function useTransactions(
 ) {
   const copyTxData = ref<CopyTxData | null>(null)
 
+  /**
+   * Thêm khoản chi tiêu mới. Nếu thanh toán qua thẻ, tự động tăng dư nợ thẻ tương ứng.
+   * @param desc - Mô tả giao dịch
+   * @param amount - Số tiền (VND)
+   * @param cat - Danh mục
+   * @param payMethod - 'cash' hoặc card ID; mặc định là 'cash'
+   */
   async function addExp({ desc, amount, cat, payMethod }: { desc: string; amount: number; cat: string; payMethod?: string }): Promise<void> {
     const isCash = !payMethod || payMethod === 'cash'
     const e = { id: Date.now(), desc, amount, cat, date: tStr(), payMethod: payMethod || 'cash' }
@@ -38,6 +55,12 @@ export function useTransactions(
     ;(await pushData()) ? toast('toast.expAdded') : toast('toast.expAddedErr', 'err')
   }
 
+  /**
+   * Thêm khoản thu nhập và cập nhật số dư tiền mặt ngay lập tức.
+   * @param desc - Mô tả khoản thu
+   * @param amount - Số tiền nhận được (VND)
+   * @param cat - Danh mục thu nhập
+   */
   async function addInc({ desc, amount, cat }: { desc: string; amount: number; cat: string }): Promise<void> {
     const e = { id: Date.now(), desc, amount, cat, date: tStr() }
     d.value = { ...d.value, incomes: [e, ...(d.value.incomes || [])] }
@@ -45,6 +68,10 @@ export function useTransactions(
     ;(await pushData()) ? toast('toast.incAdded') : toast('toast.incAddedErr', 'err')
   }
 
+  /**
+   * Xóa một giao dịch. Khi xóa thu nhập thì giảm số dư tiền mặt; khi xóa chi tiêu qua thẻ thì giảm dư nợ thẻ.
+   * @param e - Đối tượng có id và type ('inc' hoặc 'exp')
+   */
   async function deleteTx(e: { id: number; type: string }): Promise<void> {
     if (e.type === 'inc') {
       const inc = (d.value.incomes || []).find((i) => i.id === e.id)
@@ -68,6 +95,10 @@ export function useTransactions(
     ;(await pushData()) ? toast('toast.txDeleted') : toast('toast.txDeletedErr', 'err')
   }
 
+  /**
+   * Lưu chỉnh sửa giao dịch từ popup. Khi chỉnh sửa thu nhập thì cập nhật số dư tiền mặt theo chênh lệch số tiền.
+   * @param item - Đối tượng giao dịch với dữ liệu chỉnh sửa trong _buf
+   */
   async function handlePopupSaveTx(item: { id: number; type: string; _buf: { name: string; date: string; amt: number; cat: string } }): Promise<void> {
     const buf = item._buf
     if (item.type === 'inc') {

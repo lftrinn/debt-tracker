@@ -5,9 +5,9 @@ export type JpyNotation = 'standard' | 'kanji'
 
 export const CURRENCIES: Currency[] = ['VND', 'USD', 'JPY']
 
-const CACHE_TTL = 4 * 60 * 60 * 1000 // 4 hours
+const CACHE_TTL = 4 * 60 * 60 * 1000 // 4 giờ — tránh gọi API liên tục
 
-// Module-level singleton state (shared across all useCurrency() calls)
+// State singleton ở module level — chia sẻ giữa tất cả lần gọi useCurrency()
 const displayCurrency = ref<Currency>(
   (localStorage.getItem('dt_currency_display') as Currency | null) ?? 'VND'
 )
@@ -18,6 +18,10 @@ const rates = ref<Record<string, number>>({})
 const ratesLoading = ref(false)
 const ratesError = ref(false)
 
+/**
+ * Tải tỷ giá hối đoái từ API công cộng (gốc VND).
+ * Kết quả được cache 4 giờ trong localStorage để tránh gọi API liên tục.
+ */
 async function fetchRates(): Promise<void> {
   const now = Date.now()
   const cached = localStorage.getItem('dt_fx_rates')
@@ -45,13 +49,21 @@ async function fetchRates(): Promise<void> {
   }
 }
 
+/**
+ * Quy đổi số tiền VND sang USD hoặc JPY theo tỷ giá hiện tại.
+ * Trả về giá trị gốc nếu chưa có tỷ giá.
+ */
 function convert(amountVnd: number, to: 'USD' | 'JPY'): number {
   const key = to.toLowerCase()
   const rate = rates.value[key]
   return rate ? amountVnd * rate : amountVnd
 }
 
-/** Short format with currency symbol: ₫500K, $15.23, ¥1.5万 */
+/**
+ * Định dạng ngắn với ký hiệu tiền tệ: ₫500K, $15.23, ¥1.5万.
+ * Nếu chưa có tỷ giá thì fallback hiển thị VND.
+ * @param amountVnd - Số tiền tính theo VND
+ */
 function fCurr(amountVnd: number | null | undefined): string {
   const v = Math.abs(amountVnd || 0)
   const cur = displayCurrency.value
@@ -80,7 +92,11 @@ function fCurr(amountVnd: number | null | undefined): string {
   return '$' + usd.toFixed(2)
 }
 
-/** Full format with currency symbol: ₫34,946,713 / $1,363.42 / ¥209,680 */
+/**
+ * Định dạng đầy đủ với ký hiệu tiền tệ: ₫34,946,713 / $1,363.42 / ¥209,680.
+ * Dùng cho các nơi cần hiển thị con số chính xác, không rút gọn.
+ * @param amountVnd - Số tiền tính theo VND
+ */
 function fCurrFull(amountVnd: number | null | undefined): string {
   const v = Math.abs(amountVnd || 0)
   const cur = displayCurrency.value
@@ -93,6 +109,11 @@ function fCurrFull(amountVnd: number | null | undefined): string {
   return '$' + usd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+/**
+ * Composable quản lý hiển thị đa tiền tệ (VND/USD/JPY).
+ * Singleton — state chia sẻ toàn app, persist qua localStorage.
+ * @returns Các hàm format tiền, tỷ giá, và setter cho tiền tệ hiển thị
+ */
 export function useCurrency() {
   return {
     displayCurrency,

@@ -6,6 +6,15 @@ import type { ToastType } from '../ui/useToast'
 
 export type AppState = 'loading' | 'setup' | 'ready' | 'error'
 
+/**
+ * Composable quản lý vòng đời khởi tạo ứng dụng: setup credentials, pull/push data,
+ * xử lý các chế độ tạo mới / import / kết nối lại.
+ * @param d - Reactive ref dữ liệu ứng dụng
+ * @param appState - Trạng thái hiện tại của app (loading/setup/ready/error)
+ * @param api - Instance của useApi
+ * @param toast - Hàm hiển thị thông báo
+ * @param onAfterPull - Callback chạy sau khi pull data thành công (vd: cleanup)
+ */
 export function useAppSetup(
   d: Ref<AppData>,
   appState: Ref<AppState>,
@@ -16,6 +25,9 @@ export function useAppSetup(
   const loading = ref(false)
   const sErr = ref('')
 
+  /**
+   * Đẩy state hiện tại lên JSONBin. Trả về false thay vì throw khi thất bại.
+   */
   async function pushData(): Promise<boolean> {
     try {
       await api.push(d.value)
@@ -25,6 +37,9 @@ export function useAppSetup(
     }
   }
 
+  /**
+   * Tải data từ JSONBin. Nếu thất bại: giữ nguyên data cũ, chuyển sang trạng thái error/setup.
+   */
   async function pullData(): Promise<void> {
     try {
       d.value = await api.pull()
@@ -38,6 +53,13 @@ export function useAppSetup(
     }
   }
 
+  /**
+   * Xử lý ba luồng setup ban đầu: tạo Bin mới, import JSON có sẵn, hoặc kết nối Bin cũ.
+   * @param opts.mode - 'new' | 'import' | 'existing'
+   * @param opts.key - JSONBin API Key
+   * @param opts.binId - Bin ID (chỉ dùng với 'existing')
+   * @param opts.json - Chuỗi JSON (chỉ dùng với 'import')
+   */
   async function handleSetup(opts: {
     mode: 'new' | 'import' | 'existing'
     key?: string
@@ -81,6 +103,9 @@ export function useAppSetup(
     }
   }
 
+  /**
+   * Kết nối lại khi app ở trạng thái error — thử pull bằng credentials mới/hiện tại.
+   */
   async function reconnect({ key, binId }: { key: string; binId: string }): Promise<void> {
     if (!key || !binId) return
     loading.value = true
@@ -96,12 +121,14 @@ export function useAppSetup(
     }
   }
 
+  /** Buộc tải lại trang với cache-bust query string để lấy bundle mới nhất. */
   function hardReload(): void {
     const url = new URL(window.location.href)
     url.searchParams.set('v', String(Date.now()))
     window.location.replace(url.toString())
   }
 
+  /** Xóa credentials khỏi localStorage và đưa app về màn hình setup. */
   function logout(): void {
     api.clearCredentials()
     appState.value = 'setup'

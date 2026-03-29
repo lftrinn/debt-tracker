@@ -2,12 +2,28 @@ import type { Ref } from 'vue'
 import type { AppData } from '@/types/data'
 import type { ToastType } from '../ui/useToast'
 
+/**
+ * Xử lý các hành động quản lý nợ và cài đặt: cập nhật thẻ, bổ sung tiền mặt, đặt hạn mức, và import JSON.
+ * @param d - Reactive ref chứa toàn bộ dữ liệu ứng dụng
+ * @param pushData - Hàm đẩy dữ liệu lên JSONBin, trả về true nếu thành công
+ * @param toast - Hàm hiển thị thông báo ngắn
+ * @param tStr - Hàm trả về ngày hôm nay dạng 'YYYY-MM-DD'
+ * @returns updateCardDirect, addCash, updLimit, importNewJson
+ */
 export function useDebtActions(
   d: Ref<AppData>,
   pushData: () => Promise<boolean>,
   toast: (msg: string, type?: ToastType) => void,
   tStr: () => string,
 ) {
+  /**
+   * Cập nhật trực tiếp thông tin thẻ tín dụng (số dư, thanh toán tối thiểu, ngày đến hạn).
+   * Chỉ cập nhật trường nào được truyền vào, các trường khác giữ nguyên.
+   * @param cardId - ID thẻ cần cập nhật
+   * @param balance - Số dư mới (tùy chọn)
+   * @param min - Số tiền thanh toán tối thiểu mới (tùy chọn)
+   * @param minDueDate - Ngày đến hạn thanh toán tối thiểu mới (tùy chọn)
+   */
   async function updateCardDirect({ cardId, balance, min, minDueDate }: { cardId: string; balance?: number; min?: number; minDueDate?: string }): Promise<void> {
     d.value = {
       ...d.value,
@@ -27,6 +43,10 @@ export function useDebtActions(
     ;(await pushData()) ? toast('toast.cardUpdated') : toast('toast.cardUpdatedErr', 'err')
   }
 
+  /**
+   * Bổ sung tiền mặt vào số dư và cập nhật ngày snapshot hiện tại.
+   * @param amount - Số tiền cần thêm (VND, phải dương)
+   */
   async function addCash({ amount }: { amount: number }): Promise<void> {
     if (!amount || amount <= 0) return
     d.value = {
@@ -40,6 +60,10 @@ export function useDebtActions(
     ;(await pushData()) ? toast('toast.cashUpdated') : toast('toast.cashUpdatedErr', 'err')
   }
 
+  /**
+   * Đặt hạn mức chi tiêu tùy chỉnh theo ngày. Khi val > 0 thì ghi đè daily_limit từ rules.
+   * @param val - Hạn mức mới (VND/ngày)
+   */
   async function updLimit(val: number): Promise<void> {
     if (val > 0) {
       d.value.custom_daily_limit = val
@@ -47,6 +71,12 @@ export function useDebtActions(
     }
   }
 
+  /**
+   * Import cấu hình nợ từ JSON string, giữ nguyên giao dịch và nghĩa vụ hiện có.
+   * Merge theo chiến lược: dùng config mới (debts, income, rules...) nhưng giữ expenses/incomes/paid_obligations của user.
+   * @param jsonStr - Chuỗi JSON cần import
+   * @param importErr - Ref để ghi thông báo lỗi nếu parse thất bại
+   */
   async function importNewJson(jsonStr: string, importErr: Ref<string>): Promise<void> {
     if (!jsonStr) return
     importErr.value = ''

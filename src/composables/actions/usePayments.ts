@@ -2,6 +2,16 @@ import type { Ref } from 'vue'
 import type { AppData, DebtRef } from '@/types/data'
 import type { ToastType } from '../ui/useToast'
 
+/**
+ * Xử lý thanh toán nghĩa vụ, thêm/sửa/xóa khoản chi một lần, và dọn dẹp dữ liệu đã qua hạn.
+ * Khi đánh dấu một nghĩa vụ là đã thanh toán, tự động tạo expense có _obTag và giảm số dư nợ.
+ * @param d - Reactive ref chứa toàn bộ dữ liệu ứng dụng
+ * @param pushData - Hàm đẩy dữ liệu lên JSONBin, trả về true nếu thành công
+ * @param toast - Hàm hiển thị thông báo ngắn
+ * @param tStr - Hàm trả về ngày hôm nay dạng 'YYYY-MM-DD'
+ * @param findDebtId - Hàm tra cứu ID nợ từ tên nghĩa vụ
+ * @returns cleanupPastPaid, recPay, addOneTime, saveEdit, deleteUpcoming, togglePaid, handlePopupSaveUpcoming
+ */
 export function usePayments(
   d: Ref<AppData>,
   pushData: () => Promise<boolean>,
@@ -9,7 +19,10 @@ export function usePayments(
   tStr: () => string,
   findDebtId: (name: string) => DebtRef | null,
 ) {
-  /** Remove paid obligations whose date is in the past — also clean source data */
+  /**
+   * Xóa các nghĩa vụ đã thanh toán có ngày trong quá khứ, đồng thời dọn sạch dữ liệu nguồn.
+   * Chạy sau mỗi lần pull để tránh tích lũy rác trong one_time_expenses và monthly_plans.
+   */
   async function cleanupPastPaid(): Promise<void> {
     const todayStr = tStr()
     const paid = new Set(d.value.paid_obligations || [])
@@ -47,6 +60,11 @@ export function usePayments(
     await pushData()
   }
 
+  /**
+   * Ghi nhận khoản trả nợ trực tiếp (ngoài kế hoạch) và giảm dư nợ tương ứng trên thẻ hoặc khoản vay.
+   * @param target - Định danh dạng 'cc:card_id' hoặc 'sl:loan_id'
+   * @param amount - Số tiền đã thanh toán (VND)
+   */
   async function recPay({ target, amount }: { target: string; amount: number }): Promise<void> {
     if (!amount || amount <= 0 || !target) return
     const [type, id] = target.split(':')
@@ -60,6 +78,12 @@ export function usePayments(
     ;(await pushData()) ? toast('toast.debtPaid') : toast('toast.debtPaidErr', 'err')
   }
 
+  /**
+   * Thêm khoản chi một lần vào danh sách sắp tới (chưa thực hiện).
+   * @param name - Tên khoản chi
+   * @param date - Ngày dự kiến dạng 'YYYY-MM-DD'
+   * @param amount - Số tiền (VND)
+   */
   async function addOneTime({ name, date, amount }: { name: string; date: string; amount: number }): Promise<void> {
     if (!name || !date || !amount) return
     const ev = { id: Date.now(), name, date, amount }
@@ -67,6 +91,10 @@ export function usePayments(
     ;(await pushData()) ? toast('toast.expenseAdded') : toast('toast.expenseAddedErr', 'err')
   }
 
+  /**
+   * Lưu chỉnh sửa một khoản sắp tới từ popup. Cập nhật paid_obligations nếu key thay đổi do đổi tên/ngày.
+   * @param p - Đối tượng khoản thanh toán với dữ liệu chỉnh sửa trong _buf
+   */
   async function saveEdit(p: { source: string; _id?: number; _mo?: string; _key: string; _buf?: { name: string; date: string; amt: number } }): Promise<void> {
     const buf = p._buf
     if (!buf?.name || !buf.date || !buf.amt) return
@@ -105,6 +133,10 @@ export function usePayments(
     ;(await pushData()) ? toast('toast.upcomingUpdated') : toast('toast.upcomingUpdatedErr', 'err')
   }
 
+  /**
+   * Xóa một khoản sắp tới khỏi danh sách (one_time hoặc monthly_plan).
+   * @param p - Đối tượng khoản cần xóa với source, _id, _mo, _key
+   */
   async function deleteUpcoming(p: { source: string; _id?: number; _mo?: string; _key: string }): Promise<void> {
     if (p.source === 'one_time') {
       d.value = { ...d.value, one_time_expenses: (d.value.one_time_expenses || []).filter((e) => e.id !== p._id) }
@@ -127,6 +159,14 @@ export function usePayments(
     ;(await pushData()) ? toast('toast.upcomingDeleted') : toast('toast.upcomingDeletedErr', 'err')
   }
 
+  /**
+   * Đánh dấu hoặc bỏ đánh dấu một nghĩa vụ là đã thanh toán.
+   * Khi đánh dấu: trừ tiền mặt, tạo expense có _obTag, giảm dư nợ thẻ/khoản vay.
+   * Khi bỏ đánh dấu: hoàn tác toàn bộ các thay đổi trên.
+   * @param key - Key dạng 'YYYY-MM-DD:tên nghĩa vụ'
+   * @param amt - Số tiền nghĩa vụ (VND)
+   * @param obName - Tên nghĩa vụ để tra cứu debt ID, tùy chọn
+   */
   async function togglePaid(key: string, amt: number, obName?: string): Promise<void> {
     const paid = new Set(d.value.paid_obligations || [])
     const nd: AppData = {

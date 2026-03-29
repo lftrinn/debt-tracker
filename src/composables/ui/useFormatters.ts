@@ -1,5 +1,7 @@
 /**
- * Formatting utilities for Vietnamese currency and dates
+ * Các tiện ích định dạng số tiền VND và ngày tháng theo chuẩn Việt Nam.
+ * Dùng chung xuyên suốt ứng dụng — không chứa state, an toàn khi gọi nhiều lần.
+ * @returns fN, fS, fV, fDate, tStr, isTM, isT, dDiff
  */
 export function useFormatters() {
   /** Format number with vi-VN locale separators */

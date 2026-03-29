@@ -3,9 +3,19 @@ import type { Ref, ComputedRef } from 'vue'
 import type { AppData, Milestone } from '@/types/data'
 import { useFormatters } from '../ui/useFormatters'
 
+/**
+ * Xây dựng danh sách mốc tiến độ trả nợ từ dữ liệu payoff_timeline.
+ * Ưu tiên dùng milestones nếu có, fallback sang projected_debt_by_month.
+ * @param d - Reactive ref chứa toàn bộ dữ liệu ứng dụng
+ * @returns milestones — danh sách mốc với trạng thái done/active/future
+ */
 export function useTimeline(d: Ref<AppData>): { milestones: ComputedRef<Milestone[]> } {
   const { fS } = useFormatters()
 
+  /**
+   * Danh sách mốc trả nợ với trạng thái so với tháng hiện tại.
+   * Tra debtMap để hiển thị tổng nợ tương ứng với từng milestone tháng.
+   */
   const milestones = computed((): Milestone[] => {
     const now = new Date().toISOString().slice(0, 7)
     const raw = d.value.payoff_timeline?.milestones || []

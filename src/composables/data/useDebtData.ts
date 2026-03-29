@@ -9,8 +9,10 @@ import { useUpcoming } from './useUpcoming'
 import { useTimeline } from './useTimeline'
 
 /**
- * Root composable — orchestrates all debt/finance computed data.
- * App.vue consumes this single composable; sub-composables handle focused concerns.
+ * Composable gốc — tổng hợp toàn bộ dữ liệu tài chính/nợ cho ứng dụng.
+ * App.vue dùng composable này duy nhất; các sub-composable xử lý từng mảng chức năng riêng.
+ * @param d - Reactive ref chứa toàn bộ dữ liệu ứng dụng
+ * @returns Tất cả computed values và helpers cần thiết cho UI
  */
 export function useDebtData(d: Ref<AppData>) {
   const { isT, isTM } = useFormatters()
@@ -26,6 +28,10 @@ export function useDebtData(d: Ref<AppData>) {
   const expenses = computed(() => d.value.expenses || [])
   const incomes = computed(() => d.value.incomes || [])
 
+  /**
+   * Gộp và sắp xếp tất cả giao dịch (chi tiêu + thu nhập) theo ngày mới nhất lên đầu.
+   * Dùng id để phân biệt thứ tự khi cùng ngày.
+   */
   const sortedTx = computed(() =>
     [
       ...expenses.value.map((e) => ({ ...e, type: 'exp' as const })),
@@ -43,7 +49,7 @@ export function useDebtData(d: Ref<AppData>) {
   )
 
   // ─── Daily / monthly spending ─────────────────────────────────────────
-  // Exclude obligation payments (_obTag) from daily/monthly spending
+  // Loại trừ _obTag để không tính kép thanh toán nghĩa vụ vào chi tiêu hàng ngày/tháng
   const todaySpent = computed((): number =>
     expenses.value.filter((e) => isT(e.date) && !e._obTag).reduce((s, e) => s + e.amount, 0)
   )
@@ -72,6 +78,9 @@ export function useDebtData(d: Ref<AppData>) {
   )
 
   // ─── Trend directions ─────────────────────────────────────────────────
+  /**
+   * Chiều hướng tiền mặt trong ngày: 'up' nếu thu > chi, 'down' nếu ngược lại, 'neutral' nếu không có giao dịch.
+   */
   const cashTrend: ComputedRef<TrendDirection> = computed(() => {
     if (todayOutflow.value === 0 && todayIncome.value === 0) return 'neutral'
     return todayIncome.value > todayOutflow.value ? 'up' : 'down'

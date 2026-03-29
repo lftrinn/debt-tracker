@@ -17,13 +17,19 @@ export interface DebtCardsResult {
 }
 
 /**
- * Credit card and small loan derived data, debt totals, and minimum payment tracking.
+ * Tính toán dữ liệu thẻ tín dụng, khoản vay nhỏ, tổng nợ và trạng thái thanh toán tối thiểu.
+ * @param d - Reactive ref chứa toàn bộ dữ liệu ứng dụng
+ * @returns Các computed values và hàm tiện ích liên quan đến nợ
  */
 export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
   const { dDiff } = useFormatters()
   const { palette } = useColors()
 
-  /** Match obligation name → debt id for auto-update */
+  /**
+   * Khớp tên nghĩa vụ với ID nợ tương ứng để tự động cập nhật số dư khi đánh dấu đã thanh toán.
+   * @param name - Tên nghĩa vụ cần tìm kiếm
+   * @returns DebtRef chứa type và id, hoặc null nếu không tìm thấy
+   */
   function findDebtId(name: string): DebtRef | null {
     const n = name.toLowerCase()
     const cards = d.value.debts?.credit_cards || []
@@ -43,7 +49,10 @@ export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
     return null
   }
 
-  // Check if all minimum payment obligations for a card are paid
+  /**
+   * Kiểm tra xem tất cả nghĩa vụ thanh toán tối thiểu của từng thẻ đã được đánh dấu thanh toán chưa.
+   * Xét trong phạm vi tháng hiện tại và 2 tháng tới để bao phủ các kỳ sắp đến.
+   */
   const minPaidByCard = computed((): Record<string, boolean> => {
     const paid = new Set(d.value.paid_obligations || [])
     const plans = d.value.monthly_plans || {}
@@ -99,6 +108,9 @@ export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
     return result
   })
 
+  /**
+   * Danh sách thẻ tín dụng đã được enrich với trạng thái khẩn cấp thanh toán và khoản thanh toán theo kế hoạch.
+   */
   const debtCards = computed((): DebtCard[] =>
     (d.value.debts?.credit_cards || []).map((c): DebtCard => {
       const dueDate = c.min_due_date || ''
@@ -158,22 +170,27 @@ export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
     })
   )
 
+  /** Chỉ lấy các khoản vay nhỏ còn dư nợ (lọc bỏ đã trả hết). */
   const smallLoans = computed(() =>
     (d.value.debts?.small_loans || []).filter((l) => (l.remaining_balance || 0) > 0)
   )
 
+  /** Tổng nợ hiện tại = tổng dư nợ thẻ tín dụng + tổng khoản vay nhỏ còn lại. */
   const totalDebt = computed((): number => {
     const cc = (d.value.debts?.credit_cards || []).reduce((s, c) => s + (c.balance || 0), 0)
     const sl = (d.value.debts?.small_loans || []).reduce((s, l) => s + (l.remaining_balance || 0), 0)
     return Math.max(0, cc + sl)
   })
 
+  /** Tổng nợ ban đầu lấy từ debts.summary.total, dùng làm mốc tính % tiến độ trả nợ. */
   const origDebt = computed((): number => d.value.debts?.summary?.total || 91721251)
 
+  /** Phần trăm nợ đã trả so với tổng nợ ban đầu (0–100). */
   const repayPct = computed((): number =>
     Math.min(100, Math.max(0, Math.round((1 - totalDebt.value / origDebt.value) * 100)))
   )
 
+  /** Dữ liệu phân tích nợ theo từng thẻ/khoản vay, gán màu từ palette để hiển thị trên biểu đồ tròn. */
   const debtBreakdown = computed(() => {
     const cc = (d.value.debts?.credit_cards || []).map((c, i) => ({
       name: c.name.replace(' — Techcombank', ''),
@@ -190,6 +207,9 @@ export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
     return [...cc, ...sl]
   })
 
+  /**
+   * Chiều hướng nợ: 'down' nếu đã có thanh toán nợ hoặc trả thêm trong kỳ này, ngược lại 'neutral'.
+   */
   const debtTrend = computed((): TrendDirection => {
     const paidObs = d.value.paid_obligations || []
     const extraPaid = d.value.extra_paid || 0

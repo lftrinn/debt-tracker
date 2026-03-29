@@ -3,17 +3,27 @@ import type { Ref, ComputedRef } from 'vue'
 import type { AppData, UpcomingItem } from '@/types/data'
 import { useFormatters } from '../ui/useFormatters'
 
+/**
+ * Tổng hợp danh sách các khoản thanh toán sắp đến hạn từ kế hoạch tháng và chi tiêu một lần.
+ * @param d - Reactive ref chứa toàn bộ dữ liệu ứng dụng
+ * @returns upcomingLabel (nhãn tháng hiện tại), upcoming (danh sách tối đa 10 khoản sắp đến)
+ */
 export function useUpcoming(d: Ref<AppData>): {
   upcomingLabel: ComputedRef<string>
   upcoming: ComputedRef<UpcomingItem[]>
 } {
   const { dDiff } = useFormatters()
 
+  /** Nhãn hiển thị tháng/năm hiện tại theo dạng "T3/2026". */
   const upcomingLabel = computed((): string => {
     const now = new Date()
     return 'T' + String(now.getMonth() + 1) + '/' + now.getFullYear()
   })
 
+  /**
+   * Danh sách khoản thanh toán sắp đến, bao gồm cả đã quá hạn trong vòng 30 ngày.
+   * Gộp từ monthly_plans (3 tháng hiện tại và tới) và one_time_expenses, sắp xếp theo ngày tăng dần.
+   */
   const upcoming = computed((): UpcomingItem[] => {
     const plans = d.value.monthly_plans || {}
     const paid = new Set(d.value.paid_obligations || [])

@@ -6,6 +6,12 @@
 
 type RgbColorName = 'accent' | 'accent2' | 'accent3' | 'danger' | 'text'
 
+/**
+ * Cung cấp design tokens màu sắc cho các ngữ cảnh JavaScript (Chart.js, computed data).
+ * Các giá trị này phải khớp với CSS variables trong styles.css :root.
+ * Trong template/styles dùng var(--accent2); trong JS logic dùng composable này.
+ * @returns colors, rgb, rgba, chartGrid, chartTick, chartFont, palette
+ */
 export function useColors() {
   const colors = {
     bg: '#0a0a0f',

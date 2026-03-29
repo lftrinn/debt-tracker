@@ -41,6 +41,11 @@ const emojiToKey: Record<string, string> = {
   '↩️': 'hoantien', '📈': 'dautu', '💰': 'khac_thu',
 }
 
+/**
+ * Cung cấp danh sách danh mục chi tiêu/thu nhập và hàm resolve từ key hoặc emoji legacy.
+ * Dùng trong AddTransaction, TransactionList, DetailPopup để hiển thị icon và nhãn nhất quán.
+ * @returns expenseCategories, incomeCategories, emojiToKey, resolveCat
+ */
 export function useCategories() {
   const { t } = useI18n()
 
