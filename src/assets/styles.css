@@ -75,7 +75,8 @@ textarea.inp-s { height: 130px; resize: none; font-size: 10px; line-height: 1.5;
 
 
 /* Trend icons */
-.trend-ico { display: inline-flex; align-items: center; margin-left: 4px; vertical-align: middle; }
+@keyframes trendAppear { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
+.trend-ico { display: inline-flex; align-items: center; margin-left: 4px; vertical-align: middle; animation: trendAppear .3s ease-out; }
 .trend-ico.up { color: var(--accent3); }
 .trend-ico.down { color: var(--accent2); }
 .trend-ico.neutral { color: var(--muted); }
