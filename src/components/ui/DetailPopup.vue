@@ -14,12 +14,12 @@
 
         <!-- Header -->
         <div class="popup-hdr">
-          <span class="popup-title">{{ editing ? $t('detail.edit') : $t('detail.view') }}</span>
+          <span class="popup-title">{{ editing ? $t('detail.edit') : reviewStep ? $t('detail.review.title') : $t('detail.view') }}</span>
           <button class="popup-close" @click="$emit('close')"><Icon name="x" :size="18" /></button>
         </div>
 
         <!-- VIEW MODE -->
-        <template v-if="!editing">
+        <template v-if="!editing && !reviewStep">
           <div class="popup-body">
             <!-- Icon / urgency indicator -->
             <div class="popup-hero">
