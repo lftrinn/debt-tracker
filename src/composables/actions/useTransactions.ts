@@ -5,8 +5,14 @@ import type { ToastType } from '../ui/useToast'
 import { useCurrency } from '../api/useCurrency'
 import type { Currency } from '../api/useCurrency'
 import { i18n } from '../../i18n'
-import { translateToAll } from '../api/useTranslation'
+import { translateToAll, translateText, ALL_LANGS } from '../api/useTranslation'
 import type { AppLang } from '../api/useTranslation'
+
+/** Quyết định dịch từ review step của DetailPopup */
+export interface TranslationDecision {
+  action: 'keep' | 'auto' | 'manual'
+  value?: string | null
+}
 
 export interface CopyTxData {
   desc: string
@@ -59,14 +65,53 @@ export function useTransactions(
       // bỏ qua bản dịch stale này để tránh overwrite descI18n mới hơn.
       const current = (d.value[listKey] as Array<{ id: number; desc?: string }>).find((x) => x.id === id)
       if (!current || current.desc !== desc) return
+      // Build meta: ngôn ngữ nguồn = manual, các ngôn ngữ được dịch tự động = auto
+      const meta: Partial<Record<AppLang, 'auto' | 'manual'>> = {}
+      for (const l of ALL_LANGS) {
+        if (translations[l]) meta[l] = l === lang ? 'manual' : 'auto'
+      }
       d.value = {
         ...d.value,
-        [listKey]: (d.value[listKey] as Array<{ id: number; descI18n?: unknown }>).map((x) =>
-          x.id === id ? { ...x, descI18n: translations } : x
+        [listKey]: (d.value[listKey] as Array<{ id: number; descI18n?: unknown; descI18nMeta?: unknown }>).map((x) =>
+          x.id === id ? { ...x, descI18n: translations, descI18nMeta: meta } : x
         ),
       }
       await pushData()
     })
+  }
+
+  /**
+   * Dịch lại một số ngôn ngữ cụ thể trong background (dùng sau khi edit với một số lang đã được dịch auto).
+   * Chỉ cập nhật các lang trong targetLangs, không đụng đến manual langs.
+   */
+  function backgroundTranslatePartial(
+    id: number,
+    desc: string,
+    from: AppLang,
+    listKey: 'expenses' | 'incomes',
+    targetLangs: AppLang[],
+  ): void {
+    if (!desc.trim() || targetLangs.length === 0) return
+    Promise.all(targetLangs.map((lang) => translateText(desc, from, lang).then((r) => ({ lang, result: r })))).then(
+      async (results) => {
+        const current = (d.value[listKey] as Array<{ id: number; desc?: string }>).find((x) => x.id === id)
+        if (!current || current.desc !== desc) return
+        const i18nUpdates: Partial<Record<AppLang, string>> = {}
+        const metaUpdates: Partial<Record<AppLang, 'auto' | 'manual'>> = {}
+        for (const { lang, result } of results) {
+          if (result) { i18nUpdates[lang] = result; metaUpdates[lang] = 'auto' }
+        }
+        d.value = {
+          ...d.value,
+          [listKey]: (d.value[listKey] as Array<{ id: number; descI18n?: unknown; descI18nMeta?: unknown }>).map((x) =>
+            x.id === id
+              ? { ...x, descI18n: { ...(x.descI18n as object || {}), ...i18nUpdates }, descI18nMeta: { ...(x.descI18nMeta as object || {}), ...metaUpdates } }
+              : x
+          ),
+        }
+        await pushData()
+      },
+    )
   }
 
   /**
@@ -89,6 +134,7 @@ export function useTransactions(
       currency: txCur,
       descLang: lang,
       descI18n: { [lang]: desc } as Partial<Record<AppLang, string>>,
+      descI18nMeta: { [lang]: 'manual' as const } as Partial<Record<AppLang, 'auto' | 'manual'>>,
     }
     const nd: AppData = {
       ...d.value,
@@ -127,6 +173,7 @@ export function useTransactions(
       currency: txCur,
       descLang: lang,
       descI18n: { [lang]: desc } as Partial<Record<AppLang, string>>,
+      descI18nMeta: { [lang]: 'manual' as const } as Partial<Record<AppLang, 'auto' | 'manual'>>,
     }
     d.value = { ...d.value, incomes: [e, ...(d.value.incomes || [])] }
     // Cash balance luôn theo VND — quy đổi nếu thu nhập ở ngoại tệ
@@ -169,17 +216,48 @@ export function useTransactions(
 
   /**
    * Lưu chỉnh sửa giao dịch từ popup. Cash balance cập nhật theo chênh lệch VND.
-   * Cập nhật descI18n[locale hiện tại] = desc mới; xoá các bản dịch cũ (có thể stale).
-   * @param item - Đối tượng giao dịch với dữ liệu chỉnh sửa trong _buf
+   * Xử lý quyết định dịch từ review step: 'auto' lang được dịch lại, 'manual' dùng giá trị user nhập, 'keep' giữ nguyên.
+   * @param item - Đối tượng giao dịch với dữ liệu chỉnh sửa trong _buf và _translations từ review step
    */
-  async function handlePopupSaveTx(item: { id: number; type: string; _buf: { name: string; date: string; amt: number; cat: string } }): Promise<void> {
+  async function handlePopupSaveTx(item: {
+    id: number
+    type: string
+    _buf: { name: string; date: string; amt: number; cat: string }
+    _translations?: Partial<Record<AppLang, TranslationDecision>>
+    descI18n?: Partial<Record<AppLang, string>>
+    descI18nMeta?: Partial<Record<AppLang, 'auto' | 'manual'>>
+  }): Promise<void> {
     const buf = item._buf
     const lang = currentLang()
-    // descI18n reset về {[locale]: newDesc} — bản dịch cũ có thể stale sau khi sửa
-    const newDescI18n: Partial<Record<AppLang, string>> = { [lang]: buf.name }
+    const existingI18n = item.descI18n || {}
+    const existingMeta = item.descI18nMeta || {}
+
+    // Build descI18n và meta mới: bắt đầu từ existing, cập nhật theo decisions
+    const newDescI18n: Partial<Record<AppLang, string>> = { ...existingI18n, [lang]: buf.name }
+    const newDescI18nMeta: Partial<Record<AppLang, 'auto' | 'manual'>> = { ...existingMeta, [lang]: 'manual' }
+    const autoLangs: AppLang[] = []
+
+    for (const otherLang of ALL_LANGS.filter((l) => l !== lang)) {
+      const decision = item._translations?.[otherLang]
+      if (decision) {
+        if (decision.action === 'auto' && decision.value) {
+          newDescI18n[otherLang] = decision.value
+          newDescI18nMeta[otherLang] = 'auto'
+        } else if (decision.action === 'manual' && decision.value) {
+          newDescI18n[otherLang] = decision.value
+          newDescI18nMeta[otherLang] = 'manual'
+        }
+        // action='keep': giữ nguyên existing values và meta (đã copy ở trên)
+      } else if (existingMeta[otherLang] === 'auto' || !existingMeta[otherLang]) {
+        // Không có decision → ngôn ngữ này là 'auto' mode → dịch lại background
+        autoLangs.push(otherLang)
+      }
+      // Nếu existing meta = 'manual' và không có decision → đã được handled ở review step
+    }
+
+    const listKey = item.type === 'inc' ? 'incomes' : 'expenses'
     if (item.type === 'inc') {
       const old = (d.value.incomes || []).find((i) => i.id === item.id)
-      // Tính chênh lệch theo VND để cập nhật cash balance chính xác
       const txCur = (old?.currency || baseCurrency.value) as Currency
       const oldVnd = toVnd(old?.amount || 0, txCur)
       const newVnd = toVnd(buf.amt, txCur)
@@ -188,7 +266,7 @@ export function useTransactions(
         ...d.value,
         incomes: (d.value.incomes || []).map((i) =>
           i.id === item.id
-            ? { ...i, desc: buf.name, date: buf.date, amount: buf.amt, cat: buf.cat, descLang: lang, descI18n: newDescI18n }
+            ? { ...i, desc: buf.name, date: buf.date, amount: buf.amt, cat: buf.cat, descLang: lang, descI18n: newDescI18n, descI18nMeta: newDescI18nMeta }
             : i
         ),
         current_cash: { ...d.value.current_cash, balance: (d.value.current_cash?.balance || 0) + amtDiff },
@@ -198,15 +276,14 @@ export function useTransactions(
         ...d.value,
         expenses: (d.value.expenses || []).map((i) =>
           i.id === item.id
-            ? { ...i, desc: buf.name, date: buf.date, amount: buf.amt, cat: buf.cat, descLang: lang, descI18n: newDescI18n }
+            ? { ...i, desc: buf.name, date: buf.date, amount: buf.amt, cat: buf.cat, descLang: lang, descI18n: newDescI18n, descI18nMeta: newDescI18nMeta }
             : i
         ),
       }
     }
     ;(await pushData()) ? toast('toast.txUpdated') : toast('toast.txUpdatedErr', 'err')
-    // Dịch lại background vì mô tả đã thay đổi
-    const listKey = item.type === 'inc' ? 'incomes' : 'expenses'
-    backgroundTranslate(item.id, buf.name, lang, listKey)
+    // Dịch lại background các 'auto' langs
+    backgroundTranslatePartial(item.id, buf.name, lang, listKey, autoLangs)
   }
 
   return { copyTxData, addExp, addInc, deleteTx, handlePopupSaveTx }

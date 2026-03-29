@@ -310,6 +310,17 @@ export default {
     categoryIncome: '収入',
     saveButton: '変更を保存',
     cancelButton: 'キャンセル',
+    review: {
+      title: '翻訳を更新',
+      subtitle: 'コンテンツを編集しました。以前に手動で入力した言語の処理方法を選択してください:',
+      autoTranslate: '自動翻訳',
+      manual: '手動で編集',
+      keep: 'そのまま',
+      saveAll: '保存',
+      cancel: 'キャンセル',
+      translating: '翻訳中...',
+      langLabel: { vi: 'ベトナム語', en: '英語', ja: '日本語' },
+    },
   },
   categories: {
     expense: {

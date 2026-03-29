@@ -64,6 +64,7 @@ export function useUpcoming(d: Ref<AppData>): {
           mo: String(d2.getMonth() + 1).padStart(2, '0'),
           name: ob.name,
           nameI18n: ob.nameI18n,
+          nameI18nMeta: ob.nameI18nMeta,
           sub: overdueDays > 0
             ? i18n.global.t('upcoming.overdueDays', { n: overdueDays })
             : ob.category === 'debt_minimum' ? i18n.global.t('upcoming.minPayLabel') : null,
@@ -94,6 +95,7 @@ export function useUpcoming(d: Ref<AppData>): {
         mo: String(d2.getMonth() + 1).padStart(2, '0'),
         name: ev.name,
         nameI18n: ev.nameI18n,
+        nameI18nMeta: ev.nameI18nMeta,
         sub: overdueDays > 0 ? i18n.global.t('upcoming.overdueDays', { n: overdueDays }) : null,
         amt: ev.amount,
         paid: isPaid,

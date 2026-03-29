@@ -80,7 +80,7 @@
         </template>
 
         <!-- EDIT MODE -->
-        <template v-else>
+        <template v-else-if="editing">
           <div class="popup-body">
             <!-- CC payment level selector (edit mode) -->
             <div v-if="isCcItem" class="popup-field">
@@ -141,6 +141,42 @@
             <button class="popup-btn secondary" @click="editing = false">{{ $t('detail.cancelButton') }}</button>
           </div>
         </template>
+
+        <!-- REVIEW STEP: xử lý bản dịch các ngôn ngữ manual sau khi edit -->
+        <template v-else-if="reviewStep">
+          <div class="popup-body">
+            <p class="review__subtitle">{{ $t('detail.review.subtitle') }}</p>
+            <div v-for="entry in reviewPending" :key="entry.lang" class="review__lang-block">
+              <div class="review__lang-header">
+                <span class="review__lang-label">{{ $t('detail.review.langLabel.' + entry.lang) }}</span>
+                <div class="review__options">
+                  <button
+                    v-for="opt in ['keep', 'auto', 'manual']"
+                    :key="opt"
+                    :class="['review__opt-btn', reviewDecisions[entry.lang]?.action === opt ? 'active' : '']"
+                    @click="setReviewAction(entry.lang, opt)"
+                  >
+                    {{ $t('detail.review.' + (opt === 'keep' ? 'keep' : opt === 'auto' ? 'autoTranslate' : 'manual')) }}
+                  </button>
+                </div>
+              </div>
+              <div class="detail__input-wrap" style="margin-top:6px">
+                <input
+                  class="popup-input"
+                  :value="reviewInputValue(entry.lang)"
+                  :readonly="reviewDecisions[entry.lang]?.action !== 'manual'"
+                  :style="reviewDecisions[entry.lang]?.action !== 'manual' ? { opacity: '.7' } : {}"
+                  :placeholder="reviewDecisions[entry.lang]?.action === 'auto' && autoTranslations[entry.lang] == null ? $t('detail.review.translating') : ''"
+                  @input="(e) => onReviewInput(entry.lang, e.target.value)"
+                />
+              </div>
+            </div>
+          </div>
+          <div class="popup-actions">
+            <button class="popup-btn primary" @click="handleReviewSave">{{ $t('detail.review.saveAll') }}</button>
+            <button class="popup-btn secondary" @click="reviewStep = false">{{ $t('detail.review.cancel') }}</button>
+          </div>
+        </template>
       </div>
     </div>
   </Transition>
@@ -154,6 +190,7 @@ import { useFormatters } from '../../composables/ui/useFormatters'
 import { useCategories } from '../../composables/data/useCategories'
 import { useCurrency } from '../../composables/api/useCurrency'
 import { getLocalized } from '../../composables/data/useI18nData'
+import { translateText, ALL_LANGS } from '../../composables/api/useTranslation'
 
 const { locale } = useI18n()
 const { fDate, tStr } = useFormatters()
@@ -172,6 +209,15 @@ const emit = defineEmits(['close', 'save-upcoming', 'save-tx', 'delete', 'toggle
 const editing = ref(false)
 const buf = ref({ name: '', date: '', amt: 0, cat: '' })
 const editPayLevel = ref('min') // 'min' | 'custom' — only used for CC edit
+
+// ─── Review step state ────────────────────────────────────────────────────
+const reviewStep = ref(false)
+/** Danh sách ngôn ngữ cần review (các ngôn ngữ manual != currentLocale) */
+const reviewPending = ref([]) // Array<{ lang: AppLang, oldValue: string }>
+/** Quyết định của user cho từng ngôn ngữ: { [lang]: { action: 'keep'|'auto'|'manual', value: string } } */
+const reviewDecisions = ref({})
+/** Auto-translations được prefetch khi bước review bắt đầu */
+const autoTranslations = ref({})
 
 // ─── Dual input (native currency ↔ display currency) ──────────────────────
 /** Currency của giao dịch đang xem/edit; null nếu không có item */
@@ -255,6 +301,10 @@ const canCopy = computed(() => {
 
 watch(() => props.item, (v) => {
   editing.value = false
+  reviewStep.value = false
+  reviewPending.value = []
+  reviewDecisions.value = {}
+  autoTranslations.value = {}
   dragY.value = 0
   dragging.value = false
   dismissing.value = false
@@ -317,16 +367,96 @@ function handleCopy() {
   emit('clone-item', { ...i })
 }
 
+/** Lấy i18nMeta và i18n của item hiện tại theo field (name hoặc desc) */
+function getItemI18nFields(i) {
+  if (i._variant === 'upcoming') return { i18n: i.nameI18n, meta: i.nameI18nMeta }
+  return { i18n: i.descI18n, meta: i.descI18nMeta }
+}
+
+/** Lấy giá trị hiển thị trong input của review step cho một ngôn ngữ */
+function reviewInputValue(lang) {
+  const d = reviewDecisions.value[lang]
+  if (!d) return ''
+  if (d.action === 'auto') return autoTranslations.value[lang] ?? ''
+  return d.value ?? ''
+}
+
+/** User đổi action của một ngôn ngữ trong review step */
+function setReviewAction(lang, action) {
+  const prev = reviewDecisions.value[lang] || {}
+  reviewDecisions.value = { ...reviewDecisions.value, [lang]: { ...prev, action } }
+}
+
+/** User chỉnh thủ công input trong review step */
+function onReviewInput(lang, value) {
+  const prev = reviewDecisions.value[lang] || {}
+  reviewDecisions.value = { ...reviewDecisions.value, [lang]: { ...prev, value } }
+}
+
 function handleSave() {
   if (!buf.value.name || !buf.value.amt) return
   if (props.item._variant === 'tx' && buf.value.date > tStr()) buf.value.date = tStr()
   const i = props.item
+  const currentLang = locale.value
+  const { meta } = getItemI18nFields(i)
+
+  // Tìm ngôn ngữ manual (không phải current locale, có meta='manual')
+  const manualLangs = ALL_LANGS.filter((l) => l !== currentLang && meta?.[l] === 'manual')
+
+  if (manualLangs.length > 0) {
+    // Bắt đầu review step
+    const { i18n: existingI18n } = getItemI18nFields(i)
+    reviewPending.value = manualLangs.map((lang) => ({
+      lang,
+      oldValue: existingI18n?.[lang] || (i._variant === 'upcoming' ? i.name : i.desc) || '',
+    }))
+    // Khởi tạo decisions với action='keep' và giá trị cũ
+    const decisions = {}
+    for (const { lang, oldValue } of reviewPending.value) {
+      decisions[lang] = { action: 'keep', value: oldValue }
+    }
+    reviewDecisions.value = decisions
+    autoTranslations.value = {}
+    // Prefetch auto translations cho từng lang
+    for (const { lang } of reviewPending.value) {
+      translateText(buf.value.name, currentLang, lang).then((result) => {
+        autoTranslations.value = { ...autoTranslations.value, [lang]: result ?? '' }
+      })
+    }
+    editing.value = false
+    reviewStep.value = true
+    return
+  }
+
+  // Không có manual langs → emit save trực tiếp
+  doSave({})
+}
+
+function doSave(translations) {
+  const i = props.item
   if (i._variant === 'upcoming') {
-    emit('save-upcoming', { ...i, _buf: { ...buf.value } })
+    emit('save-upcoming', { ...i, _buf: { ...buf.value }, _translations: translations })
   } else {
-    emit('save-tx', { ...i, _buf: { ...buf.value } })
+    emit('save-tx', { ...i, _buf: { ...buf.value }, _translations: translations })
   }
   editing.value = false
+  reviewStep.value = false
+}
+
+function handleReviewSave() {
+  // Build translations từ decisions
+  const translations = {}
+  for (const [lang, d] of Object.entries(reviewDecisions.value)) {
+    if (d.action === 'auto') {
+      const autoVal = autoTranslations.value[lang]
+      translations[lang] = { action: 'auto', value: autoVal || null }
+    } else if (d.action === 'manual') {
+      translations[lang] = { action: 'manual', value: d.value || null }
+    } else {
+      translations[lang] = { action: 'keep', value: null }
+    }
+  }
+  doSave(translations)
 }
 
 // --- Swipe to dismiss ---
@@ -449,4 +579,14 @@ function onTouchEnd(e) {
 .detail__dual-row { display: flex; gap: 6px; align-items: center; }
 .detail__dual-row .detail__input-wrap { flex: 1; min-width: 0; }
 .detail__dual-sep { font-family: var(--mono); font-size: 10px; color: var(--muted); flex-shrink: 0; }
+
+/* Review step */
+.review__subtitle { font-size: 12px; color: var(--muted); margin: 0 0 14px; line-height: 1.5; }
+.review__lang-block { margin-bottom: 16px; }
+.review__lang-block:last-child { margin-bottom: 0; }
+.review__lang-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.review__lang-label { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .05em; }
+.review__options { display: flex; gap: 4px; }
+.review__opt-btn { font-family: var(--sans); font-size: 10px; padding: 3px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); cursor: pointer; transition: all .15s; }
+.review__opt-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 </style>

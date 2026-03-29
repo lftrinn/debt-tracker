@@ -39,6 +39,8 @@ export interface Expense {
   descLang?: 'vi' | 'en' | 'ja'
   /** Bản dịch desc sang các ngôn ngữ khác — fallback về desc nếu không có */
   descI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
+  /** Trạng thái bản dịch: 'manual' = user tự nhập, 'auto' = đã dịch tự động */
+  descI18nMeta?: Partial<Record<'vi' | 'en' | 'ja', 'auto' | 'manual'>>
 }
 
 export interface Income {
@@ -53,6 +55,8 @@ export interface Income {
   descLang?: 'vi' | 'en' | 'ja'
   /** Bản dịch desc sang các ngôn ngữ khác — fallback về desc nếu không có */
   descI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
+  /** Trạng thái bản dịch: 'manual' = user tự nhập, 'auto' = đã dịch tự động */
+  descI18nMeta?: Partial<Record<'vi' | 'en' | 'ja', 'auto' | 'manual'>>
 }
 
 export interface Obligation {
@@ -68,6 +72,8 @@ export interface Obligation {
   nameLang?: 'vi' | 'en' | 'ja'
   /** Bản dịch name sang các ngôn ngữ khác */
   nameI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
+  /** Trạng thái bản dịch: 'manual' = user tự nhập, 'auto' = đã dịch tự động */
+  nameI18nMeta?: Partial<Record<'vi' | 'en' | 'ja', 'auto' | 'manual'>>
 }
 
 export interface OneTimeExpense {
@@ -79,6 +85,8 @@ export interface OneTimeExpense {
   nameLang?: 'vi' | 'en' | 'ja'
   /** Bản dịch name sang các ngôn ngữ khác */
   nameI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
+  /** Trạng thái bản dịch: 'manual' = user tự nhập, 'auto' = đã dịch tự động */
+  nameI18nMeta?: Partial<Record<'vi' | 'en' | 'ja', 'auto' | 'manual'>>
 }
 
 export interface MonthlyPlan {
@@ -170,6 +178,8 @@ export interface UpcomingItem {
   name: string
   /** Bản dịch name — component tự localize khi render */
   nameI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
+  /** Trạng thái bản dịch: 'manual' = user tự nhập, 'auto' = đã dịch tự động */
+  nameI18nMeta?: Partial<Record<'vi' | 'en' | 'ja', 'auto' | 'manual'>>
   sub: string | null
   amt: number
   paid: boolean
