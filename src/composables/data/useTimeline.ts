@@ -3,6 +3,7 @@ import type { Ref, ComputedRef } from 'vue'
 import type { AppData, Milestone } from '@/types/data'
 import { i18n } from '../../i18n'
 import { useFormatters } from '../ui/useFormatters'
+import { getLocalized } from './useI18nData'
 
 /**
  * Xây dựng danh sách mốc tiến độ trả nợ từ dữ liệu payoff_timeline.
@@ -28,7 +29,7 @@ export function useTimeline(d: Ref<AppData>): { milestones: ComputedRef<Mileston
     if (raw.length) {
       return raw.map((m): Milestone => ({
         month: m.month,
-        ev: m.event || i18n.global.t('timeline.fullyDebtFree'),
+        ev: m.event ? getLocalized(m, 'event') : i18n.global.t('timeline.fullyDebtFree'),
         debt: debtMap[m.month] ?? null,
         st: m.month < now ? 'done' : m.month === now ? 'active' : 'future',
       }))

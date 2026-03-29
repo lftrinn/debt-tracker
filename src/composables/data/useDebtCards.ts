@@ -3,6 +3,7 @@ import type { Ref, ComputedRef } from 'vue'
 import type { AppData, DebtCard, DebtRef, TrendDirection } from '@/types/data'
 import { useFormatters } from '../ui/useFormatters'
 import { useColors } from '../ui/useColors'
+import { getLocalized } from './useI18nData'
 
 export interface DebtCardsResult {
   findDebtId: (name: string) => DebtRef | null
@@ -160,7 +161,7 @@ export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
 
       return {
         id: c.id,
-        name: c.name.replace(' — Techcombank', '').replace(' — ', ''),
+        name: getLocalized(c, 'name').replace(' — Techcombank', '').replace(' — ', ''),
         balance: c.balance,
         limit: c.credit_limit,
         rate: Math.round(c.interest_rate_annual * 100),
@@ -199,17 +200,20 @@ export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
   /** Dữ liệu phân tích nợ theo từng thẻ/khoản vay, gán màu từ palette để hiển thị trên biểu đồ tròn. */
   const debtBreakdown = computed(() => {
     const cc = (d.value.debts?.credit_cards || []).map((c, i) => ({
-      name: c.name.replace(' — Techcombank', ''),
+      name: getLocalized(c, 'name').replace(' — Techcombank', ''),
       val: c.balance,
       color: palette[i % palette.length],
     }))
     const sl = (d.value.debts?.small_loans || [])
       .filter((l) => (l.remaining_balance || 0) > 0)
-      .map((l, i) => ({
-        name: l.name.length > 24 ? l.name.slice(0, 24) + '…' : l.name,
-        val: l.remaining_balance,
-        color: palette[(cc.length + i) % palette.length],
-      }))
+      .map((l, i) => {
+        const n = getLocalized(l, 'name')
+        return {
+          name: n.length > 24 ? n.slice(0, 24) + '…' : n,
+          val: l.remaining_balance,
+          color: palette[(cc.length + i) % palette.length],
+        }
+      })
     return [...cc, ...sl]
   })
 

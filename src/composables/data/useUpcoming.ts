@@ -3,6 +3,7 @@ import type { Ref, ComputedRef } from 'vue'
 import type { AppData, UpcomingItem } from '@/types/data'
 import { i18n } from '../../i18n'
 import { useFormatters } from '../ui/useFormatters'
+import { getLocalized } from './useI18nData'
 
 /**
  * Tổng hợp danh sách các khoản thanh toán sắp đến hạn từ kế hoạch tháng và chi tiêu một lần.
@@ -62,7 +63,7 @@ export function useUpcoming(d: Ref<AppData>): {
           _key: key,
           day: String(d2.getDate()).padStart(2, '0'),
           mo: String(d2.getMonth() + 1).padStart(2, '0'),
-          name: ob.name,
+          name: getLocalized(ob, 'name'),
           sub: overdueDays > 0
             ? i18n.global.t('upcoming.overdueDays', { n: overdueDays })
             : ob.category === 'debt_minimum' ? i18n.global.t('upcoming.minPayLabel') : null,
@@ -91,7 +92,7 @@ export function useUpcoming(d: Ref<AppData>): {
         _key: key,
         day: String(d2.getDate()).padStart(2, '0'),
         mo: String(d2.getMonth() + 1).padStart(2, '0'),
-        name: ev.name,
+        name: getLocalized(ev, 'name'),
         sub: overdueDays > 0 ? i18n.global.t('upcoming.overdueDays', { n: overdueDays }) : null,
         amt: ev.amount,
         paid: isPaid,

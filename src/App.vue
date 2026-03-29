@@ -146,7 +146,7 @@
         :todaySpent="todaySpent"
         :limPct="limPct"
         :limSt="limSt"
-        :rules="d.rules?.must_not || []"
+        :rules="localizedRules"
         :syncMsg="syncMsgText"
         :syncTime="syncTime"
         :syncing="syncing"
@@ -174,6 +174,7 @@ import { useCurrency } from './composables/api/useCurrency'
 
 import { useApi } from './composables/api/useApi'
 import { useFormatters } from './composables/ui/useFormatters'
+import { getRuleText } from './composables/data/useI18nData'
 import { useDebtData } from './composables/data/useDebtData'
 import { useToast } from './composables/ui/useToast'
 import { useHideZones } from './composables/ui/useHideZones'
@@ -263,6 +264,12 @@ const {
 const overMsg = computed(() =>
   isOver.value ? `${t('app.alert.over')}${hz('alert') ? '•••' : fCurrFull(todaySpent.value - dayLimit.value)}` : ''
 )
+
+/** Danh sách quy tắc đã bản địa hoá từ must_not + must_do (nếu có) */
+const localizedRules = computed(() => [
+  ...(d.value.rules?.must_not || []).map((r) => getRuleText(r)),
+  ...(d.value.rules?.must_do || []).map((r) => getRuleText(r)),
+])
 
 // ─── Animation keys ───────────────────────────────────────────────────────
 const cashAnimKey = ref(0)
