@@ -158,9 +158,21 @@ export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
           }
         }
       }
-      const thisMonthSpent = (d.value.expenses || [])
-        .filter((e) => isTM(e.date) && e.payMethod === c.id)
-        .reduce((s, e) => s + e.amount, 0)
+      const thisMonthExpenses = (d.value.expenses || []).filter(
+        (e) => isTM(e.date) && e.payMethod === c.id
+      )
+      const thisMonthSpent = thisMonthExpenses.reduce((s, e) => s + e.amount, 0)
+      const thisMonthSpentCount = thisMonthExpenses.length
+
+      // Đếm paid_obligations khớp thẻ này trong tháng hiện tại
+      // Format key: "YYYY-MM-DD:ObligationName"
+      const thisMonthPaymentCount = (d.value.paid_obligations || []).filter((key) => {
+        const colonIdx = key.indexOf(':')
+        if (colonIdx === -1) return false
+        const datePart = key.slice(0, colonIdx)
+        const namePart = key.slice(colonIdx + 1).toLowerCase()
+        return datePart.slice(0, 7) === nowMonth && namePart.includes(cardShort)
+      }).length
 
       return {
         id: c.id,
@@ -176,6 +188,8 @@ export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
         plannedPayment,
         thisMonthSpent,
         thisMonthPaid: paid,
+        thisMonthSpentCount,
+        thisMonthPaymentCount,
       }
     })
   })
@@ -223,25 +237,52 @@ export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
   })
 
   /**
-   * Chiều hướng nợ:
-   * - 'down' nếu đã có thanh toán nợ hoặc trả thêm trong kỳ này (tốt)
-   * - 'up' nếu có chi tiêu bằng thẻ tín dụng trong tháng mà chưa thanh toán (xấu)
+   * Chiều hướng nợ tổng hợp — so sánh TỔNG SỐ TIỀN trong tháng hiện tại:
+   * - 'down' khi totalPaymentAmount > totalSpendingAmount (đang trả nhiều hơn chi)
+   * - 'up' khi totalSpendingAmount >= totalPaymentAmount và có hoạt động (chi nhiều hơn trả)
    * - 'neutral' khi không có hoạt động nào
+   * Arrow direction (up/down) trong UI tuỳ thuộc vào progressMode — được xử lý ở template.
    */
   const debtTrend = computed((): TrendDirection => {
-    const paidObs = d.value.paid_obligations || []
-    const extraPaid = d.value.extra_paid || 0
-    const hasDebtPayment = paidObs.some((key) => {
-      const name = key.split(':').slice(1).join(':')
-      return findDebtId(name) !== null
+    const nowMonth = new Date().toISOString().slice(0, 7)
+    const cards = d.value.debts?.credit_cards || []
+    const cardIds = new Set(cards.map((c) => c.id))
+
+    // Tổng chi tiêu bằng thẻ tín dụng trong tháng (expenses[].payMethod === cardId)
+    const totalSpendingAmount = (d.value.expenses || [])
+      .filter((e) => isTM(e.date) && e.payMethod != null && cardIds.has(e.payMethod as string))
+      .reduce((s, e) => s + e.amount, 0)
+
+    // Xây map key → amount từ monthly_plans + one_time_expenses để tra amount cho paid_obligations
+    const obAmtMap = new Map<string, number>()
+    const plans = d.value.monthly_plans || {}
+    Object.values(plans).forEach((plan) => {
+      ;(plan.obligations || []).forEach((ob) => {
+        const dateStr = ob.date || ob['date '] || ''
+        if (dateStr) obAmtMap.set(dateStr + ':' + ob.name, ob.amount)
+      })
     })
-    if (hasDebtPayment || extraPaid > 0) return 'down'
-    const cardIds = new Set((d.value.debts?.credit_cards || []).map((c) => c.id))
-    const hasSpending = (d.value.expenses || []).some(
-      (e) => isTM(e.date) && e.payMethod && cardIds.has(e.payMethod as string)
-    )
-    if (hasSpending) return 'up'
-    return 'neutral'
+    ;(d.value.one_time_expenses || []).forEach((ev) => {
+      obAmtMap.set((ev.date || '') + ':' + ev.name, ev.amount)
+    })
+
+    // Tổng thanh toán nợ CC trong tháng (paid_obligations khớp tên thẻ + tháng hiện tại)
+    const totalPaymentAmount = (d.value.paid_obligations || [])
+      .filter((key) => {
+        const colonIdx = key.indexOf(':')
+        if (colonIdx === -1) return false
+        const datePart = key.slice(0, colonIdx)
+        if (datePart.slice(0, 7) !== nowMonth) return false
+        const namePart = key.slice(colonIdx + 1).toLowerCase()
+        return cards.some((c) => {
+          const cardShort = c.name.replace(' — Techcombank', '').replace(' — ', '').toLowerCase()
+          return namePart.includes(cardShort)
+        })
+      })
+      .reduce((s, key) => s + (obAmtMap.get(key) || 0), 0)
+
+    if (totalPaymentAmount === 0 && totalSpendingAmount === 0) return 'neutral'
+    return totalPaymentAmount > totalSpendingAmount ? 'down' : 'up'
   })
 
   return {

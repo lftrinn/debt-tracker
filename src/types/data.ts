@@ -156,6 +156,10 @@ export interface DebtCard {
   } | null
   thisMonthSpent: number
   thisMonthPaid: boolean
+  /** Số expense dùng thẻ này trong tháng hiện tại */
+  thisMonthSpentCount: number
+  /** Số paid_obligations khớp thẻ này trong tháng hiện tại */
+  thisMonthPaymentCount: number
 }
 
 export interface UpcomingItem {
