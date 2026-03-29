@@ -301,7 +301,7 @@ function saveEdit() {
 .debt-overview__card-bal--critical { color: var(--danger); }
 /* Input với suffix ký hiệu tiền tệ bên phải */
 .debt-overview__input-wrap { position: relative; display: flex; align-items: center; }
-.debt-overview__input-wrap .popup-input { flex: 1; padding-right: 44px; }
+.debt-overview__input-wrap .popup-input { flex: 1; padding-right: 44px; min-width: 0; }
 .debt-overview__input-suffix { position: absolute; right: 8px; font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: rgba(var(--accent-rgb),.12); color: var(--accent); pointer-events: none; }
 .debt-overview__dual-inputs { display: flex; gap: 8px; }
 .debt-overview__dual-inputs .debt-overview__input-wrap { flex: 1; min-width: 0; }

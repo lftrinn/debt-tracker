@@ -442,7 +442,7 @@ function onTouchEnd(e) {
 <style scoped>
 /* Input wrap với currency badge bên trong (absolute right) */
 .detail__input-wrap { position: relative; display: flex; align-items: center; }
-.detail__input-wrap .popup-input { flex: 1; padding-right: 44px; }
+.detail__input-wrap .popup-input { flex: 1; padding-right: 44px; min-width: 0; }
 .detail__input-suffix { position: absolute; right: 8px; font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: rgba(var(--accent-rgb),.12); color: var(--accent); pointer-events: none; }
 /* Dual input: 2 ô cùng 1 hàng khi currency khác nhau */
 .detail__dual-row { display: flex; gap: 8px; }
