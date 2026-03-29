@@ -1,4 +1,6 @@
 import { computed } from 'vue'
+import type { Ref, ComputedRef } from 'vue'
+import type { AppData, LimitStatus, TrendDirection } from '@/types/data'
 import { useFormatters } from './useFormatters'
 import { useDailyLimit } from './useDailyLimit'
 import { useCashData } from './useCashData'
@@ -9,9 +11,8 @@ import { useTimeline } from './useTimeline'
 /**
  * Root composable — orchestrates all debt/finance computed data.
  * App.vue consumes this single composable; sub-composables handle focused concerns.
- * @param {import('vue').Ref} d - main data ref (AppData)
  */
-export function useDebtData(d) {
+export function useDebtData(d: Ref<AppData>) {
   const { isT, isTM } = useFormatters()
 
   // ─── Sub-composables ──────────────────────────────────────────────────
@@ -27,12 +28,12 @@ export function useDebtData(d) {
 
   const sortedTx = computed(() =>
     [
-      ...expenses.value.map((e) => ({ ...e, type: 'exp' })),
-      ...incomes.value.map((e) => ({ ...e, type: 'inc' })),
+      ...expenses.value.map((e) => ({ ...e, type: 'exp' as const })),
+      ...incomes.value.map((e) => ({ ...e, type: 'inc' as const })),
     ].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)
   )
 
-  const today = computed(() =>
+  const today = computed((): string =>
     new Date().toLocaleDateString('vi-VN', {
       weekday: 'short',
       day: '2-digit',
@@ -43,66 +44,60 @@ export function useDebtData(d) {
 
   // ─── Daily / monthly spending ─────────────────────────────────────────
   // Exclude obligation payments (_obTag) from daily/monthly spending
-  const todaySpent = computed(() =>
+  const todaySpent = computed((): number =>
     expenses.value.filter((e) => isT(e.date) && !e._obTag).reduce((s, e) => s + e.amount, 0)
   )
 
-  const monthSpent = computed(() =>
+  const monthSpent = computed((): number =>
     expenses.value.filter((e) => isTM(e.date) && !e._obTag).reduce((s, e) => s + e.amount, 0)
   )
 
-  // Total outflow today including obligation payments (for trend display)
-  const todayOutflow = computed(() =>
+  const todayOutflow = computed((): number =>
     expenses.value.filter((e) => isT(e.date)).reduce((s, e) => s + e.amount, 0)
   )
 
-  const todayIncome = computed(() =>
+  const todayIncome = computed((): number =>
     incomes.value.filter((e) => isT(e.date)).reduce((s, e) => s + e.amount, 0)
   )
 
   // ─── Limit status (depends on todaySpent + dayLimit) ─────────────────
-  const isOver = computed(() => dayLimit.value > 0 && todaySpent.value > dayLimit.value)
+  const isOver: ComputedRef<boolean> = computed(() => dayLimit.value > 0 && todaySpent.value > dayLimit.value)
 
-  const limPct = computed(() =>
+  const limPct: ComputedRef<number> = computed(() =>
     !dayLimit.value ? 0 : Math.round((todaySpent.value / dayLimit.value) * 100)
   )
 
-  const limSt = computed(() =>
+  const limSt: ComputedRef<LimitStatus> = computed(() =>
     limPct.value >= 100 ? 'over' : limPct.value >= 75 ? 'warn' : 'safe'
   )
 
   // ─── Trend directions ─────────────────────────────────────────────────
-  const cashTrend = computed(() => {
+  const cashTrend: ComputedRef<TrendDirection> = computed(() => {
     if (todayOutflow.value === 0 && todayIncome.value === 0) return 'neutral'
     return todayIncome.value > todayOutflow.value ? 'up' : 'down'
   })
 
-  const txTrend = computed(() => cashTrend.value)
+  const txTrend: ComputedRef<TrendDirection> = computed(() => cashTrend.value)
 
   return {
-    // Transaction lists
     expenses,
     incomes,
     sortedTx,
     today,
-    // Spending
     todaySpent,
     todayOutflow,
     todayIncome,
     monthSpent,
-    // Limit
     dToSalary,
     afterSalary,
     dayLimit,
     isOver,
     limPct,
     limSt,
-    // Cash
     availCash,
     cashDaysLeft,
     spentSinceSnapshot,
     unpaidObsToPayday,
-    // Debt
     debtCards,
     smallLoans,
     totalDebt,
@@ -110,11 +105,9 @@ export function useDebtData(d) {
     repayPct,
     debtBreakdown,
     findDebtId,
-    // Trends
     cashTrend,
     debtTrend,
     txTrend,
-    // Upcoming / Timeline
     upcomingLabel,
     upcoming,
     milestones,

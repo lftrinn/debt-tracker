@@ -1,15 +1,25 @@
 import { computed } from 'vue'
+import type { Ref, ComputedRef } from 'vue'
+import type { AppData } from '@/types/data'
+
+export interface CashDataResult {
+  spentSinceSnapshot: ComputedRef<number>
+  availCash: ComputedRef<number>
+  unpaidObsToPayday: ComputedRef<number>
+  cashDaysLeft: ComputedRef<number | null>
+}
 
 /**
  * Available cash, spending snapshot, and cash runway computations.
- * @param {import('vue').Ref} d - main data ref
- * @param {import('vue').ComputedRef<number>} dayLimit - from useDailyLimit
- * @param {Function} actualPayDate - from useDailyLimit
  */
-export function useCashData(d, dayLimit, actualPayDate) {
+export function useCashData(
+  d: Ref<AppData>,
+  dayLimit: ComputedRef<number>,
+  actualPayDate: (year: number, month: number, nominalDay: number) => Date,
+): CashDataResult {
   // Total cash expenses since current_cash.as_of
-  // Excludes obligation payments (_obTag) and Visa payments (those increase card balance, not reduce cash)
-  const spentSinceSnapshot = computed(() => {
+  // Excludes obligation payments (_obTag) and Visa payments
+  const spentSinceSnapshot = computed((): number => {
     const asOf = d.value.current_cash?.as_of
     if (!asOf) return 0
     return (d.value.expenses || [])
@@ -17,14 +27,14 @@ export function useCashData(d, dayLimit, actualPayDate) {
       .reduce((s, e) => s + e.amount, 0)
   })
 
-  const availCash = computed(() => {
+  const availCash = computed((): number => {
     const c = d.value.current_cash
     if (!c) return 0
     return (c.balance || 0) - (c.reserved || 0) - spentSinceSnapshot.value
   })
 
   // Sum of unpaid obligations between today and next payday
-  const unpaidObsToPayday = computed(() => {
+  const unpaidObsToPayday = computed((): number => {
     const paid = new Set(d.value.paid_obligations || [])
     const now = new Date()
     const todayStr = now.toISOString().slice(0, 10)
@@ -53,8 +63,7 @@ export function useCashData(d, dayLimit, actualPayDate) {
     return total
   })
 
-  // How many days current cash can last after subtracting upcoming obligations
-  const cashDaysLeft = computed(() => {
+  const cashDaysLeft = computed((): number | null => {
     const lim = dayLimit.value
     if (lim <= 0) return null
     const cashAfterObs = availCash.value - unpaidObsToPayday.value

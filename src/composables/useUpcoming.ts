@@ -1,19 +1,20 @@
 import { computed } from 'vue'
+import type { Ref, ComputedRef } from 'vue'
+import type { AppData, UpcomingItem } from '@/types/data'
 import { useFormatters } from './useFormatters'
 
-/**
- * Upcoming payment items from monthly_plans and one_time_expenses.
- * @param {import('vue').Ref} d - main data ref
- */
-export function useUpcoming(d) {
+export function useUpcoming(d: Ref<AppData>): {
+  upcomingLabel: ComputedRef<string>
+  upcoming: ComputedRef<UpcomingItem[]>
+} {
   const { dDiff } = useFormatters()
 
-  const upcomingLabel = computed(() => {
+  const upcomingLabel = computed((): string => {
     const now = new Date()
     return 'T' + String(now.getMonth() + 1) + '/' + now.getFullYear()
   })
 
-  const upcoming = computed(() => {
+  const upcoming = computed((): UpcomingItem[] => {
     const plans = d.value.monthly_plans || {}
     const paid = new Set(d.value.paid_obligations || [])
     const now = new Date()
@@ -22,7 +23,7 @@ export function useUpcoming(d) {
       const dt = new Date(now.getFullYear(), now.getMonth() + i, 1)
       return dt.toISOString().slice(0, 7)
     })
-    const items = []
+    const items: UpcomingItem[] = []
 
     months.forEach((mo) => {
       const plan = plans[mo]
@@ -48,11 +49,7 @@ export function useUpcoming(d) {
             : ob.category === 'debt_minimum' ? 'Thanh toán tối thiểu' : null,
           amt: ob.amount,
           paid: isPaid,
-          urg: isPaid
-            ? 'ok'
-            : overdueDays > 0
-              ? 'overdue'
-              : diff <= 5 ? 'urgent' : diff <= 10 ? 'soon' : 'ok',
+          urg: isPaid ? 'ok' : overdueDays > 0 ? 'overdue' : diff <= 5 ? 'urgent' : diff <= 10 ? 'soon' : 'ok',
           _date: dateStr,
           source: 'monthly_plan',
           _category: ob.category || null,
@@ -63,7 +60,6 @@ export function useUpcoming(d) {
       })
     })
 
-    // One-time expenses
     ;(d.value.one_time_expenses || []).forEach((ev) => {
       const diff = dDiff(ev.date)
       const key = ev.date + ':' + ev.name
@@ -80,11 +76,7 @@ export function useUpcoming(d) {
         sub: overdueDays > 0 ? `Chậm ${overdueDays} ngày` : null,
         amt: ev.amount,
         paid: isPaid,
-        urg: isPaid
-          ? 'ok'
-          : overdueDays > 0
-            ? 'overdue'
-            : diff <= 5 ? 'urgent' : diff <= 10 ? 'soon' : 'ok',
+        urg: isPaid ? 'ok' : overdueDays > 0 ? 'overdue' : diff <= 5 ? 'urgent' : diff <= 10 ? 'soon' : 'ok',
         _date: ev.date,
         source: 'one_time',
         _id: ev.id,

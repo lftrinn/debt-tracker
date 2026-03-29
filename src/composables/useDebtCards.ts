@@ -1,17 +1,30 @@
 import { computed } from 'vue'
+import type { Ref, ComputedRef } from 'vue'
+import type { AppData, DebtCard, DebtRef, TrendDirection } from '@/types/data'
 import { useFormatters } from './useFormatters'
 import { useColors } from './useColors'
 
+export interface DebtCardsResult {
+  findDebtId: (name: string) => DebtRef | null
+  minPaidByCard: ComputedRef<Record<string, boolean>>
+  debtCards: ComputedRef<DebtCard[]>
+  smallLoans: ComputedRef<AppData['debts']['small_loans']>
+  totalDebt: ComputedRef<number>
+  origDebt: ComputedRef<number>
+  repayPct: ComputedRef<number>
+  debtBreakdown: ComputedRef<Array<{ name: string; val: number; color: string }>>
+  debtTrend: ComputedRef<TrendDirection>
+}
+
 /**
  * Credit card and small loan derived data, debt totals, and minimum payment tracking.
- * @param {import('vue').Ref} d - main data ref
  */
-export function useDebtCards(d) {
+export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
   const { dDiff } = useFormatters()
   const { palette } = useColors()
 
   /** Match obligation name → debt id for auto-update */
-  function findDebtId(name) {
+  function findDebtId(name: string): DebtRef | null {
     const n = name.toLowerCase()
     const cards = d.value.debts?.credit_cards || []
     for (const c of cards) {
@@ -31,7 +44,7 @@ export function useDebtCards(d) {
   }
 
   // Check if all minimum payment obligations for a card are paid
-  const minPaidByCard = computed(() => {
+  const minPaidByCard = computed((): Record<string, boolean> => {
     const paid = new Set(d.value.paid_obligations || [])
     const plans = d.value.monthly_plans || {}
     const now = new Date()
@@ -39,12 +52,13 @@ export function useDebtCards(d) {
       const dt = new Date(now.getFullYear(), now.getMonth() + i, 1)
       return dt.toISOString().slice(0, 7)
     })
-    const allObs = []
+    const allObs: Array<{ name: string; date?: string; 'date '?: string; amount: number; category: string | null }> = []
     months.forEach((mo) => {
       const plan = plans[mo]
-      if (plan?.obligations) plan.obligations.forEach((ob) => allObs.push(ob))
+      if (plan?.obligations) {
+        plan.obligations.forEach((ob) => allObs.push({ ...ob, category: ob.category ?? null }))
+      }
     })
-    // Also include one_time_expenses as virtual obligations
     ;(d.value.one_time_expenses || []).forEach((ev) => {
       const evMonth = (ev.date || '').slice(0, 7)
       if (months.includes(evMonth)) {
@@ -52,13 +66,12 @@ export function useDebtCards(d) {
       }
     })
     if (allObs.length === 0) return {}
-    const result = {}
+    const result: Record<string, boolean> = {}
     const cards = d.value.debts?.credit_cards || []
     cards.forEach((c) => {
       const shortName = c.name.replace(' — Techcombank', '').replace(' — ', '').toLowerCase().trim()
       const dueDate = c.min_due_date || ''
       const cardObs = allObs.filter((ob) => {
-        if (ob.monthly) return false
         const obName = (ob.name || '').toLowerCase()
         const matchesCard = obName.includes(shortName)
         if (!matchesCard) return false
@@ -86,12 +99,12 @@ export function useDebtCards(d) {
     return result
   })
 
-  const debtCards = computed(() =>
-    (d.value.debts?.credit_cards || []).map((c) => {
+  const debtCards = computed((): DebtCard[] =>
+    (d.value.debts?.credit_cards || []).map((c): DebtCard => {
       const dueDate = c.min_due_date || ''
       const daysLeft = dueDate ? dDiff(dueDate) : null
       const paid = minPaidByCard.value[c.id] || false
-      let minUrg = 'normal'
+      let minUrg: DebtCard['minUrg'] = 'normal'
       if (paid) minUrg = 'ok'
       else if (daysLeft !== null) {
         if (daysLeft <= 0) minUrg = 'overdue'
@@ -105,31 +118,28 @@ export function useDebtCards(d) {
         dt.setMonth(dt.getMonth() + 1)
         return dt.toISOString().slice(0, 7)
       })()
-      let plannedPayment = null
+      let plannedPayment: DebtCard['plannedPayment'] = null
       for (const ev of d.value.one_time_expenses || []) {
         const evName = (ev.name || '').toLowerCase()
         if (!evName.includes(cardShort)) continue
         const evMonth = (ev.date || '').slice(0, 7)
         if (evMonth === nowMonth || evMonth === nextMonth) {
-          const isMin = evName.includes('minimum')
-          plannedPayment = { amount: ev.amount, isMin, name: ev.name, date: ev.date }
+          plannedPayment = { amount: ev.amount, isMin: evName.includes('minimum'), name: ev.name, date: ev.date }
           break
         }
       }
       if (!plannedPayment) {
         const plans = d.value.monthly_plans || {}
-        for (const mo of [nowMonth, nextMonth]) {
+        outer: for (const mo of [nowMonth, nextMonth]) {
           const obs = plans[mo]?.obligations || []
           for (const ob of obs) {
             if (ob.monthly) continue
             const obName = (ob.name || '').toLowerCase()
             if (!obName.includes(cardShort)) continue
             if (ob.category && ob.category !== 'debt_minimum') continue
-            const isMin = obName.includes('minimum')
-            plannedPayment = { amount: ob.amount, isMin, name: ob.name, date: ob.date || '' }
-            break
+            plannedPayment = { amount: ob.amount, isMin: obName.includes('minimum'), name: ob.name, date: ob.date || '' }
+            break outer
           }
-          if (plannedPayment) break
         }
       }
       return {
@@ -152,15 +162,15 @@ export function useDebtCards(d) {
     (d.value.debts?.small_loans || []).filter((l) => (l.remaining_balance || 0) > 0)
   )
 
-  const totalDebt = computed(() => {
+  const totalDebt = computed((): number => {
     const cc = (d.value.debts?.credit_cards || []).reduce((s, c) => s + (c.balance || 0), 0)
     const sl = (d.value.debts?.small_loans || []).reduce((s, l) => s + (l.remaining_balance || 0), 0)
     return Math.max(0, cc + sl)
   })
 
-  const origDebt = computed(() => d.value.debts?.summary?.total || 91721251)
+  const origDebt = computed((): number => d.value.debts?.summary?.total || 91721251)
 
-  const repayPct = computed(() =>
+  const repayPct = computed((): number =>
     Math.min(100, Math.max(0, Math.round((1 - totalDebt.value / origDebt.value) * 100)))
   )
 
@@ -180,8 +190,7 @@ export function useDebtCards(d) {
     return [...cc, ...sl]
   })
 
-  // Debt trend: only count payments that actually reduce debt
-  const debtTrend = computed(() => {
+  const debtTrend = computed((): TrendDirection => {
     const paidObs = d.value.paid_obligations || []
     const extraPaid = d.value.extra_paid || 0
     const hasDebtPayment = paidObs.some((key) => {
