@@ -2,14 +2,10 @@
   <div class="debt-overview">
     <div class="debt-overview__label">
       {{ $t('debt.label') }}
-      <!-- Header: màu luôn semantic (xanh=tốt, cam=xấu); arrow direction đảo theo mode -->
+      <!-- Header: phản ánh tổng nợ thực tế tăng/giảm — KHÔNG phụ thuộc mode -->
+      <!-- payment>spending → nợ GIẢM → DOWN XANH; spending≥payment → nợ TĂNG → UP CAM -->
       <span v-if="debtTrend !== 'neutral'" class="trend-ico" :class="debtTrend === 'down' ? 'up' : 'down'">
-        <!-- repaid: payment>spending → UP (available credit tăng); spending≥payment → DOWN -->
-        <!-- used:   payment>spending → DOWN (nợ giảm); spending≥payment → UP -->
-        <Icon :name="progressMode === 'repaid'
-          ? (debtTrend === 'down' ? 'trending-up' : 'trending-down')
-          : (debtTrend === 'down' ? 'trending-down' : 'trending-up')"
-          :size="12" />
+        <Icon :name="debtTrend === 'down' ? 'trending-down' : 'trending-up'" :size="12" />
       </span>
       <!-- Toggle kiểu thanh tiến độ — icon xoay 2 vòng khi click -->
       <button class="debt-overview__prog-toggle" :class="{ 'debt-overview__prog-toggle--spin': spinning }" @click="toggleProgressMode" :title="progressMode === 'repaid' ? $t('debt.progressModeUsed') : $t('debt.progressModeRepaid')">
@@ -98,7 +94,7 @@
               <div v-else-if="useDisplayCur && !ratesLoading" class="debt-overview__dual-inputs">
                 <div class="debt-overview__input-wrap">
                   <input class="popup-input" v-model.number="editBal" type="number" inputmode="numeric" :placeholder="fN(editCard.balance)" @input="onEditBalInput" />
-                  <span class="debt-overview__input-suffix">₫</span>
+                  <span class="debt-overview__input-suffix">VND</span>
                 </div>
                 <span class="debt-overview__dual-sep">≈</span>
                 <div class="debt-overview__input-wrap">
@@ -117,7 +113,7 @@
               <div v-else-if="useDisplayCur && !ratesLoading" class="debt-overview__dual-inputs">
                 <div class="debt-overview__input-wrap">
                   <input class="popup-input" v-model.number="editMin" type="number" inputmode="numeric" :placeholder="fN(editCard.min)" @input="onEditMinInput" />
-                  <span class="debt-overview__input-suffix">₫</span>
+                  <span class="debt-overview__input-suffix">VND</span>
                 </div>
                 <span class="debt-overview__dual-sep">≈</span>
                 <div class="debt-overview__input-wrap">
@@ -154,11 +150,8 @@ import { useDebtSettings } from '../../composables/ui/useDebtSettings'
 const { fN } = useFormatters()
 const { fCurr, fCurrFull, displayCurrency, convertBetween, toVnd, ratesLoading } = useCurrency()
 
-/** Ký hiệu tiền tệ hiển thị để hiện suffix trong input */
-const currSymbol = computed(() => {
-  const c = displayCurrency.value
-  return c === 'USD' ? '$' : c === 'JPY' ? '¥' : '₫'
-})
+/** Mã tiền tệ hiển thị trong input suffix (VND / USD / JPY) */
+const currSymbol = computed(() => displayCurrency.value)
 
 /** True khi display currency khác VND — cần dual input */
 const useDisplayCur = computed(() => displayCurrency.value !== 'VND')
@@ -325,7 +318,7 @@ function saveEdit() {
 .debt-overview__dual-inputs .debt-overview__input-wrap { flex: 1; min-width: 0; }
 .debt-overview__dual-sep { font-family: var(--mono); font-size: 10px; color: var(--muted); flex-shrink: 0; }
 /* Animation xoay 720deg cho icon toggle khi chuyển mode */
-@keyframes spin2 { from { transform: rotate(0deg); } to { transform: rotate(720deg); } }
+@keyframes spin2 { from { transform: rotate(0deg); } to { transform: rotate(540deg); } }
 .debt-overview__prog-toggle--spin :deep(svg) { animation: spin2 .6s ease; }
 .debt-overview__card-r4 { display: flex; align-items: center; justify-content: space-between; font-family: var(--mono); font-size: 9.5px; padding-top: 6px; margin-top: 2px; border-top: 1px solid rgba(var(--text-rgb),.05); }
 .debt-overview__min-label { font-weight: 700; letter-spacing: .02em; color: var(--muted); flex-shrink: 0; }
