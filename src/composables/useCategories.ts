@@ -2,8 +2,15 @@
  * Category icon mapping — maps category keys to Lucide icon names and Vietnamese labels.
  * Used in AddTransaction, TransactionList, DetailPopup for consistent category display.
  */
+
+export interface Category {
+  key: string
+  icon: string
+  label: string
+}
+
 export function useCategories() {
-  const expenseCategories = [
+  const expenseCategories: Category[] = [
     { key: 'an', icon: 'utensils', label: 'Ăn' },
     { key: 'cafe', icon: 'coffee', label: 'Cafe' },
     { key: 'mua', icon: 'shopping-cart', label: 'Mua' },
@@ -15,7 +22,7 @@ export function useCategories() {
     { key: 'thanhToan', icon: 'credit-card', label: 'Thanh toán nợ' },
   ]
 
-  const incomeCategories = [
+  const incomeCategories: Category[] = [
     { key: 'luong', icon: 'briefcase', label: 'Lương' },
     { key: 'freelance', icon: 'laptop', label: 'Freelance' },
     { key: 'thuong', icon: 'gift', label: 'Thưởng' },
@@ -25,12 +32,12 @@ export function useCategories() {
   ]
 
   // Map from key → { icon, label }
-  const catMap = {}
+  const catMap: Record<string, Category> = {}
   expenseCategories.forEach(c => { catMap[c.key] = c })
   incomeCategories.forEach(c => { catMap[c.key] = c })
 
   // Legacy emoji → new key mapping (for backward compatibility with existing data)
-  const emojiToKey = {
+  const emojiToKey: Record<string, string> = {
     '🍜': 'an', '☕': 'cafe', '🛒': 'mua', '🚌': 'dilai',
     '💊': 'yte', '🎮': 'giaitri', '💡': 'hd', '📦': 'khac',
     '💼': 'luong', '💻': 'freelance', '🎁': 'thuong',
@@ -41,14 +48,11 @@ export function useCategories() {
    * Resolve a category value (new key or legacy emoji) to { icon, label, key }.
    * Returns a fallback for unknown categories.
    */
-  function resolveCat(val) {
+  function resolveCat(val: string | undefined | null): Category {
     if (!val) return { icon: 'package', label: '?', key: 'unknown' }
-    // Direct key match
     if (catMap[val]) return catMap[val]
-    // Legacy emoji match
     const mapped = emojiToKey[val]
     if (mapped && catMap[mapped]) return catMap[mapped]
-    // Unknown fallback
     return { icon: 'package', label: val, key: val }
   }
 
