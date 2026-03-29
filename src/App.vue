@@ -67,7 +67,7 @@
         :debtCards="debtCards"
         :debtTrend="debtTrend"
         :debtAnimKey="debtAnimKey"
-        :hide="{ total: hz('debt.total'), cardBal: hz('debt.cardBal'), minPay: hz('debt.minPay') }"
+        :hide="{ total: hz('debt.total'), cardBal: hz('debt.cardBal'), minPay: hz('debt.minPay'), amounts: hideAmounts }"
         @update-card="updateCardDirect"
       />
 
