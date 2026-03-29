@@ -93,6 +93,7 @@ export default {
     title: 'Debt payoff progress',
     original: 'Original:',
     remaining: 'Remaining:',
+    doneBy: 'done {month}',
   },
   upcoming: {
     title: 'Upcoming payments',
@@ -103,6 +104,8 @@ export default {
     payQuick: 'Quick pay',
     undoPay: 'Undo payment',
     remaining: 'left ₫{amount}',
+    overdueDays: 'Overdue {n} days',
+    minPayLabel: 'Minimum payment',
     addPopup: {
       title: 'Add payment',
       tabPay: 'Debt payment',
@@ -128,6 +131,8 @@ export default {
     empty: 'No transactions yet',
     income: 'Income',
     expense: 'Expense',
+    incShort: 'Inc',
+    expShort: 'Exp',
   },
   charts: {
     tabs: {
@@ -148,6 +153,9 @@ export default {
   timeline: {
     title: 'Debt-free timeline',
     totalDebt: 'Total debt:',
+    done: 'paid off',
+    fullyDebtFree: '🏆 DEBT FREE!',
+    debtLabel: 'Debt:',
   },
   addTx: {
     tabs: {
@@ -157,11 +165,12 @@ export default {
     expense: {
       title: 'Record expense',
       descPlaceholder: 'Description (e.g. Lunch, Coffee...)',
-      amountPlaceholder: 'Amount (VND)',
+      amountPlaceholder: 'Amount ({currency})',
     },
     income: {
       title: 'Record income',
       descPlaceholder: 'Description (e.g. April salary, Freelance...)',
+      amountPlaceholder: 'Amount ({currency})',
     },
     saving: 'Saving...',
     add: 'ADD',

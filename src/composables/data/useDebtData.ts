@@ -24,6 +24,16 @@ export function useDebtData(d: Ref<AppData>) {
   const { upcomingLabel, upcoming } = useUpcoming(d)
   const { milestones } = useTimeline(d)
 
+  /** Tháng hoàn thành trả nợ, lấy từ projected_debt_by_month (tháng đầu tiên total_debt = 0). */
+  const freeMonthStr = computed((): string => {
+    const pts = d.value.payoff_timeline?.projected_debt_by_month || []
+    const zero = pts.find((p) => p.total_debt === 0)
+    if (zero) return zero.month
+    const raws = d.value.payoff_timeline?.milestones || []
+    if (raws.length) return raws[raws.length - 1].month
+    return ''
+  })
+
   // ─── Base transaction lists ───────────────────────────────────────────
   const expenses = computed(() => d.value.expenses || [])
   const incomes = computed(() => d.value.incomes || [])
@@ -55,7 +65,7 @@ export function useDebtData(d: Ref<AppData>) {
   )
 
   const monthSpent = computed((): number =>
-    expenses.value.filter((e) => isTM(e.date) && !e._obTag).reduce((s, e) => s + e.amount, 0)
+    expenses.value.filter((e) => isTM(e.date)).reduce((s, e) => s + e.amount, 0)
   )
 
   const todayOutflow = computed((): number =>
@@ -120,5 +130,6 @@ export function useDebtData(d: Ref<AppData>) {
     upcomingLabel,
     upcoming,
     milestones,
+    freeMonthStr,
   }
 }

@@ -93,6 +93,7 @@ export default {
     title: '返済進捗',
     original: '元の負債:',
     remaining: '残り:',
+    doneBy: '{month}完了',
   },
   upcoming: {
     title: '近日の支払い',
@@ -103,6 +104,8 @@ export default {
     payQuick: 'すぐに支払う',
     undoPay: '支払いを取り消す',
     remaining: '残り ₫{amount}',
+    overdueDays: '{n}日遅延',
+    minPayLabel: '最低支払額',
     addPopup: {
       title: '支払いを追加',
       tabPay: '負債返済',
@@ -128,6 +131,8 @@ export default {
     empty: 'まだ取引がありません',
     income: '収入',
     expense: '支出',
+    incShort: '収入',
+    expShort: '支出',
   },
   charts: {
     tabs: {
@@ -148,6 +153,9 @@ export default {
   timeline: {
     title: '返済タイムライン',
     totalDebt: '総負債:',
+    done: '完済',
+    fullyDebtFree: '🏆 完全返済!',
+    debtLabel: '負債:',
   },
   addTx: {
     tabs: {
@@ -157,11 +165,12 @@ export default {
     expense: {
       title: '支出を記録',
       descPlaceholder: '説明 (例: 昼食、コーヒー...)',
-      amountPlaceholder: '金額 (VND)',
+      amountPlaceholder: '金額 ({currency})',
     },
     income: {
       title: '収入を記録',
       descPlaceholder: '説明 (例: 4月の給料、フリーランス...)',
+      amountPlaceholder: '金額 ({currency})',
     },
     saving: '保存中...',
     add: '追加',

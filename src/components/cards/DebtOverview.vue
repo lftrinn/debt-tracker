@@ -14,9 +14,13 @@
     </div>
     <div class="debt-overview__cards">
       <div class="debt-overview__card" :class="'debt-overview__card--' + c.minUrg" v-for="c in debtCards" :key="c.id">
-        <!-- Row 1: name + edit -->
+        <!-- Row 1: name + trend + edit -->
         <div class="debt-overview__card-r1">
           <div class="debt-overview__card-name">{{ c.name }}</div>
+          <div class="debt-overview__card-trend">
+            <Icon v-if="c.thisMonthSpent > 0" name="trending-up" :size="9" class="debt-overview__trend-up" />
+            <Icon v-if="c.thisMonthPaid" name="trending-down" :size="9" class="debt-overview__trend-down" />
+          </div>
           <button class="debt-overview__card-edit" @click.stop="openEdit(c)" :title="$t('debt.editTooltip')">
             <Icon name="pencil" :size="11" />
           </button>
@@ -169,6 +173,9 @@ function saveEdit() {
 .debt-overview__card--soon { border-left-color: var(--accent6); }
 .debt-overview__card-r1 { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
 .debt-overview__card-name { font-size: 10px; font-weight: 700; color: rgba(var(--text-rgb),.85); }
+.debt-overview__card-trend { display: flex; gap: 2px; align-items: center; flex: 1; }
+.debt-overview__trend-up { color: var(--accent2); opacity: .8; }
+.debt-overview__trend-down { color: var(--accent3); opacity: .8; }
 .debt-overview__card-edit { background: none; border: none; color: var(--muted); width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: color .2s; flex-shrink: 0; padding: 0; opacity: .5; }
 .debt-overview__card-edit:hover { color: var(--accent); opacity: 1; }
 .debt-overview__card-r2 { display: flex; align-items: baseline; justify-content: space-between; }

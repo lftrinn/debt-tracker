@@ -93,6 +93,7 @@ export default {
     title: 'Tiến độ thoát nợ',
     original: 'Gốc:',
     remaining: 'Còn:',
+    doneBy: 'xong {month}',
   },
   upcoming: {
     title: 'Thanh toán sắp đến',
@@ -103,6 +104,8 @@ export default {
     payQuick: 'Thanh toán nhanh',
     undoPay: 'Hoàn tác thanh toán',
     remaining: 'còn ₫{amount}',
+    overdueDays: 'Chậm {n} ngày',
+    minPayLabel: 'Thanh toán tối thiểu',
     addPopup: {
       title: 'Thêm khoản thanh toán',
       tabPay: 'Trả nợ',
@@ -128,6 +131,8 @@ export default {
     empty: 'Chưa có giao dịch nào',
     income: 'Khoản thu',
     expense: 'Chi tiêu',
+    incShort: 'Thu',
+    expShort: 'Chi',
   },
   charts: {
     tabs: {
@@ -148,6 +153,9 @@ export default {
   timeline: {
     title: 'Lộ trình thoát nợ',
     totalDebt: 'Tổng nợ:',
+    done: 'hết',
+    fullyDebtFree: '🏆 THOÁT NỢ HOÀN TOÀN',
+    debtLabel: 'Nợ:',
   },
   addTx: {
     tabs: {
@@ -157,11 +165,12 @@ export default {
     expense: {
       title: 'Ghi khoản chi',
       descPlaceholder: 'Mô tả (vd: Cơm tối, Cà phê...)',
-      amountPlaceholder: 'Số tiền (VNĐ)',
+      amountPlaceholder: 'Số tiền ({currency})',
     },
     income: {
       title: 'Ghi khoản thu',
       descPlaceholder: 'Mô tả (vd: Lương tháng 4, Freelance...)',
+      amountPlaceholder: 'Số tiền ({currency})',
     },
     saving: 'Đang lưu...',
     add: 'THÊM',

@@ -13,7 +13,7 @@
             class="timeline__event"
             :style="m.st === 'active' ? { color: 'var(--accent)' } : m.month === '2026-11' ? { color: 'var(--accent3)' } : {}"
           >
-            {{ hide.eventAmt ? maskMoney(m.ev) : m.ev }}
+            {{ hide.eventAmt ? maskMoney(localizeEvent(m.ev)) : localizeEvent(m.ev) }}
           </div>
           <div class="timeline__debt" :style="m.debt == null ? { visibility: 'hidden' } : {}">
             {{ $t('timeline.totalDebt') }} <template v-if="hide.debt"><span class="masked">•••••••</span></template><template v-else>{{ m.debt != null ? fCurr(m.debt) : 0 }}</template>
@@ -25,14 +25,28 @@
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
 import { useCurrency } from '../../composables/api/useCurrency'
 
+const { t } = useI18n()
 const { fCurr } = useCurrency()
 
 defineProps({
   milestones: Array,
   hide: Object,
 })
+
+/** Dịch suffix " hết" trong tên milestone sang ngôn ngữ hiện tại. */
+function localizeEvent(ev) {
+  if (!ev) return ev
+  if (ev.includes('THOÁT NỢ') || ev.includes('Thoát nợ') || ev.includes('DEBT FREE') || ev.includes('完全返済')) {
+    return t('timeline.fullyDebtFree')
+  }
+  if (ev.endsWith(' hết')) {
+    return ev.slice(0, -4) + ' ' + t('timeline.done')
+  }
+  return ev
+}
 
 function maskMoney(text) {
   return text

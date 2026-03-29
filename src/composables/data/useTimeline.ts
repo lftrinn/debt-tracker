@@ -1,6 +1,7 @@
 import { computed } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
 import type { AppData, Milestone } from '@/types/data'
+import { i18n } from '../../i18n'
 import { useFormatters } from '../ui/useFormatters'
 
 /**
@@ -27,7 +28,7 @@ export function useTimeline(d: Ref<AppData>): { milestones: ComputedRef<Mileston
     if (raw.length) {
       return raw.map((m): Milestone => ({
         month: m.month,
-        ev: m.event || (m.month === '2026-11' ? '🏆 THOÁT NỢ HOÀN TOÀN' : m.month),
+        ev: m.event || i18n.global.t('timeline.fullyDebtFree'),
         debt: debtMap[m.month] ?? null,
         st: m.month < now ? 'done' : m.month === now ? 'active' : 'future',
       }))
@@ -35,7 +36,7 @@ export function useTimeline(d: Ref<AppData>): { milestones: ComputedRef<Mileston
 
     return (d.value.payoff_timeline?.projected_debt_by_month || []).map((p): Milestone => ({
       month: p.month,
-      ev: p.total_debt === 0 ? '🏆 Thoát nợ hoàn toàn' : 'Nợ: ₫' + fS(p.total_debt),
+      ev: p.total_debt === 0 ? i18n.global.t('timeline.fullyDebtFree') : i18n.global.t('timeline.debtLabel') + ' ₫' + fS(p.total_debt),
       debt: p.total_debt,
       st: p.month < now ? 'done' : p.month === now ? 'active' : 'future',
     }))

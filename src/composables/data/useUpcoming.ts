@@ -1,6 +1,7 @@
 import { computed } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
 import type { AppData, UpcomingItem } from '@/types/data'
+import { i18n } from '../../i18n'
 import { useFormatters } from '../ui/useFormatters'
 
 /**
@@ -14,10 +15,18 @@ export function useUpcoming(d: Ref<AppData>): {
 } {
   const { dDiff } = useFormatters()
 
-  /** Nhãn hiển thị tháng/năm hiện tại theo dạng "T3/2026". */
+  /** Nhãn hiển thị tháng/năm hiện tại theo locale (T3/2026, Mar/2026, 3月/2026). */
   const upcomingLabel = computed((): string => {
     const now = new Date()
-    return 'T' + String(now.getMonth() + 1) + '/' + now.getFullYear()
+    const m = now.getMonth() + 1
+    const y = now.getFullYear()
+    const locale = (i18n.global.locale as { value: string }).value
+    if (locale === 'ja') return m + '月/' + y
+    if (locale === 'en') {
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+      return months[now.getMonth()] + '/' + y
+    }
+    return 'T' + m + '/' + y
   })
 
   /**
@@ -55,8 +64,8 @@ export function useUpcoming(d: Ref<AppData>): {
           mo: String(d2.getMonth() + 1).padStart(2, '0'),
           name: ob.name,
           sub: overdueDays > 0
-            ? `Chậm ${overdueDays} ngày`
-            : ob.category === 'debt_minimum' ? 'Thanh toán tối thiểu' : null,
+            ? i18n.global.t('upcoming.overdueDays', { n: overdueDays })
+            : ob.category === 'debt_minimum' ? i18n.global.t('upcoming.minPayLabel') : null,
           amt: ob.amount,
           paid: isPaid,
           urg: isPaid ? 'ok' : overdueDays > 0 ? 'overdue' : diff <= 5 ? 'urgent' : diff <= 10 ? 'soon' : 'ok',
@@ -83,7 +92,7 @@ export function useUpcoming(d: Ref<AppData>): {
         day: String(d2.getDate()).padStart(2, '0'),
         mo: String(d2.getMonth() + 1).padStart(2, '0'),
         name: ev.name,
-        sub: overdueDays > 0 ? `Chậm ${overdueDays} ngày` : null,
+        sub: overdueDays > 0 ? i18n.global.t('upcoming.overdueDays', { n: overdueDays }) : null,
         amt: ev.amount,
         paid: isPaid,
         urg: isPaid ? 'ok' : overdueDays > 0 ? 'overdue' : diff <= 5 ? 'urgent' : diff <= 10 ? 'soon' : 'ok',

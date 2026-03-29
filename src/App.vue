@@ -75,6 +75,7 @@
         :repayPct="repayPct"
         :origDebt="origDebt"
         :totalDebt="totalDebt"
+        :freeMonthStr="freeMonthStr"
         :hide="{ origDebt: hz('progress.origDebt'), remaining: hz('progress.remaining') }"
       />
 
@@ -256,7 +257,7 @@ const {
   todaySpent, todayOutflow, todayIncome, monthSpent, availCash, isOver, limPct, limSt,
   cashTrend, debtTrend, txTrend,
   debtCards, smallLoans, totalDebt, origDebt, repayPct, debtBreakdown,
-  upcomingLabel, upcoming, milestones, findDebtId,
+  upcomingLabel, upcoming, milestones, freeMonthStr, findDebtId,
 } = useDebtData(d)
 
 const overMsg = computed(() =>

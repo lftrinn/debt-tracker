@@ -172,10 +172,12 @@ const buf = ref({ name: '', date: '', amt: 0, cat: '' })
 const editPayLevel = ref('min') // 'min' | 'custom' — only used for CC edit
 
 // ─── Dual input (native currency ↔ display currency) ──────────────────────
-/** Currency của giao dịch đang xem/edit; null nếu không phải tx item */
+/** Currency của giao dịch đang xem/edit; null nếu không có item */
 const txCurrency = computed(() => {
-  if (!props.item || props.item._variant !== 'tx') return null
-  return (props.item.currency || baseCurrency.value) || null
+  if (!props.item) return null
+  if (props.item._variant === 'tx') return (props.item.currency || baseCurrency.value) || null
+  // Upcoming items không có currency field — luôn là base currency
+  return baseCurrency.value
 })
 /** Hiện dual input khi tx currency khác display currency và rates đã load */
 const showDisplayEquiv = computed(() =>

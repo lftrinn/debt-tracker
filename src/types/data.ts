@@ -115,6 +115,8 @@ export interface DebtCard {
     name: string
     date: string
   } | null
+  thisMonthSpent: number
+  thisMonthPaid: boolean
 }
 
 export interface UpcomingItem {

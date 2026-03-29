@@ -22,7 +22,7 @@ export interface DebtCardsResult {
  * @returns Các computed values và hàm tiện ích liên quan đến nợ
  */
 export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
-  const { dDiff } = useFormatters()
+  const { dDiff, isTM } = useFormatters()
   const { palette } = useColors()
 
   /**
@@ -154,6 +154,10 @@ export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
           }
         }
       }
+      const thisMonthSpent = (d.value.expenses || [])
+        .filter((e) => isTM(e.date) && e.payMethod === c.id)
+        .reduce((s, e) => s + e.amount, 0)
+
       return {
         id: c.id,
         name: c.name.replace(' — Techcombank', '').replace(' — ', ''),
@@ -166,6 +170,8 @@ export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
         minPaid: paid,
         minUrg,
         plannedPayment,
+        thisMonthSpent,
+        thisMonthPaid: paid,
       }
     })
   )

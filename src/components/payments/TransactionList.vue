@@ -12,9 +12,9 @@
       <span class="badge">{{ transactions.length }}</span>
     </div>
     <div v-if="txTrend !== 'neutral'" class="tx-list__trend">
-      <template v-if="hide">Thu +••••• · Chi -•••••</template>
-      <template v-else-if="txTrend === 'up'">Thu +{{ fCurr(todayIncome) }} · Chi -{{ fCurr(todaySpent) }}</template>
-      <template v-else>Chi -{{ fCurr(todaySpent) }} · Thu +{{ fCurr(todayIncome) }}</template>
+      <template v-if="hide">{{ $t('transactions.incShort') }} +••••• · {{ $t('transactions.expShort') }} -•••••</template>
+      <template v-else-if="txTrend === 'up'">{{ $t('transactions.incShort') }} +{{ fCurr(todayIncome) }} · {{ $t('transactions.expShort') }} -{{ fCurr(todaySpent) }}</template>
+      <template v-else>{{ $t('transactions.expShort') }} -{{ fCurr(todaySpent) }} · {{ $t('transactions.incShort') }} +{{ fCurr(todayIncome) }}</template>
     </div>
     <div class="tx-list__list" :class="{ 'tx-list__list--scroll': transactions.length > 4 }">
       <div v-if="!transactions.length" class="tx-list__empty">{{ $t('transactions.empty') }}</div>

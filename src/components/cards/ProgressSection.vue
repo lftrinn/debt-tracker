@@ -2,7 +2,7 @@
   <div class="progress">
     <div class="progress__header">
       <span class="progress__label">{{ $t('progress.title') }}</span>
-      <span class="progress__pct">{{ repayPct }}% · xong T11/2026</span>
+      <span class="progress__pct">{{ repayPct }}%<template v-if="freeMonth"> · {{ $t('progress.doneBy', { month: freeMonth }) }}</template></span>
     </div>
     <div class="progress__bar">
       <div class="progress__fill" :style="{ width: repayPct + '%' }"></div>
@@ -15,15 +15,32 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useCurrency } from '../../composables/api/useCurrency'
 
+const { locale } = useI18n()
 const { fCurr } = useCurrency()
 
-defineProps({
+const props = defineProps({
   repayPct: Number,
   origDebt: Number,
   totalDebt: Number,
   hide: Object,
+  freeMonthStr: { type: String, default: '' },
+})
+
+const freeMonth = computed(() => {
+  if (!props.freeMonthStr) return ''
+  const [y, m] = props.freeMonthStr.split('-')
+  const mNum = parseInt(m)
+  const yy = y.slice(2)
+  if (locale.value === 'ja') return mNum + '月/' + yy
+  if (locale.value === 'en') {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+    return months[mNum - 1] + '/' + yy
+  }
+  return 'T' + mNum + '/' + yy
 })
 </script>
 

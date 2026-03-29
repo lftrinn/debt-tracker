@@ -26,7 +26,7 @@
         <!-- Số tiền + chọn currency -->
         <div class="add-form__row" style="gap:6px">
           <div class="add-form__amount-wrap">
-            <input class="add-form__input add-form__amount" v-model.number="nAmt" type="number" inputmode="numeric" :placeholder="$t('addTx.expense.amountPlaceholder')" @input="onExpAmtInput" />
+            <input class="add-form__input add-form__amount" v-model.number="nAmt" type="number" inputmode="numeric" :placeholder="$t('addTx.expense.amountPlaceholder', { currency: nCurrency })" @input="onExpAmtInput" />
             <div v-if="topExpAmounts.length" class="add-form__quick-amounts">
               <button
                 v-for="a in topExpAmounts"
@@ -67,7 +67,7 @@
         <input class="add-form__input" v-model="iDesc" :placeholder="$t('addTx.income.descPlaceholder')" />
         <div class="add-form__row" style="gap:6px">
           <div class="add-form__amount-wrap">
-            <input class="add-form__input add-form__amount" v-model.number="iAmt" type="number" inputmode="numeric" :placeholder="$t('addTx.expense.amountPlaceholder')" @input="onIncAmtInput" />
+            <input class="add-form__input add-form__amount" v-model.number="iAmt" type="number" inputmode="numeric" :placeholder="$t('addTx.income.amountPlaceholder', { currency: iCurrency })" @input="onIncAmtInput" />
             <div v-if="topIncAmounts.length" class="add-form__quick-amounts">
               <button
                 v-for="a in topIncAmounts"
@@ -135,15 +135,23 @@ const nDesc = ref('')
 const nAmt = ref(null)
 const nCat = ref('an')
 const nPayMethod = ref('cash')
-const nCurrency = ref(baseCurrency.value)
+const nCurrency = ref(displayCurrency.value)
 const nAmtDisplay = ref(null) // tương đương theo displayCurrency
 
 // ─── State thu nhập ───────────────────────────────────────────────────────
 const iDesc = ref('')
 const iAmt = ref(null)
 const iCat = ref('luong')
-const iCurrency = ref(baseCurrency.value)
+const iCurrency = ref(displayCurrency.value)
 const iAmtDisplay = ref(null)
+
+// ─── Sync currency dropdown khi display currency thay đổi ─────────────────
+watch(displayCurrency, (newCur) => {
+  nCurrency.value = newCur
+  iCurrency.value = newCur
+  nAmtDisplay.value = null
+  iAmtDisplay.value = null
+})
 
 // ─── Hiện dual input khi txCurrency khác displayCurrency và đã có rates ──
 const hasRates = computed(() => !ratesLoading.value)
@@ -220,13 +228,13 @@ watch(() => props.prefill, (data) => {
     iDesc.value = data.desc || ''
     iAmt.value = data.amount || null
     if (data.cat) iCat.value = data.cat
-    iCurrency.value = data.currency || baseCurrency.value
+    iCurrency.value = data.currency || displayCurrency.value
   } else {
     txType.value = 'exp'
     nDesc.value = data.desc || ''
     nAmt.value = data.amount || null
     if (data.cat) nCat.value = data.cat
-    nCurrency.value = data.currency || baseCurrency.value
+    nCurrency.value = data.currency || displayCurrency.value
   }
   emit('prefill-consumed')
 }, { immediate: true })
@@ -283,7 +291,7 @@ function addExp() {
   nDesc.value = ''
   nAmt.value = null
   nAmtDisplay.value = null
-  nCurrency.value = baseCurrency.value // reset về base currency sau mỗi giao dịch
+  nCurrency.value = displayCurrency.value
 }
 
 function addInc() {
@@ -292,7 +300,7 @@ function addInc() {
   iDesc.value = ''
   iAmt.value = null
   iAmtDisplay.value = null
-  iCurrency.value = baseCurrency.value
+  iCurrency.value = displayCurrency.value
 }
 </script>
 
