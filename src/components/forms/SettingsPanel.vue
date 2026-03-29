@@ -6,6 +6,12 @@
         <span class="settings__item-label">{{ $t('settings.menu.limit') }}</span>
         <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
       </div>
+      <!-- Tiền tệ hiển thị — ngay dưới Hạn mức chi hàng ngày -->
+      <div class="settings__item" @click="openCurrency">
+        <span class="settings__item-ico"><Icon name="dollar-sign" :size="16" /></span>
+        <span class="settings__item-label">{{ $t('settings.menu.currency') }}</span>
+        <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
+      </div>
       <div class="settings__item" @click="open = 'hz'">
         <span class="settings__item-ico"><Icon name="lock" :size="16" /></span>
         <span class="settings__item-label">{{ $t('settings.menu.hideZones') }}</span>
@@ -19,11 +25,6 @@
       <div class="settings__item" @click="open = 'json'">
         <span class="settings__item-ico"><Icon name="refresh-ccw" :size="16" /></span>
         <span class="settings__item-label">{{ $t('settings.menu.json') }}</span>
-        <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
-      </div>
-      <div class="settings__item" @click="openCurrency">
-        <span class="settings__item-ico"><Icon name="dollar-sign" :size="16" /></span>
-        <span class="settings__item-label">{{ $t('settings.menu.currency') }}</span>
         <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
       </div>
       <div class="settings__sep"></div>
@@ -139,54 +140,63 @@
             </div>
           </template>
 
-          <!-- CURRENCY SELECTOR -->
+          <!-- CURRENCY SELECTOR — dạng tab -->
           <template v-if="open === 'currency'">
             <div class="popup-body">
-              <!-- Tiền tệ gốc (lưu trong data) -->
-              <div class="settings__cur-section-label">{{ $t('settings.currency.base') }}</div>
-              <div class="hint" style="margin-bottom:8px">{{ $t('settings.currency.baseHint') }}</div>
-              <div class="settings__lang-list">
-                <button
-                  v-for="cur in CURRENCIES"
-                  :key="'base-' + cur"
-                  class="settings__lang-item"
-                  :class="{ 'settings__lang-item--active': currentBaseCurrency === cur }"
-                  @click="selectBaseCurrency(cur)"
-                >
-                  <span class="settings__lang-name">{{ $t('settings.currency.' + cur) }}</span>
-                  <Icon v-if="currentBaseCurrency === cur" name="check" :size="14" class="settings__lang-check" />
-                </button>
+              <!-- Tab navigation -->
+              <div class="tab-nav">
+                <button class="tab-btn" :class="{ active: currTab === 'display' }" @click="currTab = 'display'">{{ $t('settings.currency.tabDisplay') }}</button>
+                <button class="tab-btn" :class="{ active: currTab === 'base' }" @click="currTab = 'base'">{{ $t('settings.currency.tabBase') }}</button>
+                <button v-if="currentCurrency === 'JPY'" class="tab-btn" :class="{ active: currTab === 'jpy' }" @click="currTab = 'jpy'">{{ $t('settings.currency.tabJpy') }}</button>
               </div>
 
-              <div class="settings__cur-divider"></div>
+              <!-- Tab: Tiền tệ hiển thị (mặc định) -->
+              <template v-if="currTab === 'display'">
+                <div class="hint" style="margin-bottom:8px">{{ $t('settings.currency.displayHint') }}</div>
+                <div class="settings__lang-list">
+                  <button
+                    v-for="cur in CURRENCIES"
+                    :key="cur"
+                    class="settings__lang-item"
+                    :class="{ 'settings__lang-item--active': currentCurrency === cur }"
+                    @click="selectCurrency(cur)"
+                  >
+                    <span class="settings__lang-name">{{ $t('settings.currency.' + cur) }}</span>
+                    <Icon v-if="currentCurrency === cur" name="check" :size="14" class="settings__lang-check" />
+                  </button>
+                </div>
+                <div v-if="currentCurrency !== 'VND'" style="margin-top:10px;text-align:center" class="settings__sync-note">
+                  <template v-if="ratesLoading">{{ $t('settings.currency.rateLoading') }}</template>
+                  <template v-else-if="ratesError">{{ $t('settings.currency.rateError') }}</template>
+                  <template v-else>{{ $t('settings.currency.rateInfo') }}</template>
+                </div>
+              </template>
 
-              <!-- Tiền tệ hiển thị (chỉ ảnh hưởng display) -->
-              <div class="settings__cur-section-label">{{ $t('settings.currency.display') }}</div>
-              <div class="hint" style="margin-bottom:8px">{{ $t('settings.currency.displayHint') }}</div>
-              <div class="settings__lang-list">
-                <button
-                  v-for="cur in CURRENCIES"
-                  :key="cur"
-                  class="settings__lang-item"
-                  :class="{ 'settings__lang-item--active': currentCurrency === cur }"
-                  @click="selectCurrency(cur)"
-                >
-                  <span class="settings__lang-name">{{ $t('settings.currency.' + cur) }}</span>
-                  <Icon v-if="currentCurrency === cur" name="check" :size="14" class="settings__lang-check" />
-                </button>
-              </div>
-              <div v-if="currentCurrency === 'JPY'" style="margin-top:12px">
+              <!-- Tab: Tiền tệ gốc -->
+              <template v-if="currTab === 'base'">
+                <div class="hint" style="margin-bottom:8px">{{ $t('settings.currency.baseHint') }}</div>
+                <div class="settings__lang-list">
+                  <button
+                    v-for="cur in CURRENCIES"
+                    :key="'base-' + cur"
+                    class="settings__lang-item"
+                    :class="{ 'settings__lang-item--active': currentBaseCurrency === cur }"
+                    @click="selectBaseCurrency(cur)"
+                  >
+                    <span class="settings__lang-name">{{ $t('settings.currency.' + cur) }}</span>
+                    <Icon v-if="currentBaseCurrency === cur" name="check" :size="14" class="settings__lang-check" />
+                  </button>
+                </div>
+              </template>
+
+              <!-- Tab: Ký hiệu JPY — chỉ hiện khi tiền tệ hiển thị là JPY -->
+              <template v-if="currTab === 'jpy' && currentCurrency === 'JPY'">
                 <div class="hint" style="margin-bottom:6px">{{ $t('settings.currency.jpyNotation') }}</div>
                 <div style="display:flex;gap:4px">
                   <button :class="['tab-btn', currentJpyNotation === 'standard' ? 'active' : '']" style="flex:1" @click="selectJpyNotation('standard')">{{ $t('settings.currency.jpyStandard') }}</button>
                   <button :class="['tab-btn', currentJpyNotation === 'kanji' ? 'active' : '']" style="flex:1" @click="selectJpyNotation('kanji')">{{ $t('settings.currency.jpyKanji') }}</button>
                 </div>
-              </div>
-              <div v-if="currentCurrency !== 'VND'" style="margin-top:10px;text-align:center" class="settings__sync-note">
-                <template v-if="ratesLoading">{{ $t('settings.currency.rateLoading') }}</template>
-                <template v-else-if="ratesError">{{ $t('settings.currency.rateError') }}</template>
-                <template v-else>{{ $t('settings.currency.rateInfo') }}</template>
-              </div>
+              </template>
             </div>
           </template>
 
@@ -241,6 +251,7 @@ function selectJpyNotation(n) {
 
 function openCurrency() {
   open.value = 'currency'
+  currTab.value = 'display'
   if (displayCurrency.value !== 'VND') fetchRates()
 }
 
@@ -328,6 +339,8 @@ function toggleParent(g, checked) {
 const open = ref(null)
 const expandedGroups = reactive({})
 const nLimit = ref(null)
+/** Tab hiện tại trong popup tiền tệ: 'display' | 'base' | 'jpy' */
+const currTab = ref('display')
 const importJson = ref('')
 
 function closePopup() {
