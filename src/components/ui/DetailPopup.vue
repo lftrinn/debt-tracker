@@ -398,14 +398,22 @@ function handleSave() {
   if (props.item._variant === 'tx' && buf.value.date > tStr()) buf.value.date = tStr()
   const i = props.item
   const currentLang = locale.value
-  const { meta } = getItemI18nFields(i)
+  const { i18n: existingI18n, meta } = getItemI18nFields(i)
 
-  // Tìm ngôn ngữ manual (không phải current locale, có meta='manual')
-  const manualLangs = ALL_LANGS.filter((l) => l !== currentLang && meta?.[l] === 'manual')
+  // Tìm ngôn ngữ cần review:
+  // - meta='manual' → luôn hỏi
+  // - meta='auto'   → dịch lại tự động (không hỏi)
+  // - không có meta nhưng có nội dung trong i18n → không rõ nguồn gốc, xem như manual → hỏi
+  const manualLangs = ALL_LANGS.filter((l) => {
+    if (l === currentLang) return false
+    const lMeta = meta?.[l]
+    if (lMeta === 'auto') return false
+    if (lMeta === 'manual') return true
+    return !!(existingI18n?.[l])
+  })
 
   if (manualLangs.length > 0) {
     // Bắt đầu review step
-    const { i18n: existingI18n } = getItemI18nFields(i)
     reviewPending.value = manualLangs.map((lang) => ({
       lang,
       oldValue: existingI18n?.[lang] || (i._variant === 'upcoming' ? i.name : i.desc) || '',
