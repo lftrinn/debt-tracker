@@ -149,6 +149,18 @@ textarea.inp-s { height: 130px; resize: none; font-size: 10px; line-height: 1.5;
 .cfg-item-ico { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
 .cfg-item-label { flex: 1; font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--text); }
 .cfg-item-arrow { font-size: 13px; color: var(--muted); flex-shrink: 0; }
+.cfg-sep { height: 1px; background: var(--border); margin: 4px 0; }
+.cfg-item--danger { border-color: rgba(var(--danger-rgb),.2); }
+.cfg-item--danger:active { background: rgba(var(--danger-rgb),.08); }
+.cfg-item-ico--danger { color: var(--danger); }
+.cfg-item-label--danger { color: var(--danger); }
+.popup-btn--danger { background: rgba(var(--danger-rgb),.12); color: var(--danger); border: 1px solid rgba(var(--danger-rgb),.25); }
+.popup-btn--danger:hover { background: rgba(var(--danger-rgb),.2); opacity: 1; }
+.popup-actions--gap { flex-direction: row; gap: 10px; }
+.popup-actions--gap .popup-btn { flex: 1; }
+.logout-confirm-icon { display: flex; justify-content: center; padding: 12px 0 8px; }
+.logout-confirm-msg { text-align: center; font-family: var(--sans); font-size: 14px; font-weight: 700; color: var(--text); margin: 0 0 8px; }
+.logout-confirm-hint { text-align: center; font-family: var(--sans); font-size: 12px; color: var(--muted); margin: 0; line-height: 1.5; }
 
 /* Hide zones treeview */
 .hz-tree { display: flex; flex-direction: column; gap: 4px; }

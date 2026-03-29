@@ -21,6 +21,11 @@
         <span class="cfg-item-label">Cập nhật dữ liệu JSON</span>
         <span class="cfg-item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
       </div>
+      <div class="cfg-sep"></div>
+      <div class="cfg-item cfg-item--danger" @click="open = 'logout'">
+        <span class="cfg-item-ico cfg-item-ico--danger"><Icon name="log-out" :size="16" /></span>
+        <span class="cfg-item-label cfg-item-label--danger">Đăng xuất</span>
+      </div>
     </div>
 
     <!-- Sync info -->
@@ -128,6 +133,21 @@
             </div>
           </template>
 
+          <!-- LOGOUT CONFIRM -->
+          <template v-if="open === 'logout'">
+            <div class="popup-body">
+              <div class="logout-confirm-icon">
+                <Icon name="log-out" :size="32" color="var(--danger)" />
+              </div>
+              <p class="logout-confirm-msg">Bạn có chắc muốn đăng xuất không?</p>
+              <p class="logout-confirm-hint">Dữ liệu của bạn vẫn được lưu trên JSONBin. Bạn có thể đăng nhập lại bất cứ lúc nào.</p>
+            </div>
+            <div class="popup-actions popup-actions--gap">
+              <button class="popup-btn" @click="closePopup">Huỷ</button>
+              <button class="popup-btn popup-btn--danger" @click="$emit('logout')">Đăng xuất</button>
+            </div>
+          </template>
+
         </div>
       </div>
     </Transition>
@@ -159,6 +179,7 @@ const emit = defineEmits([
   'update-limit',
   'import-json',
   'set-hide-zone',
+  'logout',
 ])
 
 const titles = {
@@ -166,6 +187,7 @@ const titles = {
   hz: 'Vùng ẩn số tiền',
   rules: 'Quy tắc',
   json: 'Cập nhật dữ liệu JSON',
+  logout: 'Đăng xuất',
 }
 
 const zoneTree = [

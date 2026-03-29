@@ -12,7 +12,7 @@
             <span class="hdr-date-compact">{{ today }}</span>
             <span class="hdr-sep">·</span>
             <Icon :name="limIcon" :size="12" class="hdr-lim-ico" :class="[limSt, { blink: limBlink }]" @click="$emit('scroll-alert')" />
-            <span v-if="cashDaysLeft !== null && cashDaysLeft < dToSalary" class="hdr-days-badge" @click="$emit('scroll-alert')">{{ hideAmounts ? '•/•' : cashDaysLeft + '/' + dToSalary }}</span>
+            <span v-if="cashDaysLeft !== null && cashDaysLeft < dToSalary" class="hdr-days-badge" @click="$emit('scroll-alert')">{{ hideAlert ? '•/•' : cashDaysLeft + '/' + dToSalary }}</span>
           </div>
         </transition>
       </div>
@@ -22,9 +22,6 @@
         </button>
         <button class="btn-ico" @click="$emit('reload')" title="Cập nhật phiên bản mới">
           <Icon name="refresh-cw" :size="16" />
-        </button>
-        <button class="btn-ico" @click="$emit('logout')" title="Đăng xuất">
-          <Icon name="log-out" :size="16" />
         </button>
       </div>
       <transition name="over-slide">
@@ -47,6 +44,7 @@ import Icon from './Icon.vue'
 const props = defineProps({
   today: String,
   hideAmounts: Boolean,
+  hideAlert: Boolean,
   scrolled: Boolean,
   syncStatus: String,
   syncMsg: String,
@@ -62,5 +60,5 @@ const props = defineProps({
 const limIcon = computed(() =>
   props.limSt === 'over' ? 'alert-triangle' : props.limSt === 'warn' ? 'alert-triangle' : 'check'
 )
-defineEmits(['reload', 'logout', 'toggle-hide', 'scroll-alert', 'dismiss-over'])
+defineEmits(['reload', 'toggle-hide', 'scroll-alert', 'dismiss-over'])
 </script>

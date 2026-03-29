@@ -38,7 +38,7 @@
 
   <!-- MAIN -->
   <div v-if="appState === 'ready' || appState === 'error'">
-    <AppHeader :today="today" :hideAmounts="hideAmounts" :scrolled="syncBarScrolled" :syncStatus="syncSt" :syncMsg="syncMsg" :syncTime="syncTime" :limSt="limSt" :limBlink="limBlink" :overBanner="overBanner" :overMsg="overMsg" :cashDaysLeft="cashDaysLeft" :dToSalary="dToSalary" @reload="hardReload" @logout="logout" @toggle-hide="toggleHide" @scroll-alert="scrollToAlert" @dismiss-over="dismissOverBanner" />
+    <AppHeader :today="today" :hideAmounts="hideAmounts" :hideAlert="hz('alert')" :scrolled="syncBarScrolled" :syncStatus="syncSt" :syncMsg="syncMsg" :syncTime="syncTime" :limSt="limSt" :limBlink="limBlink" :overBanner="overBanner" :overMsg="overMsg" :cashDaysLeft="cashDaysLeft" :dToSalary="dToSalary" @reload="hardReload" @toggle-hide="toggleHide" @scroll-alert="scrollToAlert" @dismiss-over="dismissOverBanner" />
 
     <div class="wrap">
       <SyncBar ref="syncBarRef" :status="syncSt" :message="syncMsg" :syncTime="syncTime" :today="today" />
@@ -155,6 +155,7 @@
         @update-limit="updLimit"
         @import-json="handleImportJson"
         @set-hide-zone="({ key, val }: { key: string; val: boolean }) => setHideZone(key, val)"
+        @logout="logout"
       />
     </div>
   </div>
