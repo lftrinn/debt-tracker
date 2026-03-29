@@ -347,5 +347,8 @@ export default {
     paid: 'Đã thanh toán',
     undoPaid: 'Đã hoàn tác thanh toán',
     payErr: 'Lỗi cập nhật',
+    translating: 'Đang dịch mô tả...',
+    translated: 'Đã dịch xong',
+    translateErr: 'Không dịch được',
   },
 }

@@ -1,6 +1,8 @@
 import type { Ref } from 'vue'
 import type { AppData, DebtRef } from '@/types/data'
 import type { ToastType } from '../ui/useToast'
+import { i18n } from '../../i18n'
+import type { AppLang } from '../api/useTranslation'
 
 /**
  * Xử lý thanh toán nghĩa vụ, thêm/sửa/xóa khoản chi một lần, và dọn dẹp dữ liệu đã qua hạn.
@@ -199,8 +201,19 @@ export function usePayments(
     } else {
       paid.add(key)
       nd.current_cash = { ...nd.current_cash, balance: Math.max(0, (nd.current_cash?.balance || 0) - amt) }
+      const payDesc = obName || 'Thanh toán'
+      const payLang = (i18n.global.locale as { value: string }).value as AppLang
       nd.expenses = [
-        { id: Date.now(), desc: obName || 'Thanh toán', amount: amt, cat: 'thanhToan', date: tStr(), _obTag: obTag },
+        {
+          id: Date.now(),
+          desc: payDesc,
+          amount: amt,
+          cat: 'thanhToan',
+          date: tStr(),
+          _obTag: obTag,
+          descLang: payLang,
+          descI18n: { [payLang]: payDesc } as Partial<Record<AppLang, string>>,
+        },
         ...nd.expenses,
       ]
       if (debtRef) {

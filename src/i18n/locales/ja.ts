@@ -347,5 +347,8 @@ export default {
     paid: '支払い完了',
     undoPaid: '支払いを取り消しました',
     payErr: '更新エラー',
+    translating: '説明を翻訳中...',
+    translated: '翻訳完了',
+    translateErr: '翻訳できませんでした',
   },
 }

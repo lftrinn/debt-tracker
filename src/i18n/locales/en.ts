@@ -347,5 +347,8 @@ export default {
     paid: 'Paid',
     undoPaid: 'Payment undone',
     payErr: 'Update error',
+    translating: 'Translating description...',
+    translated: 'Translation done',
+    translateErr: 'Translation failed',
   },
 }

@@ -27,7 +27,7 @@
       >
         <div class="tx-list__item-icon"><Icon :name="resolveCat(e.cat).icon" :size="16" /></div>
         <div class="tx-list__item-info">
-          <div class="tx-list__item-name">{{ e.desc }}</div>
+          <div class="tx-list__item-name">{{ getLocalized(e, 'desc', locale) }}</div>
           <div class="tx-list__item-meta">{{ fDate(e.date) }} · {{ e.type === 'inc' ? $t('transactions.income') : $t('transactions.expense') }}{{ e.payMethod && e.payMethod !== 'cash' ? ' · 💳' : '' }}</div>
         </div>
         <div class="tx-list__item-amt" :style="{ color: e.type === 'inc' ? 'var(--accent3)' : 'var(--accent2)' }">
@@ -49,11 +49,14 @@
 </template>
 
 <script setup>
+import { useI18n } from 'vue-i18n'
 import Icon from '../ui/Icon.vue'
 import { useFormatters } from '../../composables/ui/useFormatters'
 import { useCategories } from '../../composables/data/useCategories'
 import { useCurrency } from '../../composables/api/useCurrency'
+import { getLocalized } from '../../composables/data/useI18nData'
 
+const { locale } = useI18n()
 const { fDate } = useFormatters()
 const { resolveCat } = useCategories()
 const { fCurr, fCurrNative, fCurrFor, displayCurrency } = useCurrency()

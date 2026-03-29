@@ -27,6 +27,10 @@ export interface Expense {
   currency?: string
   /** Internal tag linking an expense to a paid obligation. Format: "ob:<key>" */
   _obTag?: string
+  /** Ngôn ngữ gốc khi user nhập desc */
+  descLang?: 'vi' | 'en' | 'ja'
+  /** Bản dịch desc sang các ngôn ngữ khác — fallback về desc nếu không có */
+  descI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
 }
 
 export interface Income {
@@ -37,6 +41,10 @@ export interface Income {
   date: string
   /** Đơn vị tiền của khoản thu — nếu không có, mặc định là base currency của app */
   currency?: string
+  /** Ngôn ngữ gốc khi user nhập desc */
+  descLang?: 'vi' | 'en' | 'ja'
+  /** Bản dịch desc sang các ngôn ngữ khác — fallback về desc nếu không có */
+  descI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
 }
 
 export interface Obligation {
@@ -48,6 +56,10 @@ export interface Obligation {
   date?: string
   /** Legacy field with trailing space — kept for backward-compat with existing data */
   'date '?: string
+  /** Ngôn ngữ gốc của tên obligation */
+  nameLang?: 'vi' | 'en' | 'ja'
+  /** Bản dịch name sang các ngôn ngữ khác */
+  nameI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
 }
 
 export interface OneTimeExpense {
@@ -55,6 +67,10 @@ export interface OneTimeExpense {
   name: string
   date: string
   amount: number
+  /** Ngôn ngữ gốc của tên khoản chi */
+  nameLang?: 'vi' | 'en' | 'ja'
+  /** Bản dịch name sang các ngôn ngữ khác */
+  nameI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
 }
 
 export interface MonthlyPlan {

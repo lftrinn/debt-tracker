@@ -4,6 +4,9 @@ import type { AppData, DebtRef } from '@/types/data'
 import type { ToastType } from '../ui/useToast'
 import { useCurrency } from '../api/useCurrency'
 import type { Currency } from '../api/useCurrency'
+import { i18n } from '../../i18n'
+import { translateToAll } from '../api/useTranslation'
+import type { AppLang } from '../api/useTranslation'
 
 export interface CopyTxData {
   desc: string
@@ -15,6 +18,7 @@ export interface CopyTxData {
 /**
  * Xử lý các hành động thêm, sửa, xóa giao dịch chi tiêu và thu nhập.
  * Tự động cập nhật số dư thẻ tín dụng / tiền mặt (luôn quy đổi về VND cho balance).
+ * Ghi nhận ngôn ngữ gốc và tự động dịch mô tả sang các ngôn ngữ còn lại trong background.
  * @param d - Reactive ref chứa toàn bộ dữ liệu ứng dụng
  * @param pushData - Hàm đẩy dữ liệu lên JSONBin, trả về true nếu thành công
  * @param toast - Hàm hiển thị thông báo ngắn
@@ -33,19 +37,55 @@ export function useTransactions(
   // Lấy helpers từ useCurrency singleton (toVnd, baseCurrency)
   const { toVnd, baseCurrency } = useCurrency()
 
+  /** Locale hiện tại của app, dùng để ghi descLang khi tạo giao dịch mới */
+  function currentLang(): AppLang {
+    return (i18n.global.locale as { value: string }).value as AppLang
+  }
+
+  /**
+   * Tự động dịch desc sang các ngôn ngữ còn lại trong background sau khi đã lưu.
+   * Cập nhật descI18n trên record có id tương ứng trong mảng chỉ định.
+   * Không block UI, không toast — thất bại im lặng.
+   */
+  function backgroundTranslate(
+    id: number,
+    desc: string,
+    lang: AppLang,
+    listKey: 'expenses' | 'incomes',
+  ): void {
+    if (!desc.trim()) return
+    translateToAll(desc, lang).then(async (translations) => {
+      d.value = {
+        ...d.value,
+        [listKey]: (d.value[listKey] as Array<{ id: number; descI18n?: unknown }>).map((x) =>
+          x.id === id ? { ...x, descI18n: translations } : x
+        ),
+      }
+      await pushData()
+    })
+  }
+
   /**
    * Thêm khoản chi tiêu mới.
    * Amount lưu nguyên theo currency được chọn; card balance luôn cập nhật bằng VND.
-   * @param desc - Mô tả giao dịch
-   * @param amount - Số tiền theo đơn vị currency
-   * @param cat - Danh mục
-   * @param payMethod - 'cash' hoặc card ID; mặc định là 'cash'
-   * @param currency - Đơn vị tiền của giao dịch; mặc định là baseCurrency
+   * descLang và descI18n được ghi nhận theo locale hiện tại; bản dịch chạy background.
    */
   async function addExp({ desc, amount, cat, payMethod, currency }: { desc: string; amount: number; cat: string; payMethod?: string; currency?: string }): Promise<void> {
     const isCash = !payMethod || payMethod === 'cash'
     const txCur = (currency || baseCurrency.value) as Currency
-    const e = { id: Date.now(), desc, amount, cat, date: tStr(), payMethod: payMethod || 'cash', currency: txCur }
+    const lang = currentLang()
+    const id = Date.now()
+    const e = {
+      id,
+      desc,
+      amount,
+      cat,
+      date: tStr(),
+      payMethod: payMethod || 'cash',
+      currency: txCur,
+      descLang: lang,
+      descI18n: { [lang]: desc } as Partial<Record<AppLang, string>>,
+    }
     const nd: AppData = {
       ...d.value,
       expenses: [e, ...(d.value.expenses || [])],
@@ -62,23 +102,34 @@ export function useTransactions(
     }
     d.value = nd
     ;(await pushData()) ? toast('toast.expAdded') : toast('toast.expAddedErr', 'err')
+    // Dịch background sau khi đã lưu thành công
+    backgroundTranslate(id, desc, lang, 'expenses')
   }
 
   /**
    * Thêm khoản thu nhập và cập nhật số dư tiền mặt (cash balance luôn theo VND).
-   * @param desc - Mô tả khoản thu
-   * @param amount - Số tiền theo đơn vị currency
-   * @param cat - Danh mục thu nhập
-   * @param currency - Đơn vị tiền của khoản thu; mặc định là baseCurrency
+   * descLang và descI18n được ghi nhận theo locale hiện tại; bản dịch chạy background.
    */
   async function addInc({ desc, amount, cat, currency }: { desc: string; amount: number; cat: string; currency?: string }): Promise<void> {
     const txCur = (currency || baseCurrency.value) as Currency
-    const e = { id: Date.now(), desc, amount, cat, date: tStr(), currency: txCur }
+    const lang = currentLang()
+    const id = Date.now()
+    const e = {
+      id,
+      desc,
+      amount,
+      cat,
+      date: tStr(),
+      currency: txCur,
+      descLang: lang,
+      descI18n: { [lang]: desc } as Partial<Record<AppLang, string>>,
+    }
     d.value = { ...d.value, incomes: [e, ...(d.value.incomes || [])] }
     // Cash balance luôn theo VND — quy đổi nếu thu nhập ở ngoại tệ
     const amountVnd = toVnd(amount, txCur)
     d.value = { ...d.value, current_cash: { ...d.value.current_cash, balance: (d.value.current_cash?.balance || 0) + amountVnd } }
     ;(await pushData()) ? toast('toast.incAdded') : toast('toast.incAddedErr', 'err')
+    backgroundTranslate(id, desc, lang, 'incomes')
   }
 
   /**
@@ -114,10 +165,14 @@ export function useTransactions(
 
   /**
    * Lưu chỉnh sửa giao dịch từ popup. Cash balance cập nhật theo chênh lệch VND.
+   * Cập nhật descI18n[locale hiện tại] = desc mới; xoá các bản dịch cũ (có thể stale).
    * @param item - Đối tượng giao dịch với dữ liệu chỉnh sửa trong _buf
    */
   async function handlePopupSaveTx(item: { id: number; type: string; _buf: { name: string; date: string; amt: number; cat: string } }): Promise<void> {
     const buf = item._buf
+    const lang = currentLang()
+    // descI18n reset về {[locale]: newDesc} — bản dịch cũ có thể stale sau khi sửa
+    const newDescI18n: Partial<Record<AppLang, string>> = { [lang]: buf.name }
     if (item.type === 'inc') {
       const old = (d.value.incomes || []).find((i) => i.id === item.id)
       // Tính chênh lệch theo VND để cập nhật cash balance chính xác
@@ -128,7 +183,9 @@ export function useTransactions(
       d.value = {
         ...d.value,
         incomes: (d.value.incomes || []).map((i) =>
-          i.id === item.id ? { ...i, desc: buf.name, date: buf.date, amount: buf.amt, cat: buf.cat } : i
+          i.id === item.id
+            ? { ...i, desc: buf.name, date: buf.date, amount: buf.amt, cat: buf.cat, descLang: lang, descI18n: newDescI18n }
+            : i
         ),
         current_cash: { ...d.value.current_cash, balance: (d.value.current_cash?.balance || 0) + amtDiff },
       }
@@ -136,11 +193,16 @@ export function useTransactions(
       d.value = {
         ...d.value,
         expenses: (d.value.expenses || []).map((i) =>
-          i.id === item.id ? { ...i, desc: buf.name, date: buf.date, amount: buf.amt, cat: buf.cat } : i
+          i.id === item.id
+            ? { ...i, desc: buf.name, date: buf.date, amount: buf.amt, cat: buf.cat, descLang: lang, descI18n: newDescI18n }
+            : i
         ),
       }
     }
     ;(await pushData()) ? toast('toast.txUpdated') : toast('toast.txUpdatedErr', 'err')
+    // Dịch lại background vì mô tả đã thay đổi
+    const listKey = item.type === 'inc' ? 'incomes' : 'expenses'
+    backgroundTranslate(item.id, buf.name, lang, listKey)
   }
 
   return { copyTxData, addExp, addInc, deleteTx, handlePopupSaveTx }

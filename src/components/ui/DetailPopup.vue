@@ -33,7 +33,7 @@
             </div>
 
             <!-- Name -->
-            <div class="popup-name">{{ item._variant === 'upcoming' ? item.name : item.desc }}</div>
+            <div class="popup-name">{{ item._variant === 'upcoming' ? item.name : getLocalized(item, 'desc', locale) }}</div>
 
             <!-- Amount -->
             <div class="popup-amt" :class="item._variant === 'tx' ? (item.type === 'inc' ? 'inc' : 'exp') : 'exp'">
@@ -149,11 +149,14 @@
 
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Icon from './Icon.vue'
 import { useFormatters } from '../../composables/ui/useFormatters'
 import { useCategories } from '../../composables/data/useCategories'
 import { useCurrency } from '../../composables/api/useCurrency'
+import { getLocalized } from '../../composables/data/useI18nData'
 
+const { locale } = useI18n()
 const { fDate, tStr } = useFormatters()
 const { resolveCat, expenseCategories, incomeCategories } = useCategories()
 const { fCurr, fCurrFull, displayCurrency, baseCurrency, convertBetween, ratesLoading } = useCurrency()
@@ -270,7 +273,8 @@ function startEdit() {
     }
   } else {
     const resolved = resolveCat(i.cat)
-    buf.value = { name: i.desc, date: i.date, amt: i.amount, cat: resolved.key }
+    // Hiện bản dịch đúng locale khi edit — fallback về desc gốc nếu chưa có
+    buf.value = { name: getLocalized(i, 'desc', locale.value), date: i.date, amt: i.amount, cat: resolved.key }
     // Populate display equiv nếu currencies khác nhau
     const cur = (i.currency || baseCurrency.value)
     if (cur !== displayCurrency.value && i.amount != null) {
