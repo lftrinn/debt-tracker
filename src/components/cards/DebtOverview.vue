@@ -7,6 +7,11 @@
         <Icon v-else-if="debtTrend === 'up'" name="trending-up" :size="12" />
         <Icon v-else name="minus" :size="12" />
       </span>
+      <!-- Toggle kiểu thanh tiến độ -->
+      <button class="debt-overview__prog-toggle" @click="toggleProgressMode" :title="progressMode === 'repaid' ? $t('debt.progressModeUsed') : $t('debt.progressModeRepaid')">
+        <Icon name="refresh-cw" :size="9" />
+        <span>{{ progressMode === 'repaid' ? $t('debt.progressModeRepaid') : $t('debt.progressModeUsed') }}</span>
+      </button>
     </div>
     <div class="debt-overview__total num-flash" :key="'debt' + debtAnimKey">
       <template v-if="hide.total"><span class="masked">•••••••••</span></template>
@@ -101,7 +106,12 @@ import { useDebtSettings } from '../../composables/ui/useDebtSettings'
 
 const { fN } = useFormatters()
 const { fCurr, fCurrFull } = useCurrency()
-const { progressMode } = useDebtSettings()
+const { progressMode, setProgressMode } = useDebtSettings()
+
+/** Đổi qua lại giữa 2 mode */
+function toggleProgressMode() {
+  setProgressMode(progressMode.value === 'repaid' ? 'used' : 'repaid')
+}
 
 /** Tính phần trăm theo mode: 'used' = % dùng, 'repaid' = % đã trả */
 function usedPct(c) {
@@ -176,7 +186,10 @@ function saveEdit() {
 <style scoped>
 .debt-overview { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px 20px; margin-bottom: 12px; position: relative; overflow: hidden; }
 .debt-overview::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--accent2), transparent); }
-.debt-overview__label { font-family: var(--mono); font-size: 9px; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.debt-overview__label { font-family: var(--mono); font-size: 9px; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+.debt-overview__prog-toggle { margin-left: auto; display: inline-flex; align-items: center; gap: 3px; background: rgba(var(--accent-rgb),.08); border: 1px solid rgba(var(--accent-rgb),.18); border-radius: 5px; padding: 2px 6px; color: var(--muted); font-family: var(--mono); font-size: 8px; font-weight: 700; cursor: pointer; transition: all .15s; letter-spacing: 0; text-transform: none; -webkit-tap-highlight-color: transparent; }
+.debt-overview__prog-toggle:hover { color: var(--accent); border-color: rgba(var(--accent-rgb),.4); background: rgba(var(--accent-rgb),.14); }
+.debt-overview__prog-toggle:active { transform: scale(.95); }
 .debt-overview__total { font-family: var(--mono); font-size: 32px; font-weight: 700; color: var(--accent2); line-height: 1; letter-spacing: -1px; }
 .debt-overview__cards { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 13px; }
 .debt-overview__card { background: var(--surface2); border-radius: 10px; padding: 9px 10px; border: 1px solid var(--border); border-left: 3px solid var(--border); }
