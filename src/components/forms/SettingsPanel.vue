@@ -21,11 +21,6 @@
         <span class="settings__item-label">{{ $t('settings.menu.json') }}</span>
         <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
       </div>
-      <div class="settings__item" @click="open = 'lang'">
-        <span class="settings__item-ico"><Icon name="globe" :size="16" /></span>
-        <span class="settings__item-label">{{ $t('settings.menu.language') }}</span>
-        <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
-      </div>
       <div class="settings__item" @click="openCurrency">
         <span class="settings__item-ico"><Icon name="dollar-sign" :size="16" /></span>
         <span class="settings__item-label">{{ $t('settings.menu.currency') }}</span>
@@ -144,24 +139,6 @@
             </div>
           </template>
 
-          <!-- LANGUAGE SELECTOR -->
-          <template v-if="open === 'lang'">
-            <div class="popup-body">
-              <div class="settings__lang-list">
-                <button
-                  v-for="loc in LOCALES"
-                  :key="loc"
-                  class="settings__lang-item"
-                  :class="{ 'settings__lang-item--active': currentLocale === loc }"
-                  @click="selectLocale(loc)"
-                >
-                  <span class="settings__lang-name">{{ $t('settings.language.' + loc) }}</span>
-                  <Icon v-if="currentLocale === loc" name="check" :size="14" class="settings__lang-check" />
-                </button>
-              </div>
-            </div>
-          </template>
-
           <!-- CURRENCY SELECTOR -->
           <template v-if="open === 'currency'">
             <div class="popup-body">
@@ -239,22 +216,15 @@ import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Icon from '../ui/Icon.vue'
 import { useFormatters } from '../../composables/ui/useFormatters'
-import { LOCALES, setLocale } from '../../i18n'
 import { useCurrency, CURRENCIES } from '../../composables/api/useCurrency'
 
 const { fN } = useFormatters()
-const { t, locale: i18nLocale } = useI18n()
+const { t } = useI18n()
 const { displayCurrency, baseCurrency, jpyNotation, ratesLoading, ratesError, fetchRates, setDisplayCurrency, setBaseCurrency, setJpyNotation, fCurrFull } = useCurrency()
 
-const currentLocale = computed(() => i18nLocale.value)
 const currentCurrency = computed(() => displayCurrency.value)
 const currentBaseCurrency = computed(() => baseCurrency.value)
 const currentJpyNotation = computed(() => jpyNotation.value)
-
-function selectLocale(loc) {
-  setLocale(loc)
-  closePopup()
-}
 
 function selectCurrency(cur) {
   setDisplayCurrency(cur)
@@ -301,7 +271,6 @@ const titles = computed(() => ({
   hz: t('settings.menu.hideZones'),
   rules: t('settings.menu.rules'),
   json: t('settings.menu.json'),
-  lang: t('settings.menu.language'),
   currency: t('settings.menu.currency'),
   progressMode: t('settings.progressMode.title'),
   logout: t('settings.menu.logout'),

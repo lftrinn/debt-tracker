@@ -17,6 +17,10 @@
         </transition>
       </div>
       <div class="app-header__actions">
+        <!-- Nút chọn ngôn ngữ -->
+        <button class="app-header__btn" @click="langOpen = true" :title="$t('settings.menu.language')">
+          <Icon name="globe" :size="16" />
+        </button>
         <button class="app-header__btn app-header__btn--eye" :class="{ 'app-header__btn--eye-active': hideAmounts }" @click="$emit('toggle-hide')" :title="hideAmounts ? $t('header.showAmounts') : $t('header.hideAmounts')">
           <Icon :name="hideAmounts ? 'eye-off' : 'eye'" :size="18" />
         </button>
@@ -24,6 +28,33 @@
           <Icon name="refresh-cw" :size="16" />
         </button>
       </div>
+
+      <!-- Popup chọn ngôn ngữ — z-index cao hơn header để hiện lên trên -->
+      <Transition name="popup">
+        <div v-if="langOpen" class="popup-overlay" style="z-index:9100" @click.self="langOpen = false">
+          <div class="popup-sheet">
+            <div class="popup-handle"><div class="popup-handle-bar"></div></div>
+            <div class="popup-hdr">
+              <span class="popup-title">{{ $t('settings.menu.language') }}</span>
+              <button class="popup-close" @click="langOpen = false"><Icon name="x" :size="18" /></button>
+            </div>
+            <div class="popup-body">
+              <div class="app-header__lang-list">
+                <button
+                  v-for="loc in LOCALES"
+                  :key="loc"
+                  class="app-header__lang-item"
+                  :class="{ 'app-header__lang-item--active': currentLocale === loc }"
+                  @click="selectLocale(loc)"
+                >
+                  <span>{{ $t('settings.language.' + loc) }}</span>
+                  <Icon v-if="currentLocale === loc" name="check" :size="14" class="app-header__lang-check" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Transition>
       <transition name="over-slide">
         <div v-if="overBanner" class="app-header__banner">
           <Icon name="alert-triangle" :size="14" class="app-header__banner-icon" />
@@ -38,8 +69,27 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import Icon from '../ui/Icon.vue'
+import { LOCALES, setLocale } from '../../i18n'
+
+const { locale: i18nLocale } = useI18n()
+
+/** Trạng thái popup chọn ngôn ngữ */
+const langOpen = ref(false)
+const currentLocale = computed(() => i18nLocale.value)
+
+/** Chọn ngôn ngữ và đóng popup */
+function selectLocale(loc) {
+  setLocale(loc)
+  langOpen.value = false
+}
+
+/** Khoá scroll body khi popup mở */
+watch(langOpen, (v) => {
+  document.body.style.overflow = v ? 'hidden' : ''
+})
 
 const props = defineProps({
   today: String,
@@ -105,4 +155,11 @@ defineEmits(['reload', 'toggle-hide', 'scroll-alert', 'dismiss-over'])
 .over-slide-leave-active { transition: transform .25s ease-in; }
 .over-slide-enter-from, .over-slide-leave-to { transform: translateY(-100%); }
 .over-slide-enter-to, .over-slide-leave-from { transform: translateY(0); }
+
+/* Popup ngôn ngữ — dùng class chung từ styles.css, chỉ thêm list style */
+.app-header__lang-list { display: flex; flex-direction: column; gap: 6px; }
+.app-header__lang-item { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: all .15s; font-family: var(--sans); font-size: 14px; color: var(--text); }
+.app-header__lang-item:active { background: rgba(var(--accent-rgb),.08); }
+.app-header__lang-item--active { border-color: var(--accent); background: rgba(var(--accent-rgb),.06); font-weight: 600; }
+.app-header__lang-check { color: var(--accent); }
 </style>
