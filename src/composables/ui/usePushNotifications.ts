@@ -204,20 +204,23 @@ export function usePushNotifications() {
    * Gửi 1 notification tổng hợp với tag 'debt-tracker-status' để replace notification cũ.
    * Body gồm: tiền mặt khả dụng, chi tiêu hôm nay/hạn mức, tổng nợ.
    * Khi >= 80% hạn mức: hiển thị cảnh báo; khi vượt 100%: hiển thị số tiền vượt.
-   * Throttle 30 giây. Bỏ qua nếu feature tắt hoặc chưa được cấp quyền.
+   * Throttle 30 giây (bỏ qua khi force=true). Bỏ qua nếu feature tắt hoặc chưa được cấp quyền.
    */
   async function sendStatusNotification(
     availCash: number,
     todaySpent: number,
     dayLimit: number,
-    totalDebt: number
+    totalDebt: number,
+    force?: boolean
   ): Promise<void> {
     if (pushStatus.value !== 'granted') return
     if (!pushStatusEnabled.value) return
 
-    // Throttle 30s
-    const lastSent = parseInt(localStorage.getItem(STATUS_THROTTLE_KEY) || '0', 10)
-    if (Date.now() - lastSent < 30 * 1000) return
+    // Throttle 30s — bỏ qua khi force=true (đổi locale/currency)
+    if (!force) {
+      const lastSent = parseInt(localStorage.getItem(STATUS_THROTTLE_KEY) || '0', 10)
+      if (Date.now() - lastSent < 30 * 1000) return
+    }
     localStorage.setItem(STATUS_THROTTLE_KEY, String(Date.now()))
 
     const workerUrl = getWorkerUrl()
