@@ -50,9 +50,21 @@
                 <span class="popup-label">{{ $t('detail.dateLabel') }}</span>
                 <span class="popup-val">{{ fDate(item._date || item.date) }}</span>
               </div>
+              <div v-if="item._variant === 'tx' && item.time" class="popup-row">
+                <span class="popup-label">{{ $t('detail.timeLabel') }}</span>
+                <span class="popup-val">{{ item.time }}</span>
+              </div>
               <div v-if="item.sub" class="popup-row">
                 <span class="popup-label">{{ $t('detail.typeLabel') }}</span>
                 <span class="popup-val">{{ item.sub }}</span>
+              </div>
+              <div v-if="item._variant === 'tx' && item.note" class="popup-row">
+                <span class="popup-label">{{ $t('detail.noteLabel') }}</span>
+                <span class="popup-val popup-val--note">{{ item.note }}</span>
+              </div>
+              <div v-if="item._variant === 'tx' && item.tags && item.tags.length" class="popup-row">
+                <span class="popup-label">{{ $t('detail.tagsLabel') }}</span>
+                <span class="popup-val"><span v-for="tag in item.tags" :key="tag" class="detail__tag">#{{ tag }}</span></span>
               </div>
               <div v-if="item._variant === 'upcoming'" class="popup-row">
                 <span class="popup-label">{{ $t('detail.availCash') }}</span>
@@ -134,6 +146,18 @@
                 </optgroup>
               </select>
             </div>
+            <div v-if="item._variant === 'tx'" class="popup-field">
+              <label class="popup-label">{{ $t('detail.timeLabel') }}</label>
+              <input type="time" class="popup-input popup-input--time" v-model="buf.time" />
+            </div>
+            <div v-if="item._variant === 'tx'" class="popup-field">
+              <label class="popup-label">{{ $t('detail.noteLabel') }}</label>
+              <textarea class="popup-input popup-input--note" v-model="buf.note" :placeholder="$t('detail.notePlaceholder')" rows="2" />
+            </div>
+            <div v-if="item._variant === 'tx'" class="popup-field">
+              <label class="popup-label">{{ $t('detail.tagsLabel') }}</label>
+              <input class="popup-input" v-model="buf.tags" :placeholder="$t('detail.tagsPlaceholder')" />
+            </div>
           </div>
 
           <div class="popup-actions">
@@ -207,7 +231,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'save-upcoming', 'save-tx', 'delete', 'toggle-paid', 'clone-item'])
 
 const editing = ref(false)
-const buf = ref({ name: '', date: '', amt: 0, cat: '' })
+const buf = ref({ name: '', date: '', amt: 0, cat: '', note: '', tags: '', time: '' })
 const editPayLevel = ref('min') // 'min' | 'custom' — only used for CC edit
 
 // ─── Review step state ────────────────────────────────────────────────────
@@ -323,7 +347,15 @@ function startEdit() {
   } else {
     const resolved = resolveCat(i.cat)
     // Hiện bản dịch đúng locale khi edit — fallback về desc gốc nếu chưa có
-    buf.value = { name: getLocalized(i, 'desc', locale.value), date: i.date, amt: i.amount, cat: resolved.key }
+    buf.value = {
+      name: getLocalized(i, 'desc', locale.value),
+      date: i.date,
+      amt: i.amount,
+      cat: resolved.key,
+      note: i.note || '',
+      tags: i.tags ? i.tags.join(', ') : '',
+      time: i.time || '',
+    }
     // Populate display equiv nếu currencies khác nhau
     const cur = (i.currency || baseCurrency.value)
     if (cur !== displayCurrency.value && i.amount != null) {
@@ -597,6 +629,13 @@ function onTouchEnd(e) {
 .detail__dual-row { display: flex; gap: 6px; align-items: center; }
 .detail__dual-row .detail__input-wrap { flex: 1; min-width: 0; }
 .detail__dual-sep { font-family: var(--mono); font-size: 10px; color: var(--muted); flex-shrink: 0; }
+
+/* Tag badges in view mode */
+.detail__tag { display: inline-block; font-family: var(--mono); font-size: 9px; padding: 1px 5px; background: rgba(var(--accent-rgb),.1); border-radius: 4px; color: var(--accent); margin-right: 4px; }
+.popup-val--note { text-align: right; word-break: break-word; white-space: pre-wrap; max-width: 60%; }
+/* time input in edit mode */
+.popup-input--time { -webkit-appearance: none; appearance: none; font-family: var(--mono); font-size: 12px; }
+.popup-input--note { height: auto; min-height: 56px; resize: none; line-height: 1.4; }
 
 /* Review step */
 .review__subtitle { font-size: 12px; color: rgba(var(--text-rgb),.55); margin: 0 0 14px; line-height: 1.5; }

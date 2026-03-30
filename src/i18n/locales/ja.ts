@@ -347,6 +347,11 @@ export default {
     categoryIncome: '収入',
     saveButton: '変更を保存',
     cancelButton: 'キャンセル',
+    noteLabel: 'メモ',
+    tagsLabel: 'タグ',
+    timeLabel: '時刻',
+    notePlaceholder: 'メモ...',
+    tagsPlaceholder: 'タグ（カンマ区切り）',
     review: {
       title: '翻訳を更新',
       subtitle: 'コンテンツを編集しました。以前に手動で入力した言語の処理方法を選択してください:',
