@@ -490,8 +490,8 @@ function onListScroll() {
 
 /* Fixed-height scrollable list — shows ≈4 items, scrolls internally */
 .tx-list__scroll {
-  /* 4 × ~54px items + 3 × 6px gaps = 234px */
-  height: 234px;
+  /* 4 × 48px items + 3 × 6px gaps = 210px */
+  height: calc(4 * 48px + 3 * 6px);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -499,20 +499,18 @@ function onListScroll() {
   position: relative;
   -webkit-overflow-scrolling: touch;
   scroll-snap-type: y mandatory;
-  /* Thin scrollbar */
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
-.tx-list__scroll::-webkit-scrollbar { width: 3px; }
-.tx-list__scroll::-webkit-scrollbar-track { background: transparent; }
-.tx-list__scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.tx-list__scroll::-webkit-scrollbar { display: none; }
 
 /* Items */
 .tx-list__item {
-  display: flex; align-items: flex-start; gap: 10px; padding: 10px 11px;
+  display: flex; align-items: flex-start; gap: 10px; padding: 9px 11px;
   background: var(--surface2); border-radius: 9px; border-left: 3px solid transparent;
   animation: si .2s ease; transition: background .15s, border-color .2s;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
+  min-height: 48px; box-sizing: border-box;
   flex-shrink: 0;
   scroll-snap-align: start;
 }
