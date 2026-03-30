@@ -506,11 +506,11 @@ function onListScroll() {
 
 /* Items */
 .tx-list__item {
-  display: flex; align-items: flex-start; gap: 10px; padding: 9px 11px;
+  display: flex; align-items: center; gap: 10px; padding: 6px 11px;
   background: var(--surface2); border-radius: 9px; border-left: 3px solid transparent;
   animation: si .2s ease; transition: background .15s, border-color .2s;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
-  min-height: 48px; box-sizing: border-box;
+  height: 48px; box-sizing: border-box; overflow: hidden;
   flex-shrink: 0;
   scroll-snap-align: start;
 }
@@ -523,7 +523,7 @@ function onListScroll() {
 .tx-list__item-date {
   width: 28px; min-height: 28px; display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  flex-shrink: 0; border-radius: 7px; margin-top: 1px;
+  flex-shrink: 0; border-radius: 7px;
   padding: 2px 0;
 }
 .tx-list__item-date--exp { background: rgba(var(--accent2-rgb),.1); }
