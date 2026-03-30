@@ -362,6 +362,10 @@ export default {
     title: '支出アラート',
     warn: '{spent}/{limit}を支出しました（{pct}%）',
     over: '上限超過！本日{spent}/{limit}を支出',
+    status: {
+      title: '今日の上限',
+      body: '{spent}/{limit}を支出（{pct}%）',
+    },
   },
   toast: {
     expAdded: '支出を追加しました',
