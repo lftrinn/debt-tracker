@@ -171,7 +171,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Ref } from 'vue'
-import type { AppData } from '@/types/data'
+import type { AppData, TransactionItem } from '@/types/data'
 import type { ToastType } from './composables/ui/useToast'
 import type { Locale } from './i18n'
 import { setLocale } from './i18n'
@@ -393,8 +393,8 @@ const { updateCardDirect, addCash, updLimit, importNewJson } = useDebtActions(d,
 
 // ─── Popup state ──────────────────────────────────────────────────────────
 const popupItem = ref<Record<string, unknown> | null>(null)
-function openDetail(item: Record<string, unknown>, variant: string): void {
-  popupItem.value = { ...item, _variant: variant }
+function openDetail(item: object, variant: string): void {
+  popupItem.value = { ...(item as Record<string, unknown>), _variant: variant }
 }
 
 async function handlePopupSaveUpcomingWrapped(p: Parameters<typeof handlePopupSaveUpcoming>[0]): Promise<void> {
@@ -416,22 +416,22 @@ async function handlePopupDelete(item: Record<string, unknown>): Promise<void> {
   }
 }
 
-async function handleQuickAdd(tx: Record<string, unknown>): Promise<void> {
+async function handleQuickAdd(tx: TransactionItem): Promise<void> {
   const now = new Date()
   const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0')
   const common = {
-    desc: (tx.desc || '') as string,
-    amount: (tx.amount || 0) as number,
-    cat: (tx.cat || 'khac') as string,
-    currency: tx.currency as string | undefined,
-    note: tx.note as string | undefined,
-    tags: tx.tags as string[] | undefined,
+    desc: tx.desc || '',
+    amount: tx.amount || 0,
+    cat: tx.cat || 'khac',
+    currency: tx.currency,
+    note: tx.note,
+    tags: tx.tags,
     time: timeStr,
   }
   if (tx.type === 'inc') {
     await addInc(common)
   } else {
-    await addExp({ ...common, payMethod: tx.payMethod as string | undefined })
+    await addExp({ ...common, payMethod: tx.payMethod })
   }
 }
 

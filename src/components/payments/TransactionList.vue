@@ -126,8 +126,8 @@
               <template v-if="hide"><span class="masked">•••••</span></template>
               <template v-else>
                 <template v-if="tx.currency && tx.currency !== displayCurrency">
-                  <span>{{ tx.type === 'inc' ? '+' : '-' }}{{ fCurrFor(tx.amount, tx.currency) }}</span>
-                  <span class="tx-list__item-equiv">{{ fCurrNative(tx.amount, tx.currency) }}</span>
+                  <span>{{ tx.type === 'inc' ? '+' : '-' }}{{ fCurrFor(tx.amount, tx.currency as Currency) }}</span>
+                  <span class="tx-list__item-equiv">{{ fCurrNative(tx.amount, tx.currency as Currency) }}</span>
                 </template>
                 <template v-else>{{ tx.type === 'inc' ? '+' : '-' }}{{ fCurr(tx.amount) }}</template>
               </template>
@@ -241,8 +241,8 @@
                     <template v-if="hide"><span class="masked">•••••</span></template>
                     <template v-else>
                       <template v-if="tx.currency && tx.currency !== displayCurrency">
-                        <span>{{ tx.type === 'inc' ? '+' : '-' }}{{ fCurrFor(tx.amount, tx.currency) }}</span>
-                        <span class="tx-list__item-equiv">{{ fCurrNative(tx.amount, tx.currency) }}</span>
+                        <span>{{ tx.type === 'inc' ? '+' : '-' }}{{ fCurrFor(tx.amount, tx.currency as Currency) }}</span>
+                        <span class="tx-list__item-equiv">{{ fCurrNative(tx.amount, tx.currency as Currency) }}</span>
                       </template>
                       <template v-else>{{ tx.type === 'inc' ? '+' : '-' }}{{ fCurr(tx.amount) }}</template>
                     </template>
@@ -273,7 +273,7 @@ import { useI18n } from 'vue-i18n'
 import Icon from '../ui/Icon.vue'
 import { useFormatters } from '../../composables/ui/useFormatters'
 import { useCategories } from '../../composables/data/useCategories'
-import { useCurrency } from '../../composables/api/useCurrency'
+import { useCurrency, type Currency } from '../../composables/api/useCurrency'
 import { getLocalized } from '../../composables/data/useI18nData'
 import type { TransactionItem } from '../../types/data'
 
