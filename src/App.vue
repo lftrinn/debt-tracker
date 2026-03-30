@@ -232,7 +232,7 @@ let overTimer: ReturnType<typeof setTimeout> | null = null
 
 // ─── Notifications ────────────────────────────────────────────────────────
 const { requestPermission, checkDailyLimit } = useNotifications()
-const { pushStatus, checkPushStatus, registerServiceWorker, enablePushNotifications, notifyOverLimit } = usePushNotifications()
+const { pushStatus, checkPushStatus, registerServiceWorker, enablePushNotifications, notifyOverLimit, sendDailyStatus } = usePushNotifications()
 
 // ─── Toast ────────────────────────────────────────────────────────────────
 const { toastMsg, toastType, toastTrigger, toast } = useToast()
@@ -358,9 +358,17 @@ watch(todaySpent, (newSpent, oldSpent) => {
     // Push notification (qua Worker) khi đã subscribe, Web Notification nếu không
     if (pushStatus.value === 'granted') {
       notifyOverLimit(newSpent, dayLimit.value)
+      sendDailyStatus(newSpent, dayLimit.value)
     } else {
       checkDailyLimit(newSpent, dayLimit.value)
     }
+  }
+})
+
+// Gửi trạng thái hạn mức khi app sẵn sàng (để cập nhật notification trên lock screen)
+watch(appState, (state) => {
+  if (state === 'ready') {
+    sendDailyStatus(todaySpent.value, dayLimit.value)
   }
 })
 

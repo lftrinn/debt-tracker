@@ -1,13 +1,15 @@
 self.addEventListener('push', (event) => {
   const data = event.data?.json() || {}
+  const options = {
+    body: data.body || '',
+    icon: '/debt-tracker/icon.svg',
+    badge: '/debt-tracker/icon.svg',
+    data: { url: data.url || '/debt-tracker/' },
+    requireInteraction: false,
+  }
+  if (data.tag) options.tag = data.tag
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Debt Tracker', {
-      body: data.body || '',
-      icon: '/debt-tracker/icon.svg',
-      badge: '/debt-tracker/icon.svg',
-      data: { url: data.url || '/debt-tracker/' },
-      requireInteraction: false,
-    })
+    self.registration.showNotification(data.title || 'Debt Tracker', options)
   )
 })
 

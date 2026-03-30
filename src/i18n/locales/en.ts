@@ -362,6 +362,10 @@ export default {
     title: 'Spending alert',
     warn: 'Spent {spent}/{limit} ({pct}% of daily limit)',
     over: 'Over limit! Spent {spent}/{limit} today',
+    status: {
+      title: 'Daily limit',
+      body: 'Spent {spent}/{limit} ({pct}%)',
+    },
   },
   toast: {
     expAdded: 'Expense added',

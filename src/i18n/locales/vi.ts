@@ -362,6 +362,10 @@ export default {
     title: 'Cảnh báo chi tiêu',
     warn: 'Đã chi {spent}/{limit} ({pct}% hạn mức ngày)',
     over: 'Vượt hạn mức! Đã chi {spent}/{limit} hôm nay',
+    status: {
+      title: 'Hạn mức trong ngày',
+      body: 'Đã chi {spent}/{limit} ({pct}%)',
+    },
   },
   toast: {
     expAdded: 'Đã thêm chi tiêu',

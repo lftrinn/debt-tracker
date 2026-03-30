@@ -163,7 +163,6 @@ export function usePushNotifications() {
 
   /**
    * Gửi push notification qua Worker khi chi tiêu vượt hạn mức.
-   * Chỉ gọi khi document.visibilityState === 'hidden'.
    * Dùng chung localStorage deduplication key với useNotifications.
    */
   async function notifyOverLimit(todaySpent: number, dayLimit: number): Promise<void> {
@@ -209,6 +208,38 @@ export function usePushNotifications() {
     }
   }
 
+  /**
+   * Gửi push "trạng thái hạn mức" với tag cố định để thay thế notification cũ trên iOS.
+   * Gọi khi app khởi động và sau mỗi lần chi tiêu thay đổi.
+   */
+  async function sendDailyStatus(todaySpent: number, dayLimit: number): Promise<void> {
+    if (dayLimit <= 0) return
+    if (pushStatus.value !== 'granted') return
+
+    const workerUrl = getWorkerUrl()
+    if (!workerUrl) return
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const t = (i18n.global as any).t as (key: string, values?: Record<string, unknown>) => string
+    const { fCurr } = useCurrency()
+    const spent = fCurr(todaySpent)
+    const limit = fCurr(dayLimit)
+    const pct = Math.round((todaySpent / dayLimit) * 100)
+
+    const title = t('notification.status.title')
+    const body = t('notification.status.body', { spent, limit, pct })
+
+    try {
+      await fetch(`${workerUrl}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, body, tag: 'daily-limit-status' }),
+      })
+    } catch {
+      // silent — không crash khi offline
+    }
+  }
+
   return {
     pushStatus,
     checkPushStatus,
@@ -217,5 +248,6 @@ export function usePushNotifications() {
     setWorkerUrl,
     enablePushNotifications,
     notifyOverLimit,
+    sendDailyStatus,
   }
 }
