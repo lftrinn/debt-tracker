@@ -46,7 +46,7 @@
       <div ref="alertRef" v-if="isOver" class="alert over"><Icon name="alert-triangle" :size="14" /> {{ $t('app.alert.over') }}{{ hz('alert') ? '•••' : fCurrFull(todaySpent - dayLimit) }}</div>
       <div ref="alertRef" v-else-if="dayLimit > 0" class="alert ok">
         <Icon name="check" :size="14" />
-        <span class="alert-main">{{ hz('alert') ? '•••' : $t('app.alert.okMain', { amount: fCurr(dayLimit - todaySpent), limit: fCurr(dayLimit) }) }}</span>
+        <span class="alert-main">{{ $t('app.alert.okMain', { amount: hz('alert') ? '****' : fCurr(dayLimit - todaySpent), limit: hz('alert') ? '****' : fCurr(dayLimit) }) }}</span>
         <span v-if="cashDaysLeft !== null && cashDaysLeft < dToSalary" class="alert-badge-warn">{{ hz('alert') ? '•/•' : $t('app.alert.days', { days: cashDaysLeft, salary: dToSalary }) }}</span>
       </div>
 
