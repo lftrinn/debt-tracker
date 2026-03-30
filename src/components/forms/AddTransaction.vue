@@ -313,6 +313,6 @@ function addInc() {
 .add-form__dual-inputs .add-form__input { flex: 1; min-width: 0; padding-right: 8px; }
 .add-form__dual-sep { font-family: var(--mono); font-size: 10px; color: var(--muted); flex-shrink: 0; }
 .add-form__submit { background: var(--accent); color: var(--bg); border: none; border-radius: 9px; padding: 11px; font-family: var(--sans); font-size: 13px; font-weight: 800; cursor: pointer; letter-spacing: .05em; transition: all .2s; }
-.add-form__submit:hover { opacity: .9; transform: translateY(-1px); }
+.add-form__submit:active { opacity: .8; transform: scale(.98); }
 .add-form__submit:disabled { opacity: .3; cursor: not-allowed; transform: none; }
 </style>

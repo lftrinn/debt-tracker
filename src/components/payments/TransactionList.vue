@@ -83,9 +83,6 @@ defineEmits(['open-detail'])
 .tx-list__item--inc { border-left-color: var(--accent3); }
 .tx-list__item--inc .tx-list__item-icon { background: rgba(var(--accent3-rgb),.12); color: var(--accent3); }
 .tx-list__item:active { background: var(--border); }
-.tx-list__item:hover { border-color: var(--border); }
-.tx-list__item--exp:hover { border-left-color: var(--accent2); }
-.tx-list__item--inc:hover { border-left-color: var(--accent3); }
 @keyframes si { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 .tx-list__item-icon { font-size: 16px; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border-radius: 50%; }
 .tx-list__item-info { flex: 1; min-width: 0; }

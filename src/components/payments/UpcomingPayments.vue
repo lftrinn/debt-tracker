@@ -550,13 +550,13 @@ function submitOneTime() {
 .upcoming__amt-col { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
 .upcoming__amt { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--accent2); flex-shrink: 0; min-width: 5.5ch; text-align: right; }
 .upcoming__shortage { font-family: var(--mono); font-size: 9px; color: var(--accent6); text-align: right; white-space: nowrap; }
-.upcoming__check-btn { background: none; border: 1px solid rgba(var(--accent3-rgb),.3); border-radius: 6px; color: var(--accent3); width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s; flex-shrink: 0; padding: 0; }
-.upcoming__check-btn:hover { background: rgba(var(--accent3-rgb),.12); border-color: var(--accent3); }
-.upcoming__check-btn--disabled { border-color: var(--border); color: var(--muted); cursor: not-allowed; opacity: .5; }
-.upcoming__check-btn--done { border-color: rgba(var(--accent-rgb),.3); color: var(--accent); }
-.upcoming__check-btn--done:hover { background: rgba(var(--accent-rgb),.12); border-color: var(--accent); }
-.upcoming__edit-btn { background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s; flex-shrink: 0; padding: 0; }
-.upcoming__edit-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--accent); }
+.upcoming__check-btn { background: rgba(var(--accent3-rgb),.12); border: 1px solid var(--accent3); border-radius: 6px; color: var(--accent3); width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s; flex-shrink: 0; padding: 0; }
+.upcoming__check-btn:active { opacity: .7; transform: scale(.93); }
+.upcoming__check-btn--disabled { background: none; border-color: var(--border); color: var(--muted); cursor: not-allowed; opacity: .5; }
+.upcoming__check-btn--done { background: rgba(var(--accent-rgb),.12); border-color: var(--accent); color: var(--accent); }
+.upcoming__check-btn--done:active { opacity: .7; transform: scale(.93); }
+.upcoming__edit-btn { background: rgba(var(--accent-rgb),.08); border: 1px solid var(--accent); border-radius: 6px; color: var(--text); width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all .2s; flex-shrink: 0; padding: 0; }
+.upcoming__edit-btn:active { opacity: .7; }
 /* Input với suffix ký hiệu tiền tệ bên phải */
 .upcoming__input-wrap { position: relative; display: flex; align-items: center; }
 .upcoming__input-wrap .popup-input { flex: 1; padding-right: 44px; min-width: 0; }

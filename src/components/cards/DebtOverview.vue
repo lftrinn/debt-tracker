@@ -273,9 +273,8 @@ function saveEdit() {
 .debt-overview { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px 20px; margin-bottom: 12px; position: relative; overflow: hidden; }
 .debt-overview::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--accent2), transparent); }
 .debt-overview__label { font-family: var(--mono); font-size: 9px; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
-.debt-overview__prog-toggle { margin-left: auto; display: inline-flex; align-items: center; gap: 3px; background: rgba(var(--accent-rgb),.08); border: 1px solid rgba(var(--accent-rgb),.18); border-radius: 5px; padding: 2px 6px; color: var(--muted); font-family: var(--mono); font-size: 8px; font-weight: 700; cursor: pointer; transition: all .15s; letter-spacing: 0; text-transform: none; -webkit-tap-highlight-color: transparent; }
-.debt-overview__prog-toggle:hover { color: var(--accent); border-color: rgba(var(--accent-rgb),.4); background: rgba(var(--accent-rgb),.14); }
-.debt-overview__prog-toggle:active { transform: scale(.95); }
+.debt-overview__prog-toggle { margin-left: auto; display: inline-flex; align-items: center; gap: 3px; background: rgba(var(--accent-rgb),.14); border: 1px solid rgba(var(--accent-rgb),.4); border-radius: 5px; padding: 2px 6px; color: var(--accent); font-family: var(--mono); font-size: 8px; font-weight: 700; cursor: pointer; transition: all .15s; letter-spacing: 0; text-transform: none; -webkit-tap-highlight-color: transparent; }
+.debt-overview__prog-toggle:active { transform: scale(.95); opacity: .75; }
 .debt-overview__total { font-family: var(--mono); font-size: 32px; font-weight: 700; color: var(--accent2); line-height: 1; letter-spacing: -1px; }
 .debt-overview__cards { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 13px; }
 .debt-overview__card { background: var(--surface2); border-radius: 10px; padding: 9px 10px; border: 1px solid var(--border); border-left: 3px solid var(--border); }
@@ -290,8 +289,8 @@ function saveEdit() {
 .debt-overview__trend-pay { color: var(--accent3); opacity: .8; animation: trendAppear .25s ease-out; }
 /* Header trend icon: spending → cam, payment → xanh */
 .trend-ico.down { color: var(--accent6); }
-.debt-overview__card-edit { background: none; border: none; color: var(--muted); width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: color .2s; flex-shrink: 0; padding: 0; opacity: .5; }
-.debt-overview__card-edit:hover { color: var(--accent); opacity: 1; }
+.debt-overview__card-edit { background: none; border: none; color: var(--accent); width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: color .2s; flex-shrink: 0; padding: 0; }
+.debt-overview__card-edit:active { opacity: .6; transform: scale(.9); }
 .debt-overview__card-r2 { display: flex; align-items: baseline; justify-content: space-between; }
 .debt-overview__card-bal { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--accent2); letter-spacing: -.3px; }
 .debt-overview__card-rate { font-family: var(--mono); font-size: 9px; color: var(--muted); }

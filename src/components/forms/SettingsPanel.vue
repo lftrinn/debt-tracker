@@ -604,20 +604,20 @@ defineExpose({})
 /* Hide zones treeview */
 .settings__hz-tree { display: flex; flex-direction: column; gap: 4px; max-height: 310px; overflow-y: auto; }
 .settings__hz-group { margin-bottom: 2px; }
-.settings__hz-parent { display: flex; align-items: center; gap: 9px; padding: 8px 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; user-select: none; transition: all .15s; }
+.settings__hz-parent { display: flex; align-items: center; gap: 9px; padding: 8px 12px; background: var(--surface2); border: 1px solid var(--muted); border-radius: 9px; user-select: none; transition: all .15s; }
 .settings__hz-group--expanded .settings__hz-parent { border-radius: 9px 9px 4px 4px; }
-.settings__hz-parent:hover { border-color: var(--muted); }
+.settings__hz-parent:active { opacity: .8; }
 .settings__hz-parent--checked { border-color: var(--accent); background: rgba(var(--accent-rgb),.04); }
 .settings__hz-parent--partial { border-color: rgba(var(--accent-rgb),.35); background: rgba(var(--accent-rgb),.02); }
 .settings__hz-parent-check { display: flex; align-items: center; cursor: pointer; }
-.settings__hz-toggle { background: none; border: none; padding: 2px 4px; cursor: pointer; color: var(--muted); font-size: 13px; line-height: 1; transition: color .15s; }
-.settings__hz-toggle:hover { color: var(--text); }
+.settings__hz-toggle { background: none; border: none; padding: 2px 4px; cursor: pointer; color: var(--text); font-size: 13px; line-height: 1; transition: color .15s; }
+.settings__hz-toggle:active { opacity: .7; }
 .settings__hz-arrow { display: inline-block; transition: transform .2s ease; }
 .settings__hz-arrow--open { transform: rotate(90deg); }
 .settings__hz-children { display: flex; flex-direction: column; gap: 0; padding-left: 20px; }
 .settings__hz-child { display: flex; align-items: center; gap: 9px; padding: 6px 12px; background: var(--bg); border: 1px solid var(--border); border-top: none; cursor: pointer; user-select: none; transition: all .15s; }
 .settings__hz-child:last-child { border-radius: 0 0 9px 9px; }
-.settings__hz-child:hover { background: var(--surface2); }
+.settings__hz-child:active { background: var(--surface2); }
 .settings__hz-child--checked { background: rgba(var(--accent-rgb),.03); }
 .settings__hz-child-name { font-size: 11px; color: var(--muted); }
 .settings__hz-child--checked .settings__hz-child-name { color: var(--text); }
@@ -635,8 +635,8 @@ defineExpose({})
 .settings__logout-hint { text-align: center; font-family: var(--sans); font-size: 12px; color: var(--muted); margin: 0; line-height: 1.5; }
 
 /* Popup modifiers (only used here) */
-.settings__popup-btn--danger { background: rgba(var(--danger-rgb),.12); color: var(--danger); border: 1px solid rgba(var(--danger-rgb),.25); }
-.settings__popup-btn--danger:hover { background: rgba(var(--danger-rgb),.2); opacity: 1; }
+.settings__popup-btn--danger { background: rgba(var(--danger-rgb),.2); color: var(--danger); border: 1px solid rgba(var(--danger-rgb),.25); }
+.settings__popup-btn--danger:active { opacity: .8; }
 .settings__popup-actions--gap { flex-direction: row; gap: 10px; }
 .settings__popup-actions--gap .popup-btn { flex: 1; }
 
