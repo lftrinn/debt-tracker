@@ -364,17 +364,10 @@ export default {
     title: 'Spending alert',
     warn: 'Spent {spent}/{limit} ({pct}% of daily limit)',
     over: 'Over limit! Spent {spent}/{limit} today',
-    status: {
-      title: 'Daily limit',
-      body: 'Spent {spent}/{limit} ({pct}%)',
-    },
-    cashUpdate: {
-      title: 'Cash balance',
-      body: 'Available: {cash} · Today: {spent}',
-    },
-    debtUpdate: {
-      title: 'Total debt',
-      body: '{debt}',
+    summary: {
+      title: 'Debt Tracker',
+      body: 'Cash: {cash} · Today: {spent}/{limit}\nTotal debt: {debt}\nDaily limit: {remaining} left',
+      bodyOver: 'Cash: {cash} · Today: {spent}/{limit}\nTotal debt: {debt}\n⚠ Over limit by {over}',
     },
   },
   toast: {

@@ -364,17 +364,10 @@ export default {
     title: 'Cảnh báo chi tiêu',
     warn: 'Đã chi {spent}/{limit} ({pct}% hạn mức ngày)',
     over: 'Vượt hạn mức! Đã chi {spent}/{limit} hôm nay',
-    status: {
-      title: 'Hạn mức trong ngày',
-      body: 'Đã chi {spent}/{limit} ({pct}%)',
-    },
-    cashUpdate: {
-      title: 'Tiền mặt',
-      body: 'Còn: {cash} · Chi hôm nay: {spent}',
-    },
-    debtUpdate: {
-      title: 'Tổng nợ',
-      body: '{debt}',
+    summary: {
+      title: 'Debt Tracker',
+      body: 'Tiền mặt: {cash} · Chi hôm nay: {spent}/{limit}\nTổng nợ: {debt}\nHạn mức: còn {remaining}/ngày',
+      bodyOver: 'Tiền mặt: {cash} · Chi hôm nay: {spent}/{limit}\nTổng nợ: {debt}\n⚠ Vượt hạn mức {over}',
     },
   },
   toast: {
