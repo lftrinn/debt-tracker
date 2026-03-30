@@ -91,6 +91,7 @@ export default {
     remaining: 'Còn',
     progressModeRepaid: '% đã trả',
     progressModeUsed: '% đã dùng',
+    daysUnit: 'n',
   },
   progress: {
     title: 'Tiến độ thoát nợ',
@@ -366,6 +367,14 @@ export default {
     status: {
       title: 'Hạn mức trong ngày',
       body: 'Đã chi {spent}/{limit} ({pct}%)',
+    },
+    cashUpdate: {
+      title: 'Tiền mặt',
+      body: 'Còn: {cash} · Chi hôm nay: {spent}',
+    },
+    debtUpdate: {
+      title: 'Tổng nợ',
+      body: '{debt}',
     },
   },
   toast: {

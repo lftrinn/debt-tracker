@@ -67,8 +67,8 @@
             <span class="debt-overview__min-val">{{ fCurr(c.plannedPayment && !c.plannedPayment.isMin ? c.plannedPayment.amount : c.min) }}</span>
           </template>
           <template v-if="!c.minPaid && c.minDaysLeft !== null">
-            <span v-if="c.minDaysLeft <= 0" class="debt-overview__min-tag debt-overview__min-tag--overdue">-{{ Math.abs(c.minDaysLeft) }}d</span>
-            <span v-else-if="c.minDaysLeft <= 7" class="debt-overview__min-tag" :class="c.minDaysLeft <= 3 ? 'debt-overview__min-tag--urgent' : 'debt-overview__min-tag--soon'">{{ c.minDaysLeft }}d</span>
+            <span v-if="c.minDaysLeft <= 0" class="debt-overview__min-tag debt-overview__min-tag--overdue">-{{ Math.abs(c.minDaysLeft) }}{{ $t('debt.daysUnit') }}</span>
+            <span v-else-if="c.minDaysLeft <= 7" class="debt-overview__min-tag" :class="c.minDaysLeft <= 3 ? 'debt-overview__min-tag--urgent' : 'debt-overview__min-tag--soon'">{{ c.minDaysLeft }}{{ $t('debt.daysUnit') }}</span>
           </template>
           <template v-if="c.minDueDate">
             <Icon v-if="!c.minPaid && c.minDaysLeft !== null && c.minDaysLeft <= 3" name="alert-triangle" :size="9" class="debt-overview__min-warn" />

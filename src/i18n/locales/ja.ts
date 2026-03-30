@@ -91,6 +91,7 @@ export default {
     remaining: '残り',
     progressModeRepaid: '% 返済済',
     progressModeUsed: '% 使用済',
+    daysUnit: '日',
   },
   progress: {
     title: '返済進捗',
@@ -366,6 +367,14 @@ export default {
     status: {
       title: '今日の上限',
       body: '{spent}/{limit}を支出（{pct}%）',
+    },
+    cashUpdate: {
+      title: '現金残高',
+      body: '残高: {cash} · 本日: {spent}',
+    },
+    debtUpdate: {
+      title: '総負債',
+      body: '{debt}',
     },
   },
   toast: {

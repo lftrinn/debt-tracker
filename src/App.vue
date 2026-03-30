@@ -232,7 +232,7 @@ let overTimer: ReturnType<typeof setTimeout> | null = null
 
 // ─── Notifications ────────────────────────────────────────────────────────
 const { requestPermission, checkDailyLimit } = useNotifications()
-const { pushStatus, checkPushStatus, registerServiceWorker, enablePushNotifications, notifyOverLimit, sendDailyStatus, sendDailyStatusOnAppReady, updateLocale } = usePushNotifications()
+const { pushStatus, checkPushStatus, registerServiceWorker, enablePushNotifications, notifyOverLimit, sendDailyStatus, sendDailyStatusOnAppReady, updateLocale, sendCashUpdate, sendDebtUpdate } = usePushNotifications()
 
 // ─── Toast ────────────────────────────────────────────────────────────────
 const { toastMsg, toastType, toastTrigger, toast } = useToast()
@@ -284,9 +284,9 @@ const localizedRules = computed(() => [
 const cashAnimKey = ref(0)
 const spentAnimKey = ref(0)
 const debtAnimKey = ref(0)
-watch(availCash, () => { cashAnimKey.value++ })
+watch(availCash, (newCash) => { cashAnimKey.value++; sendCashUpdate(newCash, todaySpent.value) })
 watch(todaySpent, () => { spentAnimKey.value++ })
-watch(totalDebt, () => { debtAnimKey.value++ })
+watch(totalDebt, (newDebt) => { debtAnimKey.value++; sendDebtUpdate(newDebt) })
 
 // ─── Over-limit blink logic ───────────────────────────────────────────────
 watch([todaySpent, limSt], ([spent, st], [oldSpent]) => {

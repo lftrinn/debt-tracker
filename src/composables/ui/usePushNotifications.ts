@@ -12,6 +12,9 @@ const NOTIF_LEVELS_KEY = 'dt_notif_levels'
 // Throttle + daily-once cho sendDailyStatus
 const STATUS_THROTTLE_KEY = 'dt_status_last_sent'
 const STATUS_DATE_KEY = 'dt_status_sent_date'
+// Throttle 30s cho cash/debt update notifications
+const CASH_UPDATE_THROTTLE_KEY = 'dt_cash_update_sent'
+const DEBT_UPDATE_THROTTLE_KEY = 'dt_debt_update_sent'
 // Toggle bật/tắt status notification (mặc định TẮT)
 const PUSH_STATUS_ENABLED_KEY = 'dt_push_status_enabled'
 
@@ -314,6 +317,72 @@ export function usePushNotifications() {
   }
 
   /**
+   * Gửi push khi tiền mặt khả dụng thay đổi.
+   * Tag 'cash-update' để replace notification cũ. Throttle 30 giây.
+   */
+  async function sendCashUpdate(availCash: number, todaySpent: number): Promise<void> {
+    if (pushStatus.value !== 'granted') return
+    if (!pushStatusEnabled.value) return
+
+    const lastSent = parseInt(localStorage.getItem(CASH_UPDATE_THROTTLE_KEY) || '0', 10)
+    if (Date.now() - lastSent < 30 * 1000) return
+    localStorage.setItem(CASH_UPDATE_THROTTLE_KEY, String(Date.now()))
+
+    const workerUrl = getWorkerUrl()
+    if (!workerUrl) return
+
+    const { fCurr } = useCurrency()
+    const payloads = buildAllLocalePayloads(
+      'notification.cashUpdate.title',
+      'notification.cashUpdate.body',
+      { cash: fCurr(availCash), spent: fCurr(todaySpent) }
+    )
+
+    try {
+      await fetch(`${workerUrl}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payloads, tag: 'cash-update' }),
+      })
+    } catch {
+      // silent
+    }
+  }
+
+  /**
+   * Gửi push khi tổng nợ thay đổi.
+   * Tag 'debt-update' để replace notification cũ. Throttle 30 giây.
+   */
+  async function sendDebtUpdate(totalDebt: number): Promise<void> {
+    if (pushStatus.value !== 'granted') return
+    if (!pushStatusEnabled.value) return
+
+    const lastSent = parseInt(localStorage.getItem(DEBT_UPDATE_THROTTLE_KEY) || '0', 10)
+    if (Date.now() - lastSent < 30 * 1000) return
+    localStorage.setItem(DEBT_UPDATE_THROTTLE_KEY, String(Date.now()))
+
+    const workerUrl = getWorkerUrl()
+    if (!workerUrl) return
+
+    const { fCurrFull } = useCurrency()
+    const payloads = buildAllLocalePayloads(
+      'notification.debtUpdate.title',
+      'notification.debtUpdate.body',
+      { debt: fCurrFull(totalDebt) }
+    )
+
+    try {
+      await fetch(`${workerUrl}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payloads, tag: 'debt-update' }),
+      })
+    } catch {
+      // silent
+    }
+  }
+
+  /**
    * Gửi trạng thái khi app sẵn sàng — chỉ 1 lần/ngày.
    * Dùng localStorage key dt_status_sent_date để track ngày đã gửi.
    */
@@ -338,5 +407,7 @@ export function usePushNotifications() {
     notifyOverLimit,
     sendDailyStatus,
     sendDailyStatusOnAppReady,
+    sendCashUpdate,
+    sendDebtUpdate,
   }
 }

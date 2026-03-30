@@ -55,7 +55,7 @@ export function useDebtData(d: Ref<AppData>) {
     const now = new Date()
     if (locale === 'en') return now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
     if (locale === 'ja') return now.toLocaleDateString('ja-JP', { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' })
-    return now.toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })
+    return now.toLocaleDateString('vi-VN', { weekday: 'narrow', day: '2-digit', month: '2-digit', year: 'numeric' })
   })
 
   // ─── Daily / monthly spending ─────────────────────────────────────────

@@ -91,6 +91,7 @@ export default {
     remaining: 'Remaining',
     progressModeRepaid: '% repaid',
     progressModeUsed: '% used',
+    daysUnit: 'd',
   },
   progress: {
     title: 'Debt payoff progress',
@@ -366,6 +367,14 @@ export default {
     status: {
       title: 'Daily limit',
       body: 'Spent {spent}/{limit} ({pct}%)',
+    },
+    cashUpdate: {
+      title: 'Cash balance',
+      body: 'Available: {cash} · Today: {spent}',
+    },
+    debtUpdate: {
+      title: 'Total debt',
+      body: '{debt}',
     },
   },
   toast: {
