@@ -212,7 +212,7 @@ const { syncSt, syncMsg, syncTime, syncing, isConfigured } = api
 const { fN, tStr } = useFormatters()
 const { fCurr, fCurrFull, fetchRates } = useCurrency()
 fetchRates()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const syncMsgText = computed(() => t(syncMsg.value))
 
 // ─── UI state ─────────────────────────────────────────────────────────────
@@ -232,7 +232,7 @@ let overTimer: ReturnType<typeof setTimeout> | null = null
 
 // ─── Notifications ────────────────────────────────────────────────────────
 const { requestPermission, checkDailyLimit } = useNotifications()
-const { pushStatus, checkPushStatus, registerServiceWorker, enablePushNotifications, notifyOverLimit, sendDailyStatus } = usePushNotifications()
+const { pushStatus, checkPushStatus, registerServiceWorker, enablePushNotifications, notifyOverLimit, sendDailyStatus, sendDailyStatusOnAppReady, updateLocale } = usePushNotifications()
 
 // ─── Toast ────────────────────────────────────────────────────────────────
 const { toastMsg, toastType, toastTrigger, toast } = useToast()
@@ -365,11 +365,16 @@ watch(todaySpent, (newSpent, oldSpent) => {
   }
 })
 
-// Gửi trạng thái hạn mức khi app sẵn sàng (để cập nhật notification trên lock screen)
+// Gửi trạng thái hạn mức khi app sẵn sàng — chỉ 1 lần/ngày
 watch(appState, (state) => {
   if (state === 'ready') {
-    sendDailyStatus(todaySpent.value, dayLimit.value)
+    sendDailyStatusOnAppReady(todaySpent.value, dayLimit.value)
   }
+})
+
+// Re-subscribe với locale mới khi user đổi ngôn ngữ
+watch(locale, () => {
+  updateLocale()
 })
 
 async function handleEnablePush(): Promise<void> {

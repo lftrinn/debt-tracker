@@ -11,6 +11,7 @@ export interface Env {
 interface StoredSub {
   endpoint: string
   keys: { p256dh: string; auth: string }
+  locale?: string
 }
 
 // ─── Base64url helpers ────────────────────────────────────────────────────
@@ -249,14 +250,15 @@ export default {
       return jsonErr('Invalid JSON', 400, origin)
     }
 
-    // POST /subscribe — store subscription in KV
+    // POST /subscribe — store subscription in KV (with locale)
     if (url.pathname === '/subscribe') {
       const sub = body as unknown as StoredSub
       if (!sub?.endpoint || !sub?.keys?.p256dh || !sub?.keys?.auth) {
         return jsonErr('Invalid subscription object', 400, origin)
       }
+      const locale = (body.locale as string | undefined) || 'vi'
       const key = await subKey(sub.endpoint)
-      await env.PUSH_SUBS.put(key, JSON.stringify(sub))
+      await env.PUSH_SUBS.put(key, JSON.stringify({ endpoint: sub.endpoint, keys: sub.keys, locale }))
       return jsonOk({ ok: true }, origin)
     }
 
@@ -269,11 +271,23 @@ export default {
     }
 
     // POST /send — send push notification to all subscribers
+    // Accepts { payloads: { vi: {title,body}, en: {title,body}, ja: {title,body} }, tag? }
+    // or legacy { title, body, tag? }
     if (url.pathname === '/send') {
-      const { title, body: msgBody } = body as { title?: string; body?: string }
-      if (!title) return jsonErr('Missing title', 400, origin)
+      const {
+        title,
+        body: msgBody,
+        tag,
+        payloads,
+      } = body as {
+        title?: string
+        body?: string
+        tag?: string
+        payloads?: Record<string, { title: string; body: string }>
+      }
 
-      const payload = JSON.stringify({ title, body: msgBody ?? '' })
+      if (!payloads && !title) return jsonErr('Missing title or payloads', 400, origin)
+
       const { keys } = await env.PUSH_SUBS.list({ prefix: 'sub:' })
 
       let sent = 0
@@ -281,6 +295,21 @@ export default {
         const raw = await env.PUSH_SUBS.get(name)
         if (!raw) continue
         const sub: StoredSub = JSON.parse(raw)
+
+        // Per-locale payload: pick the locale for this subscription
+        let localTitle: string
+        let localBody: string
+        if (payloads) {
+          const locale = sub.locale || 'vi'
+          const p = payloads[locale] || payloads['vi'] || { title: '', body: '' }
+          localTitle = p.title
+          localBody = p.body
+        } else {
+          localTitle = title ?? ''
+          localBody = msgBody ?? ''
+        }
+
+        const payload = JSON.stringify({ title: localTitle, body: localBody, ...(tag ? { tag } : {}) })
         const ok = await sendPush(sub, payload, env)
         if (!ok) {
           // 404/410 from push service — subscription expired, remove it

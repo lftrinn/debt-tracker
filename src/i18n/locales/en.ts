@@ -282,6 +282,7 @@ export default {
         unsupported: 'Not supported',
       },
       enableBtn: 'Enable notifications',
+      statusEnabled: 'Show daily limit status',
       workerUrl: 'Cloudflare Worker URL',
       workerUrlPlaceholder: 'https://debt-tracker-push.xxx.workers.dev',
       saveWorker: 'Save Worker URL',
