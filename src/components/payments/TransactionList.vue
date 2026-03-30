@@ -53,7 +53,7 @@
       </div>
     </div>
 
-    <!-- Quick stats (card only) -->
+    <!-- Quick stats -->
     <div v-if="thisMonthExp > 0" class="tx-stats">
       <span class="tx-stats__label">{{ $t('transactions.statsThisMonth') }}:</span>
       <span class="tx-stats__num">{{ hide ? '•••••' : fCurr(thisMonthExp) }}</span>
@@ -76,9 +76,9 @@
     <!-- Empty state -->
     <div v-if="!filteredItems.length" class="tx-list__empty">{{ $t('transactions.empty') }}</div>
 
-    <!-- Preview grouped list -->
+    <!-- Grouped list (preview or expanded) -->
     <div v-else class="tx-list__list">
-      <template v-for="group in previewGroups" :key="group.date">
+      <template v-for="group in showAll ? allGroups : previewGroups" :key="group.date">
         <div class="tx-list__day-hdr">
           <span class="tx-list__day-label">{{ group.label }}</span>
           <span class="tx-list__day-meta">
@@ -132,120 +132,11 @@
       </template>
     </div>
 
-    <!-- View all button -->
-    <button v-if="filteredItems.length > 4" class="tx-list__view-all" @click="openFullscreen">
-      {{ $t('transactions.viewAll', { n: filteredItems.length }) }}
-      <Icon name="chevron-right" :size="12" />
+    <!-- Expand / Collapse button -->
+    <button v-if="filteredItems.length > 4" class="tx-list__view-all" @click="showAll = !showAll">
+      {{ showAll ? $t('transactions.collapse') : $t('transactions.viewAll', { n: filteredItems.length }) }}
+      <Icon :name="showAll ? 'chevron-up' : 'chevron-right'" :size="12" />
     </button>
-
-    <!-- Fullscreen overlay -->
-    <Teleport to="body">
-      <Transition name="tx-slide">
-        <div v-if="showAll" class="tx-fullscreen">
-          <div class="tx-fullscreen__inner">
-          <!-- Fullscreen header -->
-          <div class="tx-fullscreen__hdr">
-            <span class="tx-fullscreen__title">{{ $t('transactions.title') }}</span>
-            <button class="tx-fullscreen__close" @click="closeFullscreen">
-              <Icon name="x" :size="20" />
-            </button>
-          </div>
-
-          <!-- Filter bar (fullscreen) -->
-          <div class="tx-filter tx-filter--full">
-            <div class="tx-filter__type">
-              <button
-                v-for="ft in typeFilters"
-                :key="ft.value"
-                class="tx-filter__btn"
-                :class="{ 'tx-filter__btn--active': filterType === ft.value }"
-                @click="setType(ft.value)"
-              >{{ ft.label }}</button>
-            </div>
-            <div v-if="availableCats.length > 1" class="tx-filter__cats">
-              <button
-                v-for="cat in availableCats"
-                :key="cat.key"
-                class="tx-filter__cat"
-                :class="{ 'tx-filter__cat--active': filterCat === cat.key }"
-                @click="filterCat = filterCat === cat.key ? '' : cat.key"
-              ><Icon :name="cat.icon" :size="9" class="tx-filter__cat-ico" />{{ cat.label }}</button>
-            </div>
-            <div class="tx-filter__search-wrap">
-              <Icon name="search" :size="11" class="tx-filter__search-ico" />
-              <input
-                class="tx-filter__search"
-                v-model="searchRaw"
-                :placeholder="$t('transactions.search')"
-                type="search"
-                autocomplete="off"
-              />
-              <button v-if="searchRaw" class="tx-filter__search-clear" @click="clearSearch">
-                <Icon name="x" :size="10" />
-              </button>
-            </div>
-          </div>
-
-          <!-- Full grouped list -->
-          <div class="tx-fullscreen__list">
-            <div v-if="!filteredItems.length" class="tx-list__empty">{{ $t('transactions.empty') }}</div>
-            <template v-else v-for="group in allGroups" :key="group.date">
-              <div class="tx-list__day-hdr tx-list__day-hdr--sticky">
-                <span class="tx-list__day-label">{{ group.label }}</span>
-                <span class="tx-list__day-meta">
-                  <span v-if="group.totalInc > 0" class="tx-list__day-inc">{{ hide ? '+•••••' : '+' + fCurr(group.totalInc) }}</span>
-                  <span v-if="group.totalExp > 0" class="tx-list__day-exp">{{ hide ? '-•••••' : '-' + fCurr(group.totalExp) }}</span>
-                </span>
-              </div>
-              <div
-                v-for="tx in group.items"
-                :key="tx.id"
-                class="tx-swipe"
-                @touchstart="onSwipeTouchStart($event, tx)"
-                @touchmove="onSwipeTouchMove($event, tx)"
-                @touchend="onSwipeTouchEnd($event, tx)"
-              >
-                <div class="tx-swipe__action tx-swipe__action--clone">
-                  <Icon name="copy" :size="15" />
-                  <span>{{ $t('transactions.swipeClone') }}</span>
-                </div>
-                <div class="tx-swipe__action tx-swipe__action--delete">
-                  <Icon name="trash-2" :size="15" />
-                  <span>{{ $t('transactions.swipeDelete') }}</span>
-                </div>
-                <div
-                  class="tx-list__item"
-                  :class="tx.type === 'inc' ? 'tx-list__item--inc' : 'tx-list__item--exp'"
-                  :style="swipeItemStyle(tx.id)"
-                  @click="onItemClick(tx)"
-                >
-                  <div class="tx-list__item-icon"><Icon :name="resolveCat(tx.cat).icon" :size="16" /></div>
-                  <div class="tx-list__item-info">
-                    <div class="tx-list__item-name">{{ getLocalized(tx, 'desc', locale) }}</div>
-                    <div class="tx-list__item-meta">{{ resolveCat(tx.cat).label }}{{ tx.payMethod && tx.payMethod !== 'cash' ? ' · 💳' : '' }}{{ tx.time ? ' · ' + tx.time : '' }}</div>
-                    <div v-if="tx.note" class="tx-list__item-note">{{ tx.note }}</div>
-                    <div v-if="tx.tags && tx.tags.length" class="tx-list__item-tags">
-                      <span v-for="tag in tx.tags" :key="tag" class="tx-list__item-tag">#{{ tag }}</span>
-                    </div>
-                  </div>
-                  <div class="tx-list__item-amt" :style="{ color: tx.type === 'inc' ? 'var(--accent3)' : 'var(--accent2)' }">
-                    <template v-if="hide"><span class="masked">•••••</span></template>
-                    <template v-else>
-                      <template v-if="tx.currency && tx.currency !== displayCurrency">
-                        <span>{{ tx.type === 'inc' ? '+' : '-' }}{{ fCurrFor(tx.amount, tx.currency as Currency) }}</span>
-                        <span class="tx-list__item-equiv">{{ fCurrNative(tx.amount, tx.currency as Currency) }}</span>
-                      </template>
-                      <template v-else>{{ tx.type === 'inc' ? '+' : '-' }}{{ fCurr(tx.amount) }}</template>
-                    </template>
-                  </div>
-                </div>
-              </div>
-            </template>
-          </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
 
     <!-- Undo delete toast -->
     <Teleport to="body">
@@ -597,18 +488,6 @@ function triggerClone(tx: TransactionItem) {
   emit('quick-add', tx)
 }
 
-// ─── Fullscreen ───────────────────────────────────────────────────────────────
-
-function openFullscreen() {
-  showAll.value = true
-  document.body.style.overflow = 'hidden'
-}
-
-function closeFullscreen() {
-  showAll.value = false
-  document.body.style.overflow = ''
-}
-
 // ─── Cleanup ──────────────────────────────────────────────────────────────────
 
 onBeforeUnmount(() => {
@@ -627,7 +506,6 @@ onBeforeUnmount(() => {
 
 /* ─── Filter bar ──────────────────────────────────────────────────────────── */
 .tx-filter { margin: 8px 0 6px; display: flex; flex-direction: column; gap: 6px; }
-.tx-filter--full { padding: 8px 14px 0; flex-shrink: 0; margin: 0; }
 
 .tx-filter__type { display: flex; gap: 4px; }
 .tx-filter__btn {
@@ -688,12 +566,11 @@ onBeforeUnmount(() => {
 :deep(.tx-stats__top-ico svg) { display: block; }
 
 /* ─── List ────────────────────────────────────────────────────────────────── */
-.tx-list__list { display: flex; flex-direction: column; gap: 3px; }
+.tx-list__list { display: flex; flex-direction: column; gap: 6px; }
 .tx-list__empty { text-align: center; padding: 18px; color: var(--muted); font-size: 11px; font-family: var(--mono); }
 
 /* Day header */
 .tx-list__day-hdr { display: flex; align-items: center; justify-content: space-between; padding: 6px 2px 3px; }
-.tx-list__day-hdr--sticky { position: sticky; top: 0; background: var(--bg); z-index: 2; padding: 8px 14px 4px; margin: 0 -14px; }
 .tx-list__day-label { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
 .tx-list__day-meta { display: flex; gap: 6px; align-items: center; }
 .tx-list__day-inc { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--accent3); }
@@ -712,8 +589,8 @@ onBeforeUnmount(() => {
 .tx-swipe__action {
   position: absolute;
   top: 0; bottom: 0;
-  display: flex; align-items: center; gap: 5px;
-  padding: 0 18px;
+  width: 110px;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
   font-family: var(--mono); font-size: 10px; font-weight: 700;
   letter-spacing: .03em;
   pointer-events: none;
@@ -749,7 +626,7 @@ onBeforeUnmount(() => {
 .tx-list__item-amt { font-family: var(--mono); font-size: 12px; font-weight: 700; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; padding-top: 1px; }
 .tx-list__item-equiv { font-size: 9px; font-weight: 400; color: var(--muted); }
 
-/* View all button */
+/* View all / collapse button */
 .tx-list__view-all {
   display: flex; align-items: center; justify-content: center; gap: 4px;
   width: 100%; margin-top: 8px; padding: 8px;
@@ -758,25 +635,6 @@ onBeforeUnmount(() => {
   cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 .tx-list__view-all:active { background: var(--surface2); color: var(--text); }
-
-/* ─── Fullscreen ──────────────────────────────────────────────────────────── */
-.tx-fullscreen { position: fixed; inset: 0; z-index: 1000; background: var(--bg); display: flex; justify-content: center; }
-.tx-fullscreen__inner { width: 100%; max-width: 480px; display: flex; flex-direction: column; }
-
-.tx-fullscreen__hdr {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 16px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0;
-}
-.tx-fullscreen__title { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: .5px; }
-.tx-fullscreen__close {
-  display: flex; align-items: center; justify-content: center;
-  width: 32px; height: 32px;
-  background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
-  color: var(--muted); cursor: pointer; -webkit-tap-highlight-color: transparent;
-}
-.tx-fullscreen__close:active { background: var(--border); color: var(--text); }
-
-.tx-fullscreen__list { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 4px 14px 32px; -webkit-overflow-scrolling: touch; background: var(--bg); }
 
 /* ─── Undo delete toast ───────────────────────────────────────────────────── */
 .tx-undo-toast {
@@ -803,10 +661,4 @@ onBeforeUnmount(() => {
 .undo-toast-leave-active { transition: all .25s ease; }
 .undo-toast-enter-from { opacity: 0; transform: translateX(-50%) translateY(16px); }
 .undo-toast-leave-to   { opacity: 0; transform: translateX(-50%) translateY(16px); }
-
-/* ─── Slide transition ───────────────────────────────────────────────────── */
-.tx-slide-enter-active,
-.tx-slide-leave-active { transition: transform .3s cubic-bezier(.4, 0, .2, 1); }
-.tx-slide-enter-from,
-.tx-slide-leave-to { transform: translateY(100%); }
 </style>

@@ -143,6 +143,7 @@ export default {
     filterExp: 'Expenses',
     filterInc: 'Income',
     viewAll: 'View all ({n})',
+    collapse: 'Collapse',
     allCats: 'All',
     search: 'Search transactions...',
     statsThisMonth: 'This month',
