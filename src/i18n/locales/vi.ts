@@ -149,6 +149,7 @@ export default {
     statsThisMonth: 'Tháng này',
     statsAvg: 'TB/ngày',
     statsTop: 'Nhiều nhất',
+    toggleFilter: 'Lọc / Tìm kiếm',
     swipeDelete: 'Xóa',
     swipeClone: 'Tạo lại',
     undoDelete: 'Đã xóa "{name}"',
