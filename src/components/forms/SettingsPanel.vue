@@ -43,7 +43,7 @@
 
     <!-- Sync info -->
     <div style="text-align:center;padding:6px 0">
-      <span class="settings__sync-note">{{ syncMsg }}<template v-if="syncTime"> · {{ syncTime }}</template></span>
+      <span class="settings__sync-note">{{ syncMsg }} · {{ syncTime || '--:--' }}</span>
     </div>
 
     <!-- POPUP -->

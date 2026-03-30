@@ -2,10 +2,8 @@
   <div ref="el" class="sync-bar">
     <div class="sync-bar__dot" :class="`sync-bar__dot--${status}`"></div>
     <span>{{ message }}</span>
-    <template v-if="syncTime">
-      <span class="sync-bar__sep">·</span>
-      <span>{{ syncTime }}</span>
-    </template>
+    <span class="sync-bar__sep">·</span>
+    <span>{{ syncTime || '--:--' }}</span>
     <span class="sync-bar__sep">·</span>
     <span>{{ today }}</span>
   </div>
