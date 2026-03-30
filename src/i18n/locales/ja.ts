@@ -137,6 +137,13 @@ export default {
     expense: '支出',
     incShort: '収入',
     expShort: '支出',
+    today: '今日',
+    yesterday: '昨日',
+    filterAll: 'すべて',
+    filterExp: '支出',
+    filterInc: '収入',
+    viewAll: 'すべて表示 ({n})',
+    allCats: 'すべて',
   },
   charts: {
     tabs: {

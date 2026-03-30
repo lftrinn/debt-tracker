@@ -137,6 +137,13 @@ export default {
     expense: 'Expense',
     incShort: 'Inc',
     expShort: 'Exp',
+    today: 'Today',
+    yesterday: 'Yesterday',
+    filterAll: 'All',
+    filterExp: 'Expenses',
+    filterInc: 'Income',
+    viewAll: 'View all ({n})',
+    allCats: 'All',
   },
   charts: {
     tabs: {
