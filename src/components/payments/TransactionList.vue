@@ -76,20 +76,23 @@
     <!-- Empty state -->
     <div v-if="!filteredItems.length" class="tx-list__empty">{{ $t('transactions.empty') }}</div>
 
-    <!-- Grouped list (preview or expanded) -->
-    <div v-else class="tx-list__list">
-      <template v-for="group in showAll ? allGroups : previewGroups" :key="group.date">
-        <div class="tx-list__day-hdr">
-          <span class="tx-list__day-label">{{ group.label }}</span>
-          <span class="tx-list__day-meta">
-            <span v-if="group.totalInc > 0" class="tx-list__day-inc">{{ hide ? '+•••••' : '+' + fCurr(group.totalInc) }}</span>
-            <span v-if="group.totalExp > 0" class="tx-list__day-exp">{{ hide ? '-•••••' : '-' + fCurr(group.totalExp) }}</span>
-          </span>
-        </div>
+    <!-- Sticky day header + fixed-height scrollable list -->
+    <div v-else class="tx-list__wrap">
+      <!-- Sticky header: stays in place, updates as user scrolls -->
+      <div class="tx-list__sticky-hdr">
+        <span class="tx-list__day-label">{{ activeHeader.label }}</span>
+        <span class="tx-list__day-meta">
+          <span v-if="activeHeader.totalInc > 0" class="tx-list__day-inc">{{ hide ? '+•••••' : '+' + fCurr(activeHeader.totalInc) }}</span>
+          <span v-if="activeHeader.totalExp > 0" class="tx-list__day-exp">{{ hide ? '-•••••' : '-' + fCurr(activeHeader.totalExp) }}</span>
+        </span>
+      </div>
+      <!-- Scrollable area: fixed height ≈ 4 items -->
+      <div class="tx-list__scroll" ref="scrollEl" @scroll="onListScroll">
         <div
-          v-for="tx in group.items"
+          v-for="tx in filteredItems"
           :key="tx.id"
           class="tx-swipe"
+          :data-date="tx.date"
           @touchstart="onSwipeTouchStart($event, tx)"
           @touchmove="onSwipeTouchMove($event, tx)"
           @touchend="onSwipeTouchEnd($event, tx)"
@@ -129,14 +132,8 @@
             </div>
           </div>
         </div>
-      </template>
+      </div>
     </div>
-
-    <!-- Expand / Collapse button -->
-    <button v-if="filteredItems.length > 4" class="tx-list__view-all" @click="showAll = !showAll">
-      {{ showAll ? $t('transactions.collapse') : $t('transactions.viewAll', { n: filteredItems.length }) }}
-      <Icon :name="showAll ? 'chevron-up' : 'chevron-right'" :size="12" />
-    </button>
 
     <!-- Undo delete toast -->
     <Teleport to="body">
@@ -151,7 +148,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Icon from '../ui/Icon.vue'
 import { useFormatters } from '../../composables/ui/useFormatters'
@@ -183,7 +180,6 @@ const emit = defineEmits<{
 
 const filterType = ref<'all' | 'exp' | 'inc'>('all')
 const filterCat = ref('')
-const showAll = ref(false)
 
 const typeFilters = computed(() => [
   { value: 'all' as const, label: t('transactions.filterAll') },
@@ -310,15 +306,10 @@ const topCatThisMonth = computed(() => {
   return { cat: resolveCat(topKey), amount: topAmt }
 })
 
-// ─── Grouping by date ─────────────────────────────────────────────────────────
+// ─── Sticky day header ────────────────────────────────────────────────────────
 
-interface TxGroup {
-  date: string
-  label: string
-  totalExp: number
-  totalInc: number
-  items: TransactionItem[]
-}
+const scrollEl = ref<HTMLElement | null>(null)
+const activeHeaderDate = ref('')
 
 const yesterdayStr = computed(() => {
   const d = new Date()
@@ -330,43 +321,53 @@ const yesterdayStr = computed(() => {
   )
 })
 
-function buildGroups(items: TransactionItem[]): TxGroup[] {
-  const map = new Map<string, TransactionItem[]>()
-  for (const tx of items) {
-    if (!map.has(tx.date)) map.set(tx.date, [])
-    map.get(tx.date)!.push(tx)
+// Per-day totals derived from the currently filtered list
+const dayTotals = computed(() => {
+  const map = new Map<string, { totalExp: number; totalInc: number }>()
+  for (const tx of filteredItems.value) {
+    if (!map.has(tx.date)) map.set(tx.date, { totalExp: 0, totalInc: 0 })
+    const day = map.get(tx.date)!
+    if (tx.type === 'exp') day.totalExp += tx.amount
+    else day.totalInc += tx.amount
   }
-  const today = tStr()
-  return [...map.entries()]
-    .sort(([a], [b]) => b.localeCompare(a))
-    .map(([date, txs]) => ({
-      date,
-      label:
-        date === today
-          ? t('transactions.today')
-          : date === yesterdayStr.value
-            ? t('transactions.yesterday')
-            : fDate(date, locale.value),
-      totalExp: txs.filter(tx => tx.type === 'exp').reduce((s, tx) => s + tx.amount, 0),
-      totalInc: txs.filter(tx => tx.type === 'inc').reduce((s, tx) => s + tx.amount, 0),
-      items: txs,
-    }))
-}
-
-const allGroups = computed(() => buildGroups(filteredItems.value))
-
-// Preview: first 4 items across groups (full group totals preserved)
-const previewGroups = computed<TxGroup[]>(() => {
-  let remaining = 4
-  const result: TxGroup[] = []
-  for (const group of allGroups.value) {
-    if (remaining <= 0) break
-    const items = group.items.slice(0, remaining)
-    remaining -= items.length
-    result.push({ ...group, items })
-  }
-  return result
+  return map
 })
+
+const activeHeader = computed(() => {
+  const date = activeHeaderDate.value
+  const today = tStr()
+  const label = !date
+    ? ''
+    : date === today
+      ? t('transactions.today')
+      : date === yesterdayStr.value
+        ? t('transactions.yesterday')
+        : fDate(date, locale.value)
+  const totals = dayTotals.value.get(date) ?? { totalExp: 0, totalInc: 0 }
+  return { label, ...totals }
+})
+
+// When filter/search changes: reset header to first item and scroll to top
+watch(filteredItems, async (items) => {
+  activeHeaderDate.value = items[0]?.date || ''
+  await nextTick()
+  if (scrollEl.value) scrollEl.value.scrollTop = 0
+}, { immediate: true })
+
+function onListScroll() {
+  const el = scrollEl.value
+  if (!el) return
+  const scrollTop = el.scrollTop
+  const items = el.querySelectorAll<HTMLElement>('.tx-swipe[data-date]')
+  for (const item of items) {
+    // First item whose bottom edge is still below the current scroll position
+    if (item.offsetTop + item.offsetHeight > scrollTop) {
+      const d = item.dataset.date
+      if (d) activeHeaderDate.value = d
+      return
+    }
+  }
+}
 
 // ─── Swipe actions ─────────────────────────────────────────────────────────────
 
@@ -454,7 +455,6 @@ function onItemClick(tx: TransactionItem) {
 // ─── Delete with undo ──────────────────────────────────────────────────────────
 
 function triggerDelete(tx: TransactionItem) {
-  // Commit any existing pending delete immediately before starting a new one
   if (pendingDelete.value) {
     clearTimeout(pendingDelete.value.timer)
     emit('delete-tx', pendingDelete.value.tx)
@@ -565,16 +565,37 @@ onBeforeUnmount(() => {
 .tx-stats__top-ico { opacity: .7; flex-shrink: 0; }
 :deep(.tx-stats__top-ico svg) { display: block; }
 
-/* ─── List ────────────────────────────────────────────────────────────────── */
-.tx-list__list { display: flex; flex-direction: column; gap: 6px; }
+/* ─── List wrapper ────────────────────────────────────────────────────────── */
 .tx-list__empty { text-align: center; padding: 18px; color: var(--muted); font-size: 11px; font-family: var(--mono); }
+.tx-list__wrap { display: flex; flex-direction: column; }
 
-/* Day header */
-.tx-list__day-hdr { display: flex; align-items: center; justify-content: space-between; padding: 6px 2px 3px; }
+/* Sticky day header — sits above the scroll area, does not scroll */
+.tx-list__sticky-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 5px 2px 4px;
+}
 .tx-list__day-label { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
 .tx-list__day-meta { display: flex; gap: 6px; align-items: center; }
 .tx-list__day-inc { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--accent3); }
 .tx-list__day-exp { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--accent2); }
+
+/* Fixed-height scrollable list — shows ≈4 items, scrolls internally */
+.tx-list__scroll {
+  /* 4 × ~54px items + 3 × 6px gaps = 234px */
+  height: 234px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  -webkit-overflow-scrolling: touch;
+  /* Thin scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.tx-list__scroll::-webkit-scrollbar { width: 3px; }
+.tx-list__scroll::-webkit-scrollbar-track { background: transparent; }
+.tx-list__scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
 /* ─── Swipe container ─────────────────────────────────────────────────────── */
 .tx-swipe {
@@ -584,6 +605,7 @@ onBeforeUnmount(() => {
   touch-action: pan-y;
   -webkit-user-select: none;
   user-select: none;
+  flex-shrink: 0;
 }
 
 .tx-swipe__action {
@@ -625,16 +647,6 @@ onBeforeUnmount(() => {
 .tx-list__item-tag { font-family: var(--mono); font-size: 9px; padding: 1px 5px; background: rgba(var(--accent-rgb),.1); border-radius: 4px; color: var(--accent); }
 .tx-list__item-amt { font-family: var(--mono); font-size: 12px; font-weight: 700; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; padding-top: 1px; }
 .tx-list__item-equiv { font-size: 9px; font-weight: 400; color: var(--muted); }
-
-/* View all / collapse button */
-.tx-list__view-all {
-  display: flex; align-items: center; justify-content: center; gap: 4px;
-  width: 100%; margin-top: 8px; padding: 8px;
-  font-family: var(--mono); font-size: 11px; color: var(--muted);
-  background: transparent; border: 1px dashed var(--border); border-radius: 8px;
-  cursor: pointer; -webkit-tap-highlight-color: transparent;
-}
-.tx-list__view-all:active { background: var(--surface2); color: var(--text); }
 
 /* ─── Undo delete toast ───────────────────────────────────────────────────── */
 .tx-undo-toast {
