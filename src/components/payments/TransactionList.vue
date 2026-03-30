@@ -31,16 +31,11 @@
       </div>
       <div v-if="availableCats.length > 1" class="tx-filter__cats">
         <button
-          class="tx-filter__cat"
-          :class="{ 'tx-filter__cat--active': filterCat === '' }"
-          @click="filterCat = ''"
-        >{{ $t('transactions.allCats') }}</button>
-        <button
           v-for="cat in availableCats"
           :key="cat.key"
           class="tx-filter__cat"
           :class="{ 'tx-filter__cat--active': filterCat === cat.key }"
-          @click="filterCat = cat.key"
+          @click="filterCat = filterCat === cat.key ? '' : cat.key"
         ><Icon :name="cat.icon" :size="9" class="tx-filter__cat-ico" />{{ cat.label }}</button>
       </div>
       <div class="tx-filter__search-wrap">
@@ -147,6 +142,7 @@
     <Teleport to="body">
       <Transition name="tx-slide">
         <div v-if="showAll" class="tx-fullscreen">
+          <div class="tx-fullscreen__inner">
           <!-- Fullscreen header -->
           <div class="tx-fullscreen__hdr">
             <span class="tx-fullscreen__title">{{ $t('transactions.title') }}</span>
@@ -168,16 +164,11 @@
             </div>
             <div v-if="availableCats.length > 1" class="tx-filter__cats">
               <button
-                class="tx-filter__cat"
-                :class="{ 'tx-filter__cat--active': filterCat === '' }"
-                @click="filterCat = ''"
-              >{{ $t('transactions.allCats') }}</button>
-              <button
                 v-for="cat in availableCats"
                 :key="cat.key"
                 class="tx-filter__cat"
                 :class="{ 'tx-filter__cat--active': filterCat === cat.key }"
-                @click="filterCat = cat.key"
+                @click="filterCat = filterCat === cat.key ? '' : cat.key"
               ><Icon :name="cat.icon" :size="9" class="tx-filter__cat-ico" />{{ cat.label }}</button>
             </div>
             <div class="tx-filter__search-wrap">
@@ -250,6 +241,7 @@
                 </div>
               </div>
             </template>
+          </div>
           </div>
         </div>
       </Transition>
@@ -736,7 +728,7 @@ onBeforeUnmount(() => {
 .tx-list__item {
   position: relative; z-index: 1;
   display: flex; align-items: flex-start; gap: 10px; padding: 10px 11px;
-  background: var(--surface2); border-radius: 9px; border: 1px solid transparent; border-left: 3px solid transparent;
+  background: var(--surface2); border-radius: 9px; border-left: 3px solid transparent;
   animation: si .2s ease; transition: background .15s, border-color .2s;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
   will-change: transform;
@@ -768,7 +760,8 @@ onBeforeUnmount(() => {
 .tx-list__view-all:active { background: var(--surface2); color: var(--text); }
 
 /* ─── Fullscreen ──────────────────────────────────────────────────────────── */
-.tx-fullscreen { position: fixed; inset: 0; z-index: 1000; background: var(--bg); display: flex; flex-direction: column; }
+.tx-fullscreen { position: fixed; inset: 0; z-index: 1000; background: var(--bg); display: flex; justify-content: center; }
+.tx-fullscreen__inner { width: 100%; max-width: 480px; display: flex; flex-direction: column; }
 
 .tx-fullscreen__hdr {
   display: flex; align-items: center; justify-content: space-between;
@@ -783,7 +776,7 @@ onBeforeUnmount(() => {
 }
 .tx-fullscreen__close:active { background: var(--border); color: var(--text); }
 
-.tx-fullscreen__list { flex: 1; overflow-y: auto; padding: 4px 14px 32px; -webkit-overflow-scrolling: touch; }
+.tx-fullscreen__list { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 4px 14px 32px; -webkit-overflow-scrolling: touch; background: var(--bg); }
 
 /* ─── Undo delete toast ───────────────────────────────────────────────────── */
 .tx-undo-toast {
