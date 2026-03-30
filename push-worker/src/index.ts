@@ -170,6 +170,8 @@ async function encryptPayload(
 // ─── Send one Web Push message ────────────────────────────────────────────
 
 async function sendPush(sub: StoredSub, payload: string, env: Env): Promise<boolean> {
+  // Reject clearly invalid endpoints before attempting
+  try { new URL(sub.endpoint) } catch { return false }
   try {
     const [body, authHeader] = await Promise.all([
       encryptPayload(sub, payload),

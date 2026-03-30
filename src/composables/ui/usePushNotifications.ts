@@ -167,7 +167,6 @@ export function usePushNotifications() {
    * Dùng chung localStorage deduplication key với useNotifications.
    */
   async function notifyOverLimit(todaySpent: number, dayLimit: number): Promise<void> {
-    if (document.visibilityState !== 'hidden') return
     if (dayLimit <= 0) return
 
     const pct = todaySpent / dayLimit
