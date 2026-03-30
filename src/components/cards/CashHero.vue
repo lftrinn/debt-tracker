@@ -15,7 +15,7 @@
         <span v-if="hide.balance" class="masked">•••••••</span>
         <template v-else>{{ fCurr(availCash) }}</template>
       </div>
-      <div class="cash-hero__sub">{{ $t('cash.daysToSalary', { n: dToSalary }) }}</div>
+      <div class="cash-hero__sub">{{ $t('cash.daysToSalary', { n: hide.balance ? '•••' : dToSalary }) }}</div>
     </div>
     <div>
       <div class="cash-hero__label">{{ $t('cash.todayLabel') }}</div>

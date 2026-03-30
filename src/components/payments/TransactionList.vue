@@ -506,11 +506,11 @@ function onListScroll() {
 
 /* Items */
 .tx-list__item {
-  display: flex; align-items: flex-start; gap: 10px; padding: 9px 11px;
+  display: flex; align-items: center; gap: 10px; padding: 5px 11px;
   background: var(--surface2); border-radius: 9px; border-left: 3px solid transparent;
   animation: si .2s ease; transition: background .15s, border-color .2s;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
-  min-height: 48px; box-sizing: border-box;
+  height: 48px; box-sizing: border-box; overflow: hidden;
   flex-shrink: 0;
   scroll-snap-align: start;
 }

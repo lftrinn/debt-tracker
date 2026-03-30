@@ -2,7 +2,7 @@
   <div class="app-header" :class="{ 'app-header--compact': scrolled }">
     <div class="app-header__inner">
       <div class="app-header__left">
-        <Icon name="credit-card" :size="18" class="app-header__icon" />
+        <img :src="iconSrc" class="app-header__icon" />
         <span class="app-header__title" :class="{ 'app-header__title--hidden': scrolled }">Debt Tracker</span>
         <transition name="hdr-fade">
           <div v-if="scrolled" class="app-header__sync">
@@ -77,6 +77,8 @@ import { LOCALES, setLocale } from '../../i18n'
 
 const { locale: i18nLocale } = useI18n()
 
+const iconSrc = import.meta.env.BASE_URL + 'icon-192.png'
+
 /** Trạng thái popup chọn ngôn ngữ */
 const langOpen = ref(false)
 const currentLocale = computed(() => i18nLocale.value)
@@ -122,7 +124,7 @@ defineEmits(['reload', 'toggle-hide', 'scroll-alert', 'dismiss-over'])
 .app-header--compact .app-header__btn { width: 28px; height: 28px; padding: 0; display: flex; align-items: center; justify-content: center; }
 .app-header--compact .app-header__btn :deep(svg) { width: 13px; height: 13px; }
 .app-header__left { display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; overflow: hidden; }
-.app-header__icon { flex-shrink: 0; color: var(--muted); transition: transform .25s ease; }
+.app-header__icon { flex-shrink: 0; width: 24px; height: 24px; border-radius: 6px; transition: transform .25s ease; display: block; }
 .app-header__title { font-weight: 800; font-size: 12px; letter-spacing: .15em; text-transform: uppercase; color: var(--muted); white-space: nowrap; transition: opacity .2s, max-width .25s, margin .25s; max-width: 120px; overflow: hidden; }
 .app-header__title--hidden { opacity: 0; max-width: 0; margin: 0; }
 .app-header__sync { display: flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; }
