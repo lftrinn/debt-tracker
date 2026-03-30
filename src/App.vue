@@ -210,7 +210,7 @@ import Icon from './components/ui/Icon.vue'
 const api = useApi()
 const { syncSt, syncMsg, syncTime, syncing, isConfigured } = api
 const { fN, tStr } = useFormatters()
-const { fCurr, fCurrFull, fetchRates } = useCurrency()
+const { fCurr, fCurrFull, fetchRates, displayCurrency } = useCurrency()
 fetchRates()
 const { t, locale } = useI18n()
 const syncMsgText = computed(() => t(syncMsg.value))
@@ -371,9 +371,15 @@ watch(appState, (state) => {
   }
 })
 
-// Re-subscribe với locale mới khi user đổi ngôn ngữ
-watch(locale, () => {
-  updateLocale()
+// Re-subscribe với locale mới khi user đổi ngôn ngữ, rồi gửi lại notification ngay
+watch(locale, async () => {
+  await updateLocale()
+  sendStatusNotification(availCash.value, todaySpent.value, dayLimit.value, totalDebt.value, true)
+})
+
+// Gửi lại notification khi đổi display currency để cập nhật nội dung trên lock screen
+watch(displayCurrency, () => {
+  sendStatusNotification(availCash.value, todaySpent.value, dayLimit.value, totalDebt.value, true)
 })
 
 async function handleEnablePush(): Promise<void> {
