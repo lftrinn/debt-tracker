@@ -54,13 +54,13 @@
                 <span class="popup-label">{{ $t('detail.typeLabel') }}</span>
                 <span class="popup-val">{{ item.sub }}</span>
               </div>
-              <div v-if="item._variant === 'upcoming' && !hide" class="popup-row">
+              <div v-if="item._variant === 'upcoming'" class="popup-row">
                 <span class="popup-label">{{ $t('detail.availCash') }}</span>
-                <span class="popup-val" :style="availCash < (item.amt || 0) ? { color: 'var(--accent2)' } : {}">{{ fCurrFull(availCash) }}</span>
+                <span class="popup-val" :style="!hide && availCash < (item.amt || 0) ? { color: 'var(--accent2)' } : {}">{{ hide ? '•••••' : fCurrFull(availCash) }}</span>
               </div>
-              <div v-if="item._variant === 'upcoming' && !hide && !item.paid && availCash < (item.amt || 0)" class="popup-row">
+              <div v-if="item._variant === 'upcoming' && !item.paid && availCash < (item.amt || 0)" class="popup-row">
                 <span class="popup-label">{{ $t('detail.shortfall') }}</span>
-                <span class="popup-val" style="color:var(--accent2)">{{ fCurrFull((item.amt || 0) - availCash) }}</span>
+                <span class="popup-val" style="color:var(--accent2)">{{ hide ? '•••••' : fCurrFull((item.amt || 0) - availCash) }}</span>
               </div>
             </div>
           </div>
