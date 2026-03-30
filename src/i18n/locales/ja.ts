@@ -144,6 +144,10 @@ export default {
     filterInc: '収入',
     viewAll: 'すべて表示 ({n})',
     allCats: 'すべて',
+    search: '取引を検索...',
+    statsThisMonth: '今月',
+    statsAvg: '1日平均',
+    statsTop: 'トップ支出',
   },
   charts: {
     tabs: {
@@ -177,11 +181,15 @@ export default {
       title: '支出を記録',
       descPlaceholder: '説明 (例: 昼食、コーヒー...)',
       amountPlaceholder: '金額 ({currency})',
+      notePlaceholder: 'メモ...',
+      tagsPlaceholder: 'タグ (カンマ区切り)',
     },
     income: {
       title: '収入を記録',
       descPlaceholder: '説明 (例: 4月の給料、フリーランス...)',
       amountPlaceholder: '金額 ({currency})',
+      notePlaceholder: 'メモ...',
+      tagsPlaceholder: 'タグ (カンマ区切り)',
     },
     saving: '保存中...',
     add: '追加',

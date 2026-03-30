@@ -144,6 +144,10 @@ export default {
     filterInc: 'Thu nhập',
     viewAll: 'Xem tất cả ({n})',
     allCats: 'Tất cả',
+    search: 'Tìm giao dịch...',
+    statsThisMonth: 'Tháng này',
+    statsAvg: 'TB/ngày',
+    statsTop: 'Nhiều nhất',
   },
   charts: {
     tabs: {
@@ -177,11 +181,15 @@ export default {
       title: 'Ghi khoản chi',
       descPlaceholder: 'Mô tả (vd: Cơm tối, Cà phê...)',
       amountPlaceholder: 'Số tiền ({currency})',
+      notePlaceholder: 'Ghi chú...',
+      tagsPlaceholder: 'Tags (phẩy, cách nhau)',
     },
     income: {
       title: 'Ghi khoản thu',
       descPlaceholder: 'Mô tả (vd: Lương tháng 4, Freelance...)',
       amountPlaceholder: 'Số tiền ({currency})',
+      notePlaceholder: 'Ghi chú...',
+      tagsPlaceholder: 'Tags (phẩy, cách nhau)',
     },
     saving: 'Đang lưu...',
     add: 'THÊM',

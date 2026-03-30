@@ -41,6 +41,12 @@ export interface Expense {
   descI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
   /** Trạng thái bản dịch: 'manual' = user tự nhập, 'auto' = đã dịch tự động */
   descI18nMeta?: Partial<Record<'vi' | 'en' | 'ja', 'auto' | 'manual'>>
+  /** Ghi chú tùy chọn */
+  note?: string
+  /** Tags tùy ý */
+  tags?: string[]
+  /** Giờ cụ thể (HH:mm) */
+  time?: string
 }
 
 export interface Income {
@@ -57,6 +63,12 @@ export interface Income {
   descI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
   /** Trạng thái bản dịch: 'manual' = user tự nhập, 'auto' = đã dịch tự động */
   descI18nMeta?: Partial<Record<'vi' | 'en' | 'ja', 'auto' | 'manual'>>
+  /** Ghi chú tùy chọn */
+  note?: string
+  /** Tags tùy ý */
+  tags?: string[]
+  /** Giờ cụ thể (HH:mm) */
+  time?: string
 }
 
 export interface Obligation {

@@ -48,6 +48,12 @@
             <option v-for="c in CURRENCIES" :key="c" :value="c">{{ c }}</option>
           </select>
         </div>
+        <!-- Note + Time + Tags (optional) -->
+        <textarea class="add-form__input add-form__note" v-model="nNote" :placeholder="$t('addTx.expense.notePlaceholder')" rows="2" />
+        <div class="add-form__row" style="gap:6px">
+          <input class="add-form__input add-form__time" type="time" v-model="nTime" />
+          <input class="add-form__input" style="flex:1" v-model="nTags" :placeholder="$t('addTx.expense.tagsPlaceholder')" />
+        </div>
         <button class="add-form__submit" @click="addExp" :disabled="syncing || !nDesc.trim() || !nAmt">
           {{ syncing ? $t('addTx.saving') : $t('addTx.add') }} <Icon name="arrow-right" :size="14" />
         </button>
@@ -89,6 +95,12 @@
             <option v-for="c in incomeCategories" :key="c.key" :value="c.key">{{ c.label }}</option>
           </select>
         </div>
+        <!-- Note + Time + Tags (optional) -->
+        <textarea class="add-form__input add-form__note" v-model="iNote" :placeholder="$t('addTx.income.notePlaceholder')" rows="2" />
+        <div class="add-form__row" style="gap:6px">
+          <input class="add-form__input add-form__time" type="time" v-model="iTime" />
+          <input class="add-form__input" style="flex:1" v-model="iTags" :placeholder="$t('addTx.income.tagsPlaceholder')" />
+        </div>
         <button class="add-form__submit" style="background:var(--accent3);color:var(--bg)" @click="addInc" :disabled="syncing || !iDesc.trim() || !iAmt">
           {{ syncing ? $t('addTx.saving') : $t('addTx.add') }} <Icon name="arrow-right" :size="14" />
         </button>
@@ -126,6 +138,9 @@ const nCat = ref('an')
 const nPayMethod = ref('cash')
 const nCurrency = ref(displayCurrency.value)
 const nAmtDisplay = ref(null) // tương đương theo displayCurrency
+const nNote = ref('')
+const nTags = ref('')
+const nTime = ref(getCurrentTime())
 
 // ─── State thu nhập ───────────────────────────────────────────────────────
 const iDesc = ref('')
@@ -133,6 +148,18 @@ const iAmt = ref(null)
 const iCat = ref('luong')
 const iCurrency = ref(displayCurrency.value)
 const iAmtDisplay = ref(null)
+const iNote = ref('')
+const iTags = ref('')
+const iTime = ref(getCurrentTime())
+
+function getCurrentTime() {
+  const now = new Date()
+  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+}
+
+function parseTags(raw) {
+  return raw.split(',').map(t => t.trim()).filter(Boolean)
+}
 
 // ─── Sync currency dropdown khi display currency thay đổi ─────────────────
 watch(displayCurrency, (newCur) => {
@@ -218,12 +245,18 @@ watch(() => props.prefill, (data) => {
     iAmt.value = data.amount || null
     if (data.cat) iCat.value = data.cat
     iCurrency.value = data.currency || displayCurrency.value
+    iNote.value = data.note || ''
+    iTags.value = data.tags ? data.tags.join(', ') : ''
+    iTime.value = data.time || getCurrentTime()
   } else {
     txType.value = 'exp'
     nDesc.value = data.desc || ''
     nAmt.value = data.amount || null
     if (data.cat) nCat.value = data.cat
     nCurrency.value = data.currency || displayCurrency.value
+    nNote.value = data.note || ''
+    nTags.value = data.tags ? data.tags.join(', ') : ''
+    nTime.value = data.time || getCurrentTime()
   }
   emit('prefill-consumed')
 }, { immediate: true })
@@ -277,20 +310,45 @@ const topIncAmounts = computed(() => getTopAmounts(props.incomes, iCurrency.valu
 
 function addExp() {
   if (!nAmt.value || nAmt.value <= 0 || !nDesc.value.trim()) return
-  emit('add-expense', { desc: nDesc.value.trim(), amount: nAmt.value, cat: nCat.value, payMethod: nPayMethod.value, currency: nCurrency.value })
+  const tags = parseTags(nTags.value)
+  emit('add-expense', {
+    desc: nDesc.value.trim(),
+    amount: nAmt.value,
+    cat: nCat.value,
+    payMethod: nPayMethod.value,
+    currency: nCurrency.value,
+    ...(nNote.value.trim() ? { note: nNote.value.trim() } : {}),
+    ...(tags.length ? { tags } : {}),
+    ...(nTime.value ? { time: nTime.value } : {}),
+  })
   nDesc.value = ''
   nAmt.value = null
   nAmtDisplay.value = null
   nCurrency.value = displayCurrency.value
+  nNote.value = ''
+  nTags.value = ''
+  nTime.value = getCurrentTime()
 }
 
 function addInc() {
   if (!iAmt.value || iAmt.value <= 0 || !iDesc.value.trim()) return
-  emit('add-income', { desc: iDesc.value.trim(), amount: iAmt.value, cat: iCat.value, currency: iCurrency.value })
+  const tags = parseTags(iTags.value)
+  emit('add-income', {
+    desc: iDesc.value.trim(),
+    amount: iAmt.value,
+    cat: iCat.value,
+    currency: iCurrency.value,
+    ...(iNote.value.trim() ? { note: iNote.value.trim() } : {}),
+    ...(tags.length ? { tags } : {}),
+    ...(iTime.value ? { time: iTime.value } : {}),
+  })
   iDesc.value = ''
   iAmt.value = null
   iAmtDisplay.value = null
   iCurrency.value = displayCurrency.value
+  iNote.value = ''
+  iTags.value = ''
+  iTime.value = getCurrentTime()
 }
 </script>
 
@@ -315,4 +373,6 @@ function addInc() {
 .add-form__submit { background: var(--accent); color: var(--bg); border: none; border-radius: 9px; padding: 11px; font-family: var(--sans); font-size: 13px; font-weight: 800; cursor: pointer; letter-spacing: .05em; transition: all .2s; }
 .add-form__submit:active { opacity: .8; transform: scale(.98); }
 .add-form__submit:disabled { opacity: .3; cursor: not-allowed; transform: none; }
+.add-form__note { height: auto; min-height: 52px; resize: none; line-height: 1.4; }
+.add-form__time { flex: 0 0 90px; font-family: var(--mono); font-size: 11px; color: var(--text); padding: 10px 8px; }
 </style>
