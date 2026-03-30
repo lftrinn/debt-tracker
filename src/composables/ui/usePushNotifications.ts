@@ -32,7 +32,6 @@ const pushStatus = ref<PushStatus>('unknown')
  * Worker sẽ chọn đúng locale tương ứng với từng thiết bị khi gửi push.
  */
 function buildAllLocalePayloads(
-  titleKey: string,
   bodyKey: string,
   values: Record<string, unknown>
 ): Record<string, { title: string; body: string }> {
@@ -47,7 +46,7 @@ function buildAllLocalePayloads(
     locales.map((l) => [
       l,
       {
-        title: tFn(titleKey, {}, { locale: l }),
+        title: ' ',
         body: tFn(bodyKey, values, { locale: l }),
       },
     ])
@@ -204,7 +203,6 @@ export function usePushNotifications() {
       named: Record<string, unknown>,
       opts: { locale: string }
     ) => string
-
     const first = dueItems[0]
     const extra = dueItems.length - 1
     const locales = ['vi', 'en', 'ja']
@@ -216,7 +214,7 @@ export function usePushNotifications() {
         return [
           l,
           {
-            title: tFn('notification.due.title', {}, { locale: l }),
+            title: ' ',
             body: tFn(bodyKey, values, { locale: l }),
           },
         ]
@@ -251,7 +249,7 @@ export function usePushNotifications() {
     const workerUrl = getWorkerUrl()
     if (!workerUrl) return
 
-    const payloads = buildAllLocalePayloads('notification.due.title', 'notification.payday.body', {})
+    const payloads = buildAllLocalePayloads('notification.payday.body', {})
 
     try {
       await fetch(`${workerUrl}/send`, {
