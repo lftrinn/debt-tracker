@@ -124,6 +124,7 @@
             <div class="tx-list__item-name">{{ getLocalized(tx, 'desc', locale) }}</div>
             <div class="tx-list__item-meta">
               <Icon :name="resolveCat(tx.cat).icon" :size="11" class="tx-list__item-cat-ico" />
+              <span class="tx-list__item-meta-sep">·</span>
               <span>{{ resolveCat(tx.cat).label }}</span>
               <template v-if="tx.payMethod && tx.payMethod !== 'cash'"> · 💳</template>
             </div>
@@ -550,6 +551,7 @@ function onListScroll() {
 .tx-list__item-note { font-size: 10px; line-height: 14px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .8; }
 .tx-list__item-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
 .tx-list__item-tag { font-family: var(--mono); font-size: 9px; padding: 1px 5px; background: rgba(var(--accent-rgb),.1); border-radius: 4px; color: var(--accent); }
-.tx-list__item-amt { font-family: var(--mono); font-size: 12px; font-weight: 700; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; padding-top: 1px; }
+.tx-list__item-meta-sep { opacity: .35; }
+.tx-list__item-amt { font-family: var(--mono); font-size: 12px; font-weight: 700; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; align-self: center; }
 .tx-list__item-equiv { font-size: 9px; font-weight: 400; color: var(--muted); }
 </style>

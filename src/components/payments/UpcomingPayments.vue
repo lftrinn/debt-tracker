@@ -17,8 +17,8 @@
         :class="p.paid ? 'upcoming__item--paid' : 'upcoming__item--' + p.urg"
         @click="$emit('open-detail', p)"
       >
-        <div class="upcoming__date-col">
-          <span class="upcoming__day" :style="p.paid ? { color: 'var(--muted)' } : {}">{{ p.day }}</span>
+        <div class="upcoming__date-col" :class="p.paid ? 'upcoming__date-col--paid' : 'upcoming__date-col--' + p.urg">
+          <span class="upcoming__day">{{ p.day }}</span>
           <span class="upcoming__month">/{{ p.mo }}</span>
         </div>
         <div style="flex:1;min-width:0">
@@ -542,9 +542,22 @@ function submitOneTime() {
 .upcoming__item--soon { border-left-color: var(--accent); }
 .upcoming__item--ok { border-left-color: var(--accent3); }
 .upcoming__item--paid { opacity: .6; }
-.upcoming__date-col { display: flex; flex-direction: column; align-items: center; min-width: 22px; }
-.upcoming__day { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--text); display: block; line-height: 1; }
-.upcoming__month { font-family: var(--mono); font-size: 9px; color: var(--muted); }
+.upcoming__date-col {
+  width: 28px; min-height: 28px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  flex-shrink: 0; border-radius: 7px; padding: 2px 0;
+}
+.upcoming__date-col--paid { background: rgba(var(--text-rgb),.06); }
+.upcoming__date-col--urgent { background: rgba(var(--accent2-rgb),.1); }
+.upcoming__date-col--overdue { background: rgba(var(--danger-rgb),.1); }
+.upcoming__date-col--soon { background: rgba(var(--accent-rgb),.1); }
+.upcoming__date-col--ok { background: rgba(var(--accent3-rgb),.1); }
+.upcoming__day { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--muted); display: block; line-height: 1; }
+.upcoming__date-col--urgent .upcoming__day { color: var(--accent2); }
+.upcoming__date-col--overdue .upcoming__day { color: var(--danger); }
+.upcoming__date-col--soon .upcoming__day { color: var(--accent); }
+.upcoming__date-col--ok .upcoming__day { color: var(--accent3); }
+.upcoming__month { font-family: var(--mono); font-size: 8px; color: var(--muted); margin-top: 1px; line-height: 1; }
 .upcoming__name { flex: 1; font-size: 12px; font-weight: 600; color: rgba(var(--text-rgb),.75); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .upcoming__sub { font-size: 10px; color: var(--muted); }
 .upcoming__amt-col { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
