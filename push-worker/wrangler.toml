@@ -1,0 +1,17 @@
+name = "debt-tracker-push"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+[vars]
+# VAPID_SUBJECT: email hoặc URL liên hệ (hiển thị trong push request)
+VAPID_SUBJECT = "mailto:your-email@example.com"
+
+# Thêm secrets qua CLI (KHÔNG commit vào repo):
+#   wrangler secret put VAPID_PUBLIC_KEY
+#   wrangler secret put VAPID_PRIVATE_KEY
+
+[[kv_namespaces]]
+binding = "PUSH_SUBS"
+# Tạo namespace: wrangler kv:namespace create PUSH_SUBS
+# Sau đó thay "TBD" bằng ID thực tế:
+id = "TBD"

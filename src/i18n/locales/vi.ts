@@ -192,6 +192,7 @@ export default {
       language: 'Ngôn ngữ',
       currency: 'Tiền tệ hiển thị',
       progressMode: 'Thanh tiến độ thẻ',
+      push: 'Thông báo đẩy (Push)',
       logout: 'Đăng xuất',
     },
     limit: {
@@ -270,6 +271,20 @@ export default {
       title: 'Kiểu hiển thị thanh tiến độ',
       used: 'Hiển thị % đã sử dụng',
       repaid: 'Hiển thị % đã trả',
+    },
+    push: {
+      hint: 'Nhận thông báo ngay cả khi app không mở. Cần thêm app vào màn hình chính trên iOS 16.4+.',
+      iOSHint: 'iOS: Mở Safari → Chia sẻ → Thêm vào màn hình chính, sau đó quay lại bật thông báo.',
+      status: {
+        unknown: 'Chưa bật',
+        granted: 'Đang hoạt động',
+        denied: 'Đã từ chối',
+        unsupported: 'Không hỗ trợ',
+      },
+      enableBtn: 'Bật thông báo',
+      workerUrl: 'URL Cloudflare Worker',
+      workerUrlPlaceholder: 'https://debt-tracker-push.xxx.workers.dev',
+      saveWorker: 'Lưu URL Worker',
     },
     logout: {
       confirm: 'Bạn có chắc muốn đăng xuất không?',
@@ -379,5 +394,9 @@ export default {
     translating: 'Đang dịch mô tả...',
     translated: 'Đã dịch xong',
     translateErr: 'Không dịch được',
+    pushEnabled: 'Đã bật thông báo đẩy',
+    pushDenied: 'Thông báo đã bị từ chối',
+    pushError: 'Không thể bật thông báo',
+    pushWorkerSaved: 'Đã lưu URL Worker',
   },
 }
