@@ -262,6 +262,14 @@ export function usePushNotifications() {
     }
   }
 
+  /**
+   * Xóa dedup key cho due notification, cho phép gửi lại trong ngày.
+   * Dùng khi user thêm/sửa một khoản thành ngày hôm nay.
+   */
+  function clearDueDedup(): void {
+    localStorage.removeItem(DUE_DATE_KEY)
+  }
+
   return {
     pushStatus,
     checkPushStatus,
@@ -271,5 +279,6 @@ export function usePushNotifications() {
     enablePushNotifications,
     sendDueNotification,
     sendPaydayNotification,
+    clearDueDedup,
   }
 }
