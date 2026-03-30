@@ -343,6 +343,11 @@ export default {
       khac_thu: 'Khác',
     },
   },
+  notification: {
+    title: 'Cảnh báo chi tiêu',
+    warn: 'Đã chi {spent}/{limit} ({pct}% hạn mức ngày)',
+    over: 'Vượt hạn mức! Đã chi {spent}/{limit} hôm nay',
+  },
   toast: {
     expAdded: 'Đã thêm chi tiêu',
     expAddedErr: 'Lỗi lưu chi tiêu',
