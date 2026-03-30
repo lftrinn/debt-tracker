@@ -282,6 +282,7 @@ export default {
         unsupported: '非対応',
       },
       enableBtn: '通知を有効にする',
+      statusEnabled: '1日の上限ステータスを表示',
       workerUrl: 'Cloudflare Worker URL',
       workerUrlPlaceholder: 'https://debt-tracker-push.xxx.workers.dev',
       saveWorker: 'Worker URL を保存',

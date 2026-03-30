@@ -282,6 +282,7 @@ export default {
         unsupported: 'Không hỗ trợ',
       },
       enableBtn: 'Bật thông báo',
+      statusEnabled: 'Hiển thị trạng thái hạn mức',
       workerUrl: 'URL Cloudflare Worker',
       workerUrlPlaceholder: 'https://debt-tracker-push.xxx.workers.dev',
       saveWorker: 'Lưu URL Worker',

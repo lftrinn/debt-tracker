@@ -9,6 +9,11 @@ const WORKER_URL_KEY = 'dt_push_worker_url'
 // Chia sẻ localStorage keys với useNotifications để tránh notify trùng
 const NOTIF_DATE_KEY = 'dt_notif_date'
 const NOTIF_LEVELS_KEY = 'dt_notif_levels'
+// Throttle + daily-once cho sendDailyStatus
+const STATUS_THROTTLE_KEY = 'dt_status_last_sent'
+const STATUS_DATE_KEY = 'dt_status_sent_date'
+// Toggle bật/tắt status notification (mặc định TẮT)
+const PUSH_STATUS_ENABLED_KEY = 'dt_push_status_enabled'
 
 export type PushStatus = 'unknown' | 'granted' | 'denied' | 'unsupported'
 
@@ -43,14 +48,46 @@ function urlBase64ToUint8Array(b64url: string): Uint8Array {
   return Uint8Array.from(raw, (c) => c.charCodeAt(0))
 }
 
-// Singleton reactive ref để share state giữa các lần gọi composable
+// Singleton reactive refs để share state giữa các lần gọi composable
 const pushStatus = ref<PushStatus>('unknown')
+const pushStatusEnabled = ref<boolean>(
+  localStorage.getItem(PUSH_STATUS_ENABLED_KEY) === 'true'
+)
+
+/**
+ * Build payload cho tất cả 3 locale.
+ * Worker sẽ chọn đúng locale tương ứng với từng thiết bị khi gửi push.
+ */
+function buildAllLocalePayloads(
+  titleKey: string,
+  bodyKey: string,
+  values: Record<string, unknown>
+): Record<string, { title: string; body: string }> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tFn = (i18n.global as any).t as (
+    key: string,
+    named: Record<string, unknown>,
+    opts: { locale: string }
+  ) => string
+  const locales = ['vi', 'en', 'ja']
+  return Object.fromEntries(
+    locales.map((l) => [
+      l,
+      {
+        title: tFn(titleKey, {}, { locale: l }),
+        body: tFn(bodyKey, values, { locale: l }),
+      },
+    ])
+  )
+}
 
 /**
  * Quản lý Web Push Notification qua Cloudflare Worker.
  * - registerServiceWorker() — đăng ký SW khi app khởi động
  * - enablePushNotifications() — gọi từ user gesture (button click)
- * - notifyOverLimit() — gửi push qua Worker khi chi tiêu vượt hạn mức và page ẩn
+ * - notifyOverLimit() — gửi push qua Worker khi chi tiêu vượt hạn mức
+ * - sendDailyStatus() — gửi trạng thái với throttle 5 phút
+ * - sendDailyStatusOnAppReady() — gửi trạng thái 1 lần/ngày khi app sẵn sàng
  */
 export function usePushNotifications() {
   function checkPushStatus(): void {
@@ -118,11 +155,13 @@ export function usePushNotifications() {
   async function sendSubscriptionToServer(sub: PushSubscription): Promise<boolean> {
     const workerUrl = getWorkerUrl()
     if (!workerUrl) return false
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const locale = ((i18n.global as any).locale?.value ?? 'vi') as string
     try {
       const res = await fetch(`${workerUrl}/subscribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sub.toJSON()),
+        body: JSON.stringify({ ...sub.toJSON(), locale }),
       })
       return res.ok
     } catch {
@@ -134,7 +173,7 @@ export function usePushNotifications() {
    * Kích hoạt push notification. PHẢI gọi từ user gesture (button click).
    * - Xin quyền Notification
    * - Subscribe PushManager với VAPID key
-   * - Gửi subscription lên Cloudflare Worker
+   * - Gửi subscription (kèm locale) lên Cloudflare Worker
    */
   async function enablePushNotifications(): Promise<'granted' | 'denied' | 'error'> {
     if (!('Notification' in window) || !('PushManager' in window)) {
@@ -162,8 +201,32 @@ export function usePushNotifications() {
   }
 
   /**
+   * Re-gửi subscription lên Worker với locale mới khi user đổi ngôn ngữ.
+   * Worker sẽ upsert record, cập nhật locale cho thiết bị này.
+   */
+  async function updateLocale(): Promise<void> {
+    if (!('serviceWorker' in navigator)) return
+    if (pushStatus.value !== 'granted') return
+    try {
+      const reg = await navigator.serviceWorker.ready
+      const sub = await reg.pushManager.getSubscription()
+      if (!sub) return
+      await sendSubscriptionToServer(sub)
+    } catch {
+      // silent
+    }
+  }
+
+  /** Bật/tắt status notification (persistent daily-limit badge). */
+  function togglePushStatus(): void {
+    pushStatusEnabled.value = !pushStatusEnabled.value
+    localStorage.setItem(PUSH_STATUS_ENABLED_KEY, String(pushStatusEnabled.value))
+  }
+
+  /**
    * Gửi push notification qua Worker khi chi tiêu vượt hạn mức.
    * Dùng chung localStorage deduplication key với useNotifications.
+   * Mỗi level (80%, 100%) chỉ gửi 1 lần/ngày.
    */
   async function notifyOverLimit(todaySpent: number, dayLimit: number): Promise<void> {
     if (dayLimit <= 0) return
@@ -185,23 +248,25 @@ export function usePushNotifications() {
     const workerUrl = getWorkerUrl()
     if (!workerUrl) return
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const t = (i18n.global as any).t as (key: string, values?: Record<string, unknown>) => string
     const { fCurr } = useCurrency()
     const spent = fCurr(todaySpent)
     const limit = fCurr(dayLimit)
+    const pctRounded = Math.round(pct * 100)
 
-    const title = t('notification.title')
-    const body =
+    const payloads =
       level >= 100
-        ? t('notification.over', { spent, limit })
-        : t('notification.warn', { spent, limit, pct: Math.round(pct * 100) })
+        ? buildAllLocalePayloads('notification.title', 'notification.over', { spent, limit })
+        : buildAllLocalePayloads('notification.title', 'notification.warn', {
+            spent,
+            limit,
+            pct: pctRounded,
+          })
 
     try {
       await fetch(`${workerUrl}/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, body }),
+        body: JSON.stringify({ payloads }),
       })
     } catch {
       // silent — push sẽ đến khi kết nối khôi phục
@@ -210,44 +275,68 @@ export function usePushNotifications() {
 
   /**
    * Gửi push "trạng thái hạn mức" với tag cố định để thay thế notification cũ trên iOS.
-   * Gọi khi app khởi động và sau mỗi lần chi tiêu thay đổi.
+   * Có throttle 5 phút và check setting bật/tắt.
+   * Gọi sau mỗi lần todaySpent thay đổi.
    */
   async function sendDailyStatus(todaySpent: number, dayLimit: number): Promise<void> {
     if (dayLimit <= 0) return
     if (pushStatus.value !== 'granted') return
+    if (!pushStatusEnabled.value) return
+
+    // Throttle: không gửi quá 1 lần mỗi 5 phút
+    const lastSent = parseInt(localStorage.getItem(STATUS_THROTTLE_KEY) || '0', 10)
+    if (Date.now() - lastSent < 5 * 60 * 1000) return
+    localStorage.setItem(STATUS_THROTTLE_KEY, String(Date.now()))
 
     const workerUrl = getWorkerUrl()
     if (!workerUrl) return
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const t = (i18n.global as any).t as (key: string, values?: Record<string, unknown>) => string
     const { fCurr } = useCurrency()
     const spent = fCurr(todaySpent)
     const limit = fCurr(dayLimit)
     const pct = Math.round((todaySpent / dayLimit) * 100)
 
-    const title = t('notification.status.title')
-    const body = t('notification.status.body', { spent, limit, pct })
+    const payloads = buildAllLocalePayloads(
+      'notification.status.title',
+      'notification.status.body',
+      { spent, limit, pct }
+    )
 
     try {
       await fetch(`${workerUrl}/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, body, tag: 'daily-limit-status' }),
+        body: JSON.stringify({ payloads, tag: 'daily-limit-status' }),
       })
     } catch {
       // silent — không crash khi offline
     }
   }
 
+  /**
+   * Gửi trạng thái khi app sẵn sàng — chỉ 1 lần/ngày.
+   * Dùng localStorage key dt_status_sent_date để track ngày đã gửi.
+   */
+  async function sendDailyStatusOnAppReady(todaySpent: number, dayLimit: number): Promise<void> {
+    if (localStorage.getItem(STATUS_DATE_KEY) === todayStr()) return
+    localStorage.setItem(STATUS_DATE_KEY, todayStr())
+    // Reset throttle để gửi được ngay trong ngày mới
+    localStorage.removeItem(STATUS_THROTTLE_KEY)
+    await sendDailyStatus(todaySpent, dayLimit)
+  }
+
   return {
     pushStatus,
+    pushStatusEnabled,
     checkPushStatus,
     registerServiceWorker,
     getWorkerUrl,
     setWorkerUrl,
     enablePushNotifications,
+    updateLocale,
+    togglePushStatus,
     notifyOverLimit,
     sendDailyStatus,
+    sendDailyStatusOnAppReady,
   }
 }
