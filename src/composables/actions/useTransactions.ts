@@ -119,7 +119,7 @@ export function useTransactions(
    * Amount lưu nguyên theo currency được chọn; card balance luôn cập nhật bằng VND.
    * descLang và descI18n được ghi nhận theo locale hiện tại; bản dịch chạy background.
    */
-  async function addExp({ desc, amount, cat, payMethod, currency }: { desc: string; amount: number; cat: string; payMethod?: string; currency?: string }): Promise<void> {
+  async function addExp({ desc, amount, cat, payMethod, currency, note, tags, time }: { desc: string; amount: number; cat: string; payMethod?: string; currency?: string; note?: string; tags?: string[]; time?: string }): Promise<void> {
     const isCash = !payMethod || payMethod === 'cash'
     const txCur = (currency || baseCurrency.value) as Currency
     const lang = currentLang()
@@ -135,6 +135,9 @@ export function useTransactions(
       descLang: lang,
       descI18n: { [lang]: desc } as Partial<Record<AppLang, string>>,
       descI18nMeta: { [lang]: 'manual' as const } as Partial<Record<AppLang, 'auto' | 'manual'>>,
+      ...(note ? { note } : {}),
+      ...(tags?.length ? { tags } : {}),
+      ...(time ? { time } : {}),
     }
     const nd: AppData = {
       ...d.value,
@@ -160,7 +163,7 @@ export function useTransactions(
    * Thêm khoản thu nhập và cập nhật số dư tiền mặt (cash balance luôn theo VND).
    * descLang và descI18n được ghi nhận theo locale hiện tại; bản dịch chạy background.
    */
-  async function addInc({ desc, amount, cat, currency }: { desc: string; amount: number; cat: string; currency?: string }): Promise<void> {
+  async function addInc({ desc, amount, cat, currency, note, tags, time }: { desc: string; amount: number; cat: string; currency?: string; note?: string; tags?: string[]; time?: string }): Promise<void> {
     const txCur = (currency || baseCurrency.value) as Currency
     const lang = currentLang()
     const id = Date.now()
@@ -174,6 +177,9 @@ export function useTransactions(
       descLang: lang,
       descI18n: { [lang]: desc } as Partial<Record<AppLang, string>>,
       descI18nMeta: { [lang]: 'manual' as const } as Partial<Record<AppLang, 'auto' | 'manual'>>,
+      ...(note ? { note } : {}),
+      ...(tags?.length ? { tags } : {}),
+      ...(time ? { time } : {}),
     }
     d.value = { ...d.value, incomes: [e, ...(d.value.incomes || [])] }
     // Cash balance luôn theo VND — quy đổi nếu thu nhập ở ngoại tệ

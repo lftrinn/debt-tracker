@@ -144,6 +144,10 @@ export default {
     filterInc: 'Income',
     viewAll: 'View all ({n})',
     allCats: 'All',
+    search: 'Search transactions...',
+    statsThisMonth: 'This month',
+    statsAvg: 'Avg/day',
+    statsTop: 'Top spend',
   },
   charts: {
     tabs: {
@@ -177,11 +181,15 @@ export default {
       title: 'Record expense',
       descPlaceholder: 'Description (e.g. Lunch, Coffee...)',
       amountPlaceholder: 'Amount ({currency})',
+      notePlaceholder: 'Note...',
+      tagsPlaceholder: 'Tags (comma separated)',
     },
     income: {
       title: 'Record income',
       descPlaceholder: 'Description (e.g. April salary, Freelance...)',
       amountPlaceholder: 'Amount ({currency})',
+      notePlaceholder: 'Note...',
+      tagsPlaceholder: 'Tags (comma separated)',
     },
     saving: 'Saving...',
     add: 'ADD',
