@@ -3,6 +3,7 @@ import { i18n } from '../../i18n'
 import { useCurrency } from '../api/useCurrency'
 
 const VAPID_PUBLIC_KEY = 'BE1CoUCSw3FJXmx5_ixw1nAY7Wlm3H15VLGVQG4XTL_n2qeFPOl4PTGnSsB6fjv8MbmGUqqIwOzZBmZMIAz2iVU'
+const DEFAULT_WORKER_URL = 'https://debt-tracker-push.tl-dellroyal.workers.dev'
 const PUSH_SUB_KEY = 'dt_push_sub'
 const WORKER_URL_KEY = 'dt_push_worker_url'
 // Chia sẻ localStorage keys với useNotifications để tránh notify trùng
@@ -85,7 +86,7 @@ export function usePushNotifications() {
   }
 
   function getWorkerUrl(): string {
-    return localStorage.getItem(WORKER_URL_KEY) || ''
+    return localStorage.getItem(WORKER_URL_KEY) || DEFAULT_WORKER_URL
   }
 
   function setWorkerUrl(url: string): void {

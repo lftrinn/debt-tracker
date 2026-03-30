@@ -14,4 +14,4 @@ VAPID_SUBJECT = "mailto:your-email@example.com"
 binding = "PUSH_SUBS"
 # Tạo namespace: wrangler kv:namespace create PUSH_SUBS
 # Sau đó thay "TBD" bằng ID thực tế:
-id = "TBD"
+id = "84fb3cdc5bf84ad6ac5eb95355b08e4c"
