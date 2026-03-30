@@ -343,6 +343,11 @@ export default {
       khac_thu: 'Other',
     },
   },
+  notification: {
+    title: 'Spending alert',
+    warn: 'Spent {spent}/{limit} ({pct}% of daily limit)',
+    over: 'Over limit! Spent {spent}/{limit} today',
+  },
   toast: {
     expAdded: 'Expense added',
     expAddedErr: 'Error saving expense',

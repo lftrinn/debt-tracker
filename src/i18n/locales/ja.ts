@@ -343,6 +343,11 @@ export default {
       khac_thu: 'その他',
     },
   },
+  notification: {
+    title: '支出アラート',
+    warn: '{spent}/{limit}を支出しました（{pct}%）',
+    over: '上限超過！本日{spent}/{limit}を支出',
+  },
   toast: {
     expAdded: '支出を追加しました',
     expAddedErr: '支出の保存エラー',

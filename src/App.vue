@@ -182,6 +182,7 @@ import { useAppSetup } from './composables/actions/useAppSetup'
 import { useTransactions } from './composables/actions/useTransactions'
 import { usePayments } from './composables/actions/usePayments'
 import { useDebtActions } from './composables/actions/useDebtActions'
+import { useNotifications } from './composables/ui/useNotifications'
 
 import LoadingScreen from './components/ui/LoadingScreen.vue'
 import ErrorPopup from './components/ui/ErrorPopup.vue'
@@ -224,6 +225,9 @@ const overBanner = ref(false)
 let syncObserver: IntersectionObserver | null = null
 let alertObserver: IntersectionObserver | null = null
 let overTimer: ReturnType<typeof setTimeout> | null = null
+
+// ─── Notifications ────────────────────────────────────────────────────────
+const { requestPermission, checkDailyLimit } = useNotifications()
 
 // ─── Toast ────────────────────────────────────────────────────────────────
 const { toastMsg, toastType, toastTrigger, toast } = useToast()
@@ -321,6 +325,7 @@ function dismissOverBanner(): void {
 
 // ─── SyncBar intersection observer ───────────────────────────────────────
 onMounted(() => {
+  requestPermission()
   syncObserver = new IntersectionObserver(
     ([entry]) => { syncBarScrolled.value = !entry.isIntersecting },
     { threshold: 0 }
@@ -338,6 +343,13 @@ onUnmounted(() => {
   syncObserver?.disconnect()
   alertObserver?.disconnect()
   if (overTimer) clearTimeout(overTimer)
+})
+
+// ─── Daily limit notification watch ───────────────────────────────────────
+watch(todaySpent, (newSpent, oldSpent) => {
+  if (newSpent > (oldSpent ?? 0)) {
+    checkDailyLimit(newSpent, dayLimit.value)
+  }
 })
 
 // ─── Setup composable ─────────────────────────────────────────────────────
