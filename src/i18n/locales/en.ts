@@ -283,7 +283,6 @@ export default {
         unsupported: 'Not supported',
       },
       enableBtn: 'Enable notifications',
-      statusEnabled: 'Show daily limit status',
       workerUrl: 'Cloudflare Worker URL',
       workerUrlPlaceholder: 'https://debt-tracker-push.xxx.workers.dev',
       saveWorker: 'Save Worker URL',
@@ -362,13 +361,13 @@ export default {
   },
   notification: {
     title: 'Spending alert',
-    warn: 'Spent {spent}/{limit} ({pct}% of daily limit)',
-    over: 'Over limit! Spent {spent}/{limit} today',
-    summary: {
+    due: {
       title: 'Debt Tracker',
-      body: 'Cash: {cash} · Today: {spent}/{limit}\nTotal debt: {debt}\nDaily limit: {remaining} left',
-      bodyWarn: 'Cash: {cash} · Today: {spent}/{limit}\nTotal debt: {debt}\n⚠ Used {pct}% of daily limit, {remaining} left',
-      bodyOver: 'Cash: {cash} · Today: {spent}/{limit}\nTotal debt: {debt}\n⚠ Over limit by {over}',
+      single: '{name} is due today',
+      multiple: '{name} is due today (+{count} others)',
+    },
+    payday: {
+      body: "It's payday! Have you updated your info in the app?",
     },
   },
   toast: {

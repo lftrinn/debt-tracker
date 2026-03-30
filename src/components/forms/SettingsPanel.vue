@@ -228,13 +228,6 @@
                 class="popup-btn primary settings__push-enable-btn"
                 @click="$emit('enable-push')"
               >{{ $t('settings.push.enableBtn') }}</button>
-              <div v-if="pushStatus === 'granted'" class="settings__push-toggle-row">
-                <span class="settings__push-toggle-label">{{ $t('settings.push.statusEnabled') }}</span>
-                <label class="settings__toggle">
-                  <input type="checkbox" :checked="pushStatusEnabled" @change="togglePushStatus()" />
-                  <span class="settings__toggle-track"></span>
-                </label>
-              </div>
               <div class="popup-field" style="margin-top:14px">
                 <label class="popup-label">{{ $t('settings.push.workerUrl') }}</label>
                 <input
@@ -277,7 +270,6 @@ import { useI18n } from 'vue-i18n'
 import Icon from '../ui/Icon.vue'
 import { useFormatters } from '../../composables/ui/useFormatters'
 import { useCurrency, CURRENCIES } from '../../composables/api/useCurrency'
-import { usePushNotifications } from '../../composables/ui/usePushNotifications'
 
 const { fN } = useFormatters()
 const { t } = useI18n()
@@ -445,7 +437,6 @@ const isIOS = computed(() =>
   /iPad|iPhone|iPod/.test(navigator.userAgent) ||
   (navigator.userAgent.includes('Mac') && 'ontouchend' in document)
 )
-const { pushStatusEnabled, togglePushStatus } = usePushNotifications()
 
 function savePushWorkerUrl() {
   emit('save-push-worker', pushWorkerUrl.value)
@@ -663,13 +654,4 @@ defineExpose({})
 .settings__push-dot--denied { background: var(--danger); }
 .settings__push-enable-btn { width: 100%; margin-top: 2px; }
 
-/* Toggle switch cho status notification */
-.settings__push-toggle-row { display: flex; align-items: center; justify-content: space-between; margin: 12px 0 2px; }
-.settings__push-toggle-label { font-family: var(--sans); font-size: 13px; color: var(--text); flex: 1; padding-right: 12px; }
-.settings__toggle { position: relative; display: inline-block; width: 36px; height: 20px; flex-shrink: 0; }
-.settings__toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
-.settings__toggle-track { position: absolute; inset: 0; border-radius: 20px; background: var(--border); cursor: pointer; transition: background .2s; }
-.settings__toggle-track::after { content: ''; position: absolute; width: 16px; height: 16px; left: 2px; top: 2px; border-radius: 50%; background: #fff; transition: transform .2s; }
-.settings__toggle input:checked + .settings__toggle-track { background: var(--accent); }
-.settings__toggle input:checked + .settings__toggle-track::after { transform: translateX(16px); }
 </style>

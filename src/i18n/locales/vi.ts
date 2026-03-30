@@ -283,7 +283,6 @@ export default {
         unsupported: 'Không hỗ trợ',
       },
       enableBtn: 'Bật thông báo',
-      statusEnabled: 'Hiển thị trạng thái hạn mức',
       workerUrl: 'URL Cloudflare Worker',
       workerUrlPlaceholder: 'https://debt-tracker-push.xxx.workers.dev',
       saveWorker: 'Lưu URL Worker',
@@ -362,13 +361,13 @@ export default {
   },
   notification: {
     title: 'Cảnh báo chi tiêu',
-    warn: 'Đã chi {spent}/{limit} ({pct}% hạn mức ngày)',
-    over: 'Vượt hạn mức! Đã chi {spent}/{limit} hôm nay',
-    summary: {
+    due: {
       title: 'Debt Tracker',
-      body: 'Tiền mặt: {cash} · Chi hôm nay: {spent}/{limit}\nTổng nợ: {debt}\nHạn mức: còn {remaining}/ngày',
-      bodyWarn: 'Tiền mặt: {cash} · Chi hôm nay: {spent}/{limit}\nTổng nợ: {debt}\n⚠ Đã dùng {pct}% hạn mức, còn {remaining}/ngày',
-      bodyOver: 'Tiền mặt: {cash} · Chi hôm nay: {spent}/{limit}\nTổng nợ: {debt}\n⚠ Vượt hạn mức {over}',
+      single: '{name} đến hạn hôm nay',
+      multiple: '{name} đến hạn hôm nay (+{count} khoản khác)',
+    },
+    payday: {
+      body: 'Hôm nay là ngày nhận lương! Đã cập nhật thông tin vào app chưa?',
     },
   },
   toast: {
