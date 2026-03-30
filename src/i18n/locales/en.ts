@@ -148,6 +148,10 @@ export default {
     statsThisMonth: 'This month',
     statsAvg: 'Avg/day',
     statsTop: 'Top spend',
+    swipeDelete: 'Delete',
+    swipeClone: 'Duplicate',
+    undoDelete: 'Deleted "{name}"',
+    undoAction: 'Undo',
   },
   charts: {
     tabs: {

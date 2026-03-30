@@ -148,6 +148,10 @@ export default {
     statsThisMonth: '今月',
     statsAvg: '1日平均',
     statsTop: 'トップ支出',
+    swipeDelete: '削除',
+    swipeClone: '複製',
+    undoDelete: '"{name}"を削除しました',
+    undoAction: '元に戻す',
   },
   charts: {
     tabs: {

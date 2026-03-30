@@ -148,6 +148,10 @@ export default {
     statsThisMonth: 'Tháng này',
     statsAvg: 'TB/ngày',
     statsTop: 'Nhiều nhất',
+    swipeDelete: 'Xóa',
+    swipeClone: 'Tạo lại',
+    undoDelete: 'Đã xóa "{name}"',
+    undoAction: 'Hoàn tác',
   },
   charts: {
     tabs: {
