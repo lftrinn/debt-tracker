@@ -2,22 +2,22 @@ import { useCurrency } from '../api/useCurrency'
 
 export type AmountType = 'expense' | 'income'
 
-// Income: yellow (--accent #e8ff47) → teal (--accent3 #4aefb8), theo gradient của progress bar
+// Income: vàng xanh đậm → teal rất đậm
 const INCOME_COLORS = [
-  '#e8ff47', // L1 — yellow (chục nghìn VND / <$100 / <¥10K)
-  '#c1fb63', // L2 — yellow-green (trăm nghìn / $100-$999 / ¥10K-¥99K)
-  '#99f780', // L3 — green-yellow (triệu / $1K-$9K / ¥100K-¥999K)
-  '#72f39c', // L4 — teal-green (chục triệu / $10K-$99K / ¥1M-¥9M)
-  '#4aefb8', // L5 — teal (trăm triệu+ / $100K+ / ¥10M+)
+  '#b8e600', // L1 — vàng xanh đậm (chục nghìn VND / <$100 / <¥10K)
+  '#66cc44', // L2 — xanh lá trung (trăm nghìn / $100-$999 / ¥10K-¥99K)
+  '#33b866', // L3 — xanh lá đậm (triệu / $1K-$9K / ¥100K-¥999K)
+  '#00aa88', // L4 — teal đậm (chục triệu / $10K-$99K / ¥1M-¥9M)
+  '#008866', // L5 — teal rất đậm (trăm triệu+ / $100K+ / ¥10M+)
 ]
 
-// Expense: cam nhạt → đỏ đậm
+// Expense: cam đậm → đỏ rất đậm
 const EXPENSE_COLORS = [
-  '#ffb899', // L1 — cam nhạt (chục nghìn VND)
-  '#ff8a60', // L2 — cam (trăm nghìn)
-  '#ff5c44', // L3 — cam đỏ (triệu)
-  '#ff4a6b', // L4 — đỏ --danger (chục triệu)
-  '#cc2050', // L5 — đỏ đậm (trăm triệu+)
+  '#ff8844', // L1 — cam đậm (chục nghìn VND)
+  '#ff5533', // L2 — cam đỏ (trăm nghìn)
+  '#ee3333', // L3 — đỏ (triệu)
+  '#cc1144', // L4 — đỏ đậm (chục triệu)
+  '#aa0033', // L5 — đỏ rất đậm (trăm triệu+)
 ]
 
 function vndLevel(v: number): number {

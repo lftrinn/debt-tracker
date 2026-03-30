@@ -543,7 +543,7 @@ function onListScroll() {
 }
 
 .tx-list__item-info { flex: 1; min-width: 0; }
-.tx-list__item-name { font-size: 12px; line-height: 16px; font-weight: 600; color: rgba(var(--text-rgb),.75); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tx-list__item-name { font-size: 12px; line-height: 16px; font-weight: 600; color: var(--c-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tx-list__item-meta {
   display: flex; align-items: center; gap: 3px;
   font-family: var(--mono); font-size: 9px; line-height: 12px; color: var(--muted); margin-top: 2px;
