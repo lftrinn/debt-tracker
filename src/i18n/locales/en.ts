@@ -149,6 +149,7 @@ export default {
     statsThisMonth: 'This month',
     statsAvg: 'Avg/day',
     statsTop: 'Top spend',
+    toggleFilter: 'Filter / Search',
     swipeDelete: 'Delete',
     swipeClone: 'Duplicate',
     undoDelete: 'Deleted "{name}"',
