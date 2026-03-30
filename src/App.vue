@@ -126,6 +126,8 @@
         :todaySpent="todayOutflow"
         :todayIncome="todayIncome"
         @open-detail="openDetail($event, 'tx')"
+        @delete-tx="(tx: any) => deleteTx(tx)"
+        @quick-add="handleQuickAdd"
       />
 
       <ChartsPanel
@@ -411,6 +413,25 @@ async function handlePopupDelete(item: Record<string, unknown>): Promise<void> {
     await deleteUpcoming(item as Parameters<typeof deleteUpcoming>[0])
   } else {
     await deleteTx(item as Parameters<typeof deleteTx>[0])
+  }
+}
+
+async function handleQuickAdd(tx: Record<string, unknown>): Promise<void> {
+  const now = new Date()
+  const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0')
+  const common = {
+    desc: (tx.desc || '') as string,
+    amount: (tx.amount || 0) as number,
+    cat: (tx.cat || 'khac') as string,
+    currency: tx.currency as string | undefined,
+    note: tx.note as string | undefined,
+    tags: tx.tags as string[] | undefined,
+    time: timeStr,
+  }
+  if (tx.type === 'inc') {
+    await addInc(common)
+  } else {
+    await addExp({ ...common, payMethod: tx.payMethod as string | undefined })
   }
 }
 

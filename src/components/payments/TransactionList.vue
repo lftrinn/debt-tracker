@@ -94,28 +94,44 @@
         <div
           v-for="tx in group.items"
           :key="tx.id"
-          class="tx-list__item"
-          :class="tx.type === 'inc' ? 'tx-list__item--inc' : 'tx-list__item--exp'"
-          @click="$emit('open-detail', tx)"
+          class="tx-swipe"
+          @touchstart="onSwipeTouchStart($event, tx)"
+          @touchmove="onSwipeTouchMove($event, tx)"
+          @touchend="onSwipeTouchEnd($event, tx)"
         >
-          <div class="tx-list__item-icon"><Icon :name="resolveCat(tx.cat).icon" :size="16" /></div>
-          <div class="tx-list__item-info">
-            <div class="tx-list__item-name">{{ getLocalized(tx, 'desc', locale) }}</div>
-            <div class="tx-list__item-meta">{{ resolveCat(tx.cat).label }}{{ tx.payMethod && tx.payMethod !== 'cash' ? ' · 💳' : '' }}{{ tx.time ? ' · ' + tx.time : '' }}</div>
-            <div v-if="tx.note" class="tx-list__item-note">{{ tx.note }}</div>
-            <div v-if="tx.tags && tx.tags.length" class="tx-list__item-tags">
-              <span v-for="tag in tx.tags" :key="tag" class="tx-list__item-tag">#{{ tag }}</span>
-            </div>
+          <div class="tx-swipe__action tx-swipe__action--clone">
+            <Icon name="copy" :size="15" />
+            <span>{{ $t('transactions.swipeClone') }}</span>
           </div>
-          <div class="tx-list__item-amt" :style="{ color: tx.type === 'inc' ? 'var(--accent3)' : 'var(--accent2)' }">
-            <template v-if="hide"><span class="masked">•••••</span></template>
-            <template v-else>
-              <template v-if="tx.currency && tx.currency !== displayCurrency">
-                <span>{{ tx.type === 'inc' ? '+' : '-' }}{{ fCurrFor(tx.amount, tx.currency) }}</span>
-                <span class="tx-list__item-equiv">{{ fCurrNative(tx.amount, tx.currency) }}</span>
+          <div class="tx-swipe__action tx-swipe__action--delete">
+            <Icon name="trash-2" :size="15" />
+            <span>{{ $t('transactions.swipeDelete') }}</span>
+          </div>
+          <div
+            class="tx-list__item"
+            :class="tx.type === 'inc' ? 'tx-list__item--inc' : 'tx-list__item--exp'"
+            :style="swipeItemStyle(tx.id)"
+            @click="onItemClick(tx)"
+          >
+            <div class="tx-list__item-icon"><Icon :name="resolveCat(tx.cat).icon" :size="16" /></div>
+            <div class="tx-list__item-info">
+              <div class="tx-list__item-name">{{ getLocalized(tx, 'desc', locale) }}</div>
+              <div class="tx-list__item-meta">{{ resolveCat(tx.cat).label }}{{ tx.payMethod && tx.payMethod !== 'cash' ? ' · 💳' : '' }}{{ tx.time ? ' · ' + tx.time : '' }}</div>
+              <div v-if="tx.note" class="tx-list__item-note">{{ tx.note }}</div>
+              <div v-if="tx.tags && tx.tags.length" class="tx-list__item-tags">
+                <span v-for="tag in tx.tags" :key="tag" class="tx-list__item-tag">#{{ tag }}</span>
+              </div>
+            </div>
+            <div class="tx-list__item-amt" :style="{ color: tx.type === 'inc' ? 'var(--accent3)' : 'var(--accent2)' }">
+              <template v-if="hide"><span class="masked">•••••</span></template>
+              <template v-else>
+                <template v-if="tx.currency && tx.currency !== displayCurrency">
+                  <span>{{ tx.type === 'inc' ? '+' : '-' }}{{ fCurrFor(tx.amount, tx.currency) }}</span>
+                  <span class="tx-list__item-equiv">{{ fCurrNative(tx.amount, tx.currency) }}</span>
+                </template>
+                <template v-else>{{ tx.type === 'inc' ? '+' : '-' }}{{ fCurr(tx.amount) }}</template>
               </template>
-              <template v-else>{{ tx.type === 'inc' ? '+' : '-' }}{{ fCurr(tx.amount) }}</template>
-            </template>
+            </div>
           </div>
         </div>
       </template>
@@ -193,28 +209,44 @@
               <div
                 v-for="tx in group.items"
                 :key="tx.id"
-                class="tx-list__item"
-                :class="tx.type === 'inc' ? 'tx-list__item--inc' : 'tx-list__item--exp'"
-                @click="$emit('open-detail', tx)"
+                class="tx-swipe"
+                @touchstart="onSwipeTouchStart($event, tx)"
+                @touchmove="onSwipeTouchMove($event, tx)"
+                @touchend="onSwipeTouchEnd($event, tx)"
               >
-                <div class="tx-list__item-icon"><Icon :name="resolveCat(tx.cat).icon" :size="16" /></div>
-                <div class="tx-list__item-info">
-                  <div class="tx-list__item-name">{{ getLocalized(tx, 'desc', locale) }}</div>
-                  <div class="tx-list__item-meta">{{ resolveCat(tx.cat).label }}{{ tx.payMethod && tx.payMethod !== 'cash' ? ' · 💳' : '' }}{{ tx.time ? ' · ' + tx.time : '' }}</div>
-                  <div v-if="tx.note" class="tx-list__item-note">{{ tx.note }}</div>
-                  <div v-if="tx.tags && tx.tags.length" class="tx-list__item-tags">
-                    <span v-for="tag in tx.tags" :key="tag" class="tx-list__item-tag">#{{ tag }}</span>
-                  </div>
+                <div class="tx-swipe__action tx-swipe__action--clone">
+                  <Icon name="copy" :size="15" />
+                  <span>{{ $t('transactions.swipeClone') }}</span>
                 </div>
-                <div class="tx-list__item-amt" :style="{ color: tx.type === 'inc' ? 'var(--accent3)' : 'var(--accent2)' }">
-                  <template v-if="hide"><span class="masked">•••••</span></template>
-                  <template v-else>
-                    <template v-if="tx.currency && tx.currency !== displayCurrency">
-                      <span>{{ tx.type === 'inc' ? '+' : '-' }}{{ fCurrFor(tx.amount, tx.currency) }}</span>
-                      <span class="tx-list__item-equiv">{{ fCurrNative(tx.amount, tx.currency) }}</span>
+                <div class="tx-swipe__action tx-swipe__action--delete">
+                  <Icon name="trash-2" :size="15" />
+                  <span>{{ $t('transactions.swipeDelete') }}</span>
+                </div>
+                <div
+                  class="tx-list__item"
+                  :class="tx.type === 'inc' ? 'tx-list__item--inc' : 'tx-list__item--exp'"
+                  :style="swipeItemStyle(tx.id)"
+                  @click="onItemClick(tx)"
+                >
+                  <div class="tx-list__item-icon"><Icon :name="resolveCat(tx.cat).icon" :size="16" /></div>
+                  <div class="tx-list__item-info">
+                    <div class="tx-list__item-name">{{ getLocalized(tx, 'desc', locale) }}</div>
+                    <div class="tx-list__item-meta">{{ resolveCat(tx.cat).label }}{{ tx.payMethod && tx.payMethod !== 'cash' ? ' · 💳' : '' }}{{ tx.time ? ' · ' + tx.time : '' }}</div>
+                    <div v-if="tx.note" class="tx-list__item-note">{{ tx.note }}</div>
+                    <div v-if="tx.tags && tx.tags.length" class="tx-list__item-tags">
+                      <span v-for="tag in tx.tags" :key="tag" class="tx-list__item-tag">#{{ tag }}</span>
+                    </div>
+                  </div>
+                  <div class="tx-list__item-amt" :style="{ color: tx.type === 'inc' ? 'var(--accent3)' : 'var(--accent2)' }">
+                    <template v-if="hide"><span class="masked">•••••</span></template>
+                    <template v-else>
+                      <template v-if="tx.currency && tx.currency !== displayCurrency">
+                        <span>{{ tx.type === 'inc' ? '+' : '-' }}{{ fCurrFor(tx.amount, tx.currency) }}</span>
+                        <span class="tx-list__item-equiv">{{ fCurrNative(tx.amount, tx.currency) }}</span>
+                      </template>
+                      <template v-else>{{ tx.type === 'inc' ? '+' : '-' }}{{ fCurr(tx.amount) }}</template>
                     </template>
-                    <template v-else>{{ tx.type === 'inc' ? '+' : '-' }}{{ fCurr(tx.amount) }}</template>
-                  </template>
+                  </div>
                 </div>
               </div>
             </template>
@@ -222,11 +254,21 @@
         </div>
       </Transition>
     </Teleport>
+
+    <!-- Undo delete toast -->
+    <Teleport to="body">
+      <Transition name="undo-toast">
+        <div v-if="pendingDelete" class="tx-undo-toast">
+          <span class="tx-undo-toast__text">{{ $t('transactions.undoDelete', { name: pendingDelete.name }) }}</span>
+          <button class="tx-undo-toast__btn" @click="undoDelete">{{ $t('transactions.undoAction') }}</button>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Icon from '../ui/Icon.vue'
 import { useFormatters } from '../../composables/ui/useFormatters'
@@ -248,7 +290,11 @@ const props = defineProps<{
   todayIncome: number
 }>()
 
-defineEmits<{ 'open-detail': [tx: TransactionItem] }>()
+const emit = defineEmits<{
+  'open-detail': [tx: TransactionItem]
+  'delete-tx': [tx: TransactionItem]
+  'quick-add': [tx: TransactionItem]
+}>()
 
 // ─── Filter state ─────────────────────────────────────────────────────────────
 
@@ -284,6 +330,16 @@ function clearSearch() {
   searchQuery.value = ''
 }
 
+// ─── Undo delete state ────────────────────────────────────────────────────────
+
+interface PendingDelete {
+  tx: TransactionItem
+  name: string
+  timer: ReturnType<typeof setTimeout>
+}
+const pendingDelete = ref<PendingDelete | null>(null)
+const hiddenTxId = ref<number | null>(null)
+
 // ─── Computed filtering ───────────────────────────────────────────────────────
 
 const typeFiltered = computed(() => {
@@ -316,6 +372,9 @@ const filteredItems = computed(() => {
       const note = tx.note?.toLowerCase() ?? ''
       return locName.includes(q) || rawName.includes(q) || note.includes(q)
     })
+  }
+  if (hiddenTxId.value !== null) {
+    items = items.filter(tx => tx.id !== hiddenTxId.value)
   }
   return items
 })
@@ -426,6 +485,126 @@ const previewGroups = computed<TxGroup[]>(() => {
   return result
 })
 
+// ─── Swipe actions ─────────────────────────────────────────────────────────────
+
+const swipeActiveId = ref<number | null>(null)
+const swipeX = ref(0)
+const swipeSpring = ref(false)
+let swipeTouchStartX = 0
+let swipeTouchStartY = 0
+let swipeDirLocked: 'none' | 'horiz' | 'vert' = 'none'
+let swipeDidMove = false
+
+function swipeItemStyle(id: number): Record<string, string> {
+  if (swipeActiveId.value !== id) return {}
+  return {
+    transform: `translateX(${swipeX.value}px)`,
+    transition: swipeSpring.value ? 'transform 0.3s cubic-bezier(0.22,1,0.36,1)' : 'none',
+  }
+}
+
+function onSwipeTouchStart(e: TouchEvent, tx: TransactionItem) {
+  if (swipeActiveId.value !== null && swipeActiveId.value !== tx.id) {
+    springBackSwipe()
+  }
+  swipeActiveId.value = tx.id
+  swipeX.value = 0
+  swipeTouchStartX = e.touches[0].clientX
+  swipeTouchStartY = e.touches[0].clientY
+  swipeDirLocked = 'none'
+  swipeDidMove = false
+  swipeSpring.value = false
+}
+
+function onSwipeTouchMove(e: TouchEvent, tx: TransactionItem) {
+  if (swipeActiveId.value !== tx.id) return
+  const dx = e.touches[0].clientX - swipeTouchStartX
+  const dy = e.touches[0].clientY - swipeTouchStartY
+
+  if (swipeDirLocked === 'none') {
+    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+      swipeDirLocked = Math.abs(dx) >= Math.abs(dy) ? 'horiz' : 'vert'
+    }
+  }
+  if (swipeDirLocked === 'vert') {
+    swipeX.value = 0
+    return
+  }
+  if (swipeDirLocked === 'horiz') {
+    const MAX = 110
+    swipeX.value = Math.max(-MAX, Math.min(MAX, dx))
+    if (Math.abs(dx) > 5) swipeDidMove = true
+  }
+}
+
+function onSwipeTouchEnd(_e: TouchEvent, tx: TransactionItem) {
+  if (swipeActiveId.value !== tx.id) return
+  const x = swipeX.value
+  const THRESHOLD = 60
+
+  if (x < -THRESHOLD) {
+    triggerDelete(tx)
+  } else if (x > THRESHOLD) {
+    triggerClone(tx)
+  } else {
+    springBackSwipe()
+  }
+}
+
+function springBackSwipe() {
+  swipeSpring.value = true
+  swipeX.value = 0
+  setTimeout(() => {
+    swipeSpring.value = false
+    swipeActiveId.value = null
+  }, 300)
+}
+
+function onItemClick(tx: TransactionItem) {
+  if (swipeDidMove) {
+    swipeDidMove = false
+    return
+  }
+  emit('open-detail', tx)
+}
+
+// ─── Delete with undo ──────────────────────────────────────────────────────────
+
+function triggerDelete(tx: TransactionItem) {
+  // Commit any existing pending delete immediately before starting a new one
+  if (pendingDelete.value) {
+    clearTimeout(pendingDelete.value.timer)
+    emit('delete-tx', pendingDelete.value.tx)
+    pendingDelete.value = null
+  }
+
+  hiddenTxId.value = tx.id
+  springBackSwipe()
+
+  const name = getLocalized(tx, 'desc', locale.value) || tx.desc
+  const timer = setTimeout(() => {
+    emit('delete-tx', tx)
+    pendingDelete.value = null
+    hiddenTxId.value = null
+  }, 5000)
+
+  pendingDelete.value = { tx, name, timer }
+}
+
+function undoDelete() {
+  if (!pendingDelete.value) return
+  clearTimeout(pendingDelete.value.timer)
+  pendingDelete.value = null
+  hiddenTxId.value = null
+}
+
+// ─── Quick add (clone) ────────────────────────────────────────────────────────
+
+function triggerClone(tx: TransactionItem) {
+  springBackSwipe()
+  emit('quick-add', tx)
+}
+
 // ─── Fullscreen ───────────────────────────────────────────────────────────────
 
 function openFullscreen() {
@@ -437,6 +616,17 @@ function closeFullscreen() {
   showAll.value = false
   document.body.style.overflow = ''
 }
+
+// ─── Cleanup ──────────────────────────────────────────────────────────────────
+
+onBeforeUnmount(() => {
+  if (pendingDelete.value) {
+    clearTimeout(pendingDelete.value.timer)
+    emit('delete-tx', pendingDelete.value.tx)
+    pendingDelete.value = null
+    hiddenTxId.value = null
+  }
+})
 </script>
 
 <style scoped>
@@ -517,8 +707,40 @@ function closeFullscreen() {
 .tx-list__day-inc { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--accent3); }
 .tx-list__day-exp { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--accent2); }
 
+/* ─── Swipe container ─────────────────────────────────────────────────────── */
+.tx-swipe {
+  position: relative;
+  overflow: hidden;
+  border-radius: 9px;
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.tx-swipe__action {
+  position: absolute;
+  top: 0; bottom: 0;
+  display: flex; align-items: center; gap: 5px;
+  padding: 0 18px;
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  letter-spacing: .03em;
+  pointer-events: none;
+  white-space: nowrap;
+}
+:deep(.tx-swipe__action svg) { display: block; flex-shrink: 0; }
+
+.tx-swipe__action--delete { right: 0; background: var(--accent2); color: #fff; }
+.tx-swipe__action--clone  { left: 0;  background: var(--accent3); color: #fff; }
+
 /* Items */
-.tx-list__item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 11px; background: var(--surface2); border-radius: 9px; border: 1px solid transparent; border-left: 3px solid transparent; animation: si .2s ease; transition: background .15s, border-color .2s; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.tx-list__item {
+  position: relative; z-index: 1;
+  display: flex; align-items: flex-start; gap: 10px; padding: 10px 11px;
+  background: var(--surface2); border-radius: 9px; border: 1px solid transparent; border-left: 3px solid transparent;
+  animation: si .2s ease; transition: background .15s, border-color .2s;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  will-change: transform;
+}
 .tx-list__item--exp { border-left-color: var(--accent2); }
 .tx-list__item--exp .tx-list__item-icon { background: rgba(var(--accent2-rgb),.12); color: var(--accent2); }
 .tx-list__item--inc { border-left-color: var(--accent3); }
@@ -562,6 +784,32 @@ function closeFullscreen() {
 .tx-fullscreen__close:active { background: var(--border); color: var(--text); }
 
 .tx-fullscreen__list { flex: 1; overflow-y: auto; padding: 4px 14px 32px; -webkit-overflow-scrolling: touch; }
+
+/* ─── Undo delete toast ───────────────────────────────────────────────────── */
+.tx-undo-toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 14px 10px 18px;
+  background: rgba(30, 30, 40, 0.94); border: 1px solid rgba(255,255,255,.12); border-radius: 10px;
+  font-family: var(--sans); font-size: 12px; font-weight: 600;
+  z-index: 9999; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 20px rgba(0,0,0,.45);
+  max-width: calc(100vw - 32px); min-width: 220px;
+  color: rgba(255,255,255,.85);
+}
+.tx-undo-toast__text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tx-undo-toast__btn {
+  flex-shrink: 0; padding: 4px 10px;
+  font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .03em;
+  background: rgba(var(--accent-rgb),.22); border: 1px solid rgba(var(--accent-rgb),.5); border-radius: 6px;
+  color: var(--accent); cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.tx-undo-toast__btn:active { background: rgba(var(--accent-rgb),.4); }
+
+.undo-toast-enter-active { transition: all .3s ease; }
+.undo-toast-leave-active { transition: all .25s ease; }
+.undo-toast-enter-from { opacity: 0; transform: translateX(-50%) translateY(16px); }
+.undo-toast-leave-to   { opacity: 0; transform: translateX(-50%) translateY(16px); }
 
 /* ─── Slide transition ───────────────────────────────────────────────────── */
 .tx-slide-enter-active,
