@@ -137,6 +137,13 @@ export default {
     expense: 'Chi tiêu',
     incShort: 'Thu',
     expShort: 'Chi',
+    today: 'Hôm nay',
+    yesterday: 'Hôm qua',
+    filterAll: 'Tất cả',
+    filterExp: 'Chi tiêu',
+    filterInc: 'Thu nhập',
+    viewAll: 'Xem tất cả ({n})',
+    allCats: 'Tất cả',
   },
   charts: {
     tabs: {
