@@ -143,6 +143,7 @@ export default {
     filterExp: 'Chi tiêu',
     filterInc: 'Thu nhập',
     viewAll: 'Xem tất cả ({n})',
+    collapse: 'Thu gọn',
     allCats: 'Tất cả',
     search: 'Tìm giao dịch...',
     statsThisMonth: 'Tháng này',

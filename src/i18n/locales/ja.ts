@@ -143,6 +143,7 @@ export default {
     filterExp: '支出',
     filterInc: '収入',
     viewAll: 'すべて表示 ({n})',
+    collapse: '折りたたむ',
     allCats: 'すべて',
     search: '取引を検索...',
     statsThisMonth: '今月',
