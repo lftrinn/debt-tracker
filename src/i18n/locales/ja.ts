@@ -192,6 +192,7 @@ export default {
       language: '言語',
       currency: '通貨',
       progressMode: 'カード進捗バー',
+      push: 'プッシュ通知',
       logout: 'ログアウト',
     },
     limit: {
@@ -270,6 +271,20 @@ export default {
       title: '進捗バー表示モード',
       used: '使用率 % を表示',
       repaid: '返済率 % を表示',
+    },
+    push: {
+      hint: 'アプリが閉じていてもアラートを受け取れます。iOS 16.4+ ではホーム画面への追加が必要です。',
+      iOSHint: 'iOS: Safari → 共有 → ホーム画面に追加、その後ここで通知を有効化してください。',
+      status: {
+        unknown: '未設定',
+        granted: '有効',
+        denied: '拒否済み',
+        unsupported: '非対応',
+      },
+      enableBtn: '通知を有効にする',
+      workerUrl: 'Cloudflare Worker URL',
+      workerUrlPlaceholder: 'https://debt-tracker-push.xxx.workers.dev',
+      saveWorker: 'Worker URL を保存',
     },
     logout: {
       confirm: 'ログアウトしてもよろしいですか？',
@@ -379,5 +394,9 @@ export default {
     translating: '説明を翻訳中...',
     translated: '翻訳完了',
     translateErr: '翻訳できませんでした',
+    pushEnabled: 'プッシュ通知を有効にしました',
+    pushDenied: '通知が拒否されました',
+    pushError: '通知を有効にできませんでした',
+    pushWorkerSaved: 'Worker URL を保存しました',
   },
 }

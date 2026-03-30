@@ -28,6 +28,12 @@
         <span class="settings__item-label">{{ $t('settings.menu.json') }}</span>
         <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
       </div>
+      <div class="settings__item" @click="open = 'push'">
+        <span class="settings__item-ico"><Icon name="bell" :size="16" /></span>
+        <span class="settings__item-label">{{ $t('settings.menu.push') }}</span>
+        <span class="settings__push-badge" :class="'settings__push-badge--' + (pushStatus || 'unknown')">{{ $t('settings.push.status.' + (pushStatus || 'unknown')) }}</span>
+        <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
+      </div>
       <div class="settings__sep"></div>
       <div class="settings__item settings__item--danger" @click="open = 'logout'">
         <span class="settings__item-ico settings__item-ico--danger"><Icon name="log-out" :size="16" /></span>
@@ -208,6 +214,35 @@
             </div>
           </template>
 
+          <!-- PUSH NOTIFICATIONS -->
+          <template v-if="open === 'push'">
+            <div class="popup-body">
+              <div class="hint" style="margin-bottom:10px">{{ $t('settings.push.hint') }}</div>
+              <div v-if="isIOS" class="settings__push-ios-hint">{{ $t('settings.push.iOSHint') }}</div>
+              <div class="settings__push-status-row">
+                <span class="settings__sync-note">{{ $t('settings.push.status.' + (pushStatus || 'unknown')) }}</span>
+                <span class="settings__push-dot" :class="'settings__push-dot--' + (pushStatus || 'unknown')"></span>
+              </div>
+              <button
+                v-if="pushStatus !== 'granted' && pushStatus !== 'denied' && pushStatus !== 'unsupported'"
+                class="popup-btn primary settings__push-enable-btn"
+                @click="$emit('enable-push')"
+              >{{ $t('settings.push.enableBtn') }}</button>
+              <div class="popup-field" style="margin-top:14px">
+                <label class="popup-label">{{ $t('settings.push.workerUrl') }}</label>
+                <input
+                  class="popup-input"
+                  v-model="pushWorkerUrl"
+                  type="url"
+                  :placeholder="$t('settings.push.workerUrlPlaceholder')"
+                />
+              </div>
+            </div>
+            <div class="popup-actions">
+              <button class="popup-btn primary" @click="savePushWorkerUrl">{{ $t('settings.push.saveWorker') }}</button>
+            </div>
+          </template>
+
           <!-- LOGOUT CONFIRM -->
           <template v-if="open === 'logout'">
             <div class="popup-body">
@@ -290,12 +325,15 @@ const props = defineProps({
   importErr: String,
   hide: Object,
   hideZones: Object,
+  pushStatus: String,
 })
 
 const emit = defineEmits([
   'update-limit',
   'import-json',
   'set-hide-zone',
+  'enable-push',
+  'save-push-worker',
   'logout',
 ])
 
@@ -306,6 +344,7 @@ const titles = computed(() => ({
   json: t('settings.menu.json'),
   currency: t('settings.menu.currency'),
   progressMode: t('settings.progressMode.title'),
+  push: t('settings.menu.push'),
   logout: t('settings.menu.logout'),
 }))
 
@@ -390,6 +429,18 @@ function saveLimit() {
     nLimit.value = null
     closePopup()
   }
+}
+
+// --- Push notification ---
+const pushWorkerUrl = ref(localStorage.getItem('dt_push_worker_url') || '')
+const isIOS = computed(() =>
+  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.userAgent.includes('Mac') && 'ontouchend' in document)
+)
+
+function savePushWorkerUrl() {
+  emit('save-push-worker', pushWorkerUrl.value)
+  closePopup()
 }
 
 // --- Swipe to dismiss ---
@@ -588,4 +639,18 @@ defineExpose({})
 .settings__popup-btn--danger:hover { background: rgba(var(--danger-rgb),.2); opacity: 1; }
 .settings__popup-actions--gap { flex-direction: row; gap: 10px; }
 .settings__popup-actions--gap .popup-btn { flex: 1; }
+
+/* Push notification */
+.settings__push-badge { font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 20px; flex-shrink: 0; }
+.settings__push-badge--unknown { background: rgba(var(--muted-rgb, 100,100,120),.15); color: var(--muted); }
+.settings__push-badge--granted { background: rgba(var(--accent3-rgb, 74,239,184),.15); color: var(--accent3, #4aefb8); }
+.settings__push-badge--denied { background: rgba(var(--danger-rgb),.12); color: var(--danger); }
+.settings__push-badge--unsupported { background: rgba(var(--muted-rgb, 100,100,120),.1); color: var(--muted); }
+.settings__push-ios-hint { font-family: var(--sans); font-size: 11px; color: var(--muted); background: var(--surface2); border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; line-height: 1.5; }
+.settings__push-status-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.settings__push-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.settings__push-dot--granted { background: var(--accent3, #4aefb8); box-shadow: 0 0 5px var(--accent3, #4aefb8); }
+.settings__push-dot--unknown, .settings__push-dot--unsupported { background: var(--muted); }
+.settings__push-dot--denied { background: var(--danger); }
+.settings__push-enable-btn { width: 100%; margin-top: 2px; }
 </style>

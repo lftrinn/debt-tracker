@@ -153,9 +153,12 @@
         :importErr="importErr"
         :hide="{ cardInfo: hz('settings.cardInfo'), dailyLim: hz('settings.dailyLim'), dropdown: hz('settings.dropdown'), cashInfo: hz('settings.cashInfo') }"
         :hideZones="hideZones"
+        :pushStatus="pushStatus"
         @update-limit="updLimit"
         @import-json="handleImportJson"
         @set-hide-zone="({ key, val }: { key: string; val: boolean }) => setHideZone(key, val)"
+        @enable-push="handleEnablePush"
+        @save-push-worker="handleSavePushWorker"
         @logout="logout"
       />
     </div>
@@ -183,6 +186,7 @@ import { useTransactions } from './composables/actions/useTransactions'
 import { usePayments } from './composables/actions/usePayments'
 import { useDebtActions } from './composables/actions/useDebtActions'
 import { useNotifications } from './composables/ui/useNotifications'
+import { usePushNotifications } from './composables/ui/usePushNotifications'
 
 import LoadingScreen from './components/ui/LoadingScreen.vue'
 import ErrorPopup from './components/ui/ErrorPopup.vue'
@@ -228,6 +232,7 @@ let overTimer: ReturnType<typeof setTimeout> | null = null
 
 // ─── Notifications ────────────────────────────────────────────────────────
 const { requestPermission, checkDailyLimit } = useNotifications()
+const { pushStatus, checkPushStatus, registerServiceWorker, enablePushNotifications, notifyOverLimit } = usePushNotifications()
 
 // ─── Toast ────────────────────────────────────────────────────────────────
 const { toastMsg, toastType, toastTrigger, toast } = useToast()
@@ -326,6 +331,8 @@ function dismissOverBanner(): void {
 // ─── SyncBar intersection observer ───────────────────────────────────────
 onMounted(() => {
   requestPermission()
+  registerServiceWorker()
+  checkPushStatus()
   syncObserver = new IntersectionObserver(
     ([entry]) => { syncBarScrolled.value = !entry.isIntersecting },
     { threshold: 0 }
@@ -348,9 +355,31 @@ onUnmounted(() => {
 // ─── Daily limit notification watch ───────────────────────────────────────
 watch(todaySpent, (newSpent, oldSpent) => {
   if (newSpent > (oldSpent ?? 0)) {
-    checkDailyLimit(newSpent, dayLimit.value)
+    // Push notification (qua Worker) khi đã subscribe, Web Notification nếu không
+    if (pushStatus.value === 'granted') {
+      notifyOverLimit(newSpent, dayLimit.value)
+    } else {
+      checkDailyLimit(newSpent, dayLimit.value)
+    }
   }
 })
+
+async function handleEnablePush(): Promise<void> {
+  const result = await enablePushNotifications()
+  if (result === 'granted') {
+    toastFn('toast.pushEnabled')
+  } else if (result === 'denied') {
+    toastFn('toast.pushDenied', 'err')
+  } else {
+    toastFn('toast.pushError', 'err')
+  }
+}
+
+function handleSavePushWorker(url: string): void {
+  const { setWorkerUrl } = usePushNotifications()
+  setWorkerUrl(url)
+  toastFn('toast.pushWorkerSaved')
+}
 
 // ─── Setup composable ─────────────────────────────────────────────────────
 // Payments is wired first so cleanupPastPaid can be passed to useAppSetup

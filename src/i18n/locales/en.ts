@@ -192,6 +192,7 @@ export default {
       language: 'Language',
       currency: 'Currency',
       progressMode: 'Card progress bar',
+      push: 'Push Notifications',
       logout: 'Log out',
     },
     limit: {
@@ -270,6 +271,20 @@ export default {
       title: 'Progress bar display mode',
       used: 'Show % used',
       repaid: 'Show % repaid',
+    },
+    push: {
+      hint: 'Receive alerts even when the app is closed. Requires adding to Home Screen on iOS 16.4+.',
+      iOSHint: 'iOS: Open Safari → Share → Add to Home Screen, then return here to enable.',
+      status: {
+        unknown: 'Not enabled',
+        granted: 'Active',
+        denied: 'Denied',
+        unsupported: 'Not supported',
+      },
+      enableBtn: 'Enable notifications',
+      workerUrl: 'Cloudflare Worker URL',
+      workerUrlPlaceholder: 'https://debt-tracker-push.xxx.workers.dev',
+      saveWorker: 'Save Worker URL',
     },
     logout: {
       confirm: 'Are you sure you want to log out?',
@@ -379,5 +394,9 @@ export default {
     translating: 'Translating description...',
     translated: 'Translation done',
     translateErr: 'Translation failed',
+    pushEnabled: 'Push notifications enabled',
+    pushDenied: 'Notifications denied',
+    pushError: 'Could not enable notifications',
+    pushWorkerSaved: 'Worker URL saved',
   },
 }
