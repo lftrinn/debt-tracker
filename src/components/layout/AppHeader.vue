@@ -7,8 +7,8 @@
         <transition name="hdr-fade">
           <div v-if="scrolled" class="app-header__sync">
             <div class="app-header__sync-dot" :class="`app-header__sync-dot--${syncStatus}`"></div>
-            <span v-if="syncTime" class="app-header__sync-time">{{ syncTime }}</span>
-            <span v-if="syncTime" class="app-header__sep">·</span>
+            <span class="app-header__sync-time">{{ syncTime || '--:--' }}</span>
+            <span class="app-header__sep">·</span>
             <span class="app-header__date">{{ today }}</span>
             <span class="app-header__sep">·</span>
             <Icon :name="limIcon" :size="12" class="app-header__lim-icon" :class="[`app-header__lim-icon--${limSt}`, { 'app-header__lim-icon--blink': limBlink }]" @click="$emit('scroll-alert')" />
