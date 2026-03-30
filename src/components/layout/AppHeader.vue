@@ -141,14 +141,14 @@ defineEmits(['reload', 'toggle-hide', 'scroll-alert', 'dismiss-over'])
 .app-header__days-badge { padding: 1px 6px; border-radius: 6px; background: rgba(var(--danger-rgb),.18); color: var(--accent2); font-size: 9px; font-weight: 700; font-family: var(--mono); cursor: pointer; }
 @keyframes lim-blink { 0%,100% { opacity: 1; } 50% { opacity: .2; } }
 .app-header__actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.app-header__btn { background: none; border: 1px solid var(--border); border-radius: 7px; color: var(--muted); font-size: 13px; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: width .25s ease, height .25s ease, border-color .2s, color .2s; }
-.app-header__btn:hover { color: var(--text); }
+.app-header__btn { background: none; border: 1px solid var(--border); border-radius: 7px; color: var(--text); font-size: 13px; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: width .25s ease, height .25s ease, border-color .2s, color .2s; }
+.app-header__btn:active { opacity: .7; }
 .app-header__btn--eye-active { color: var(--accent); border-color: var(--accent); }
 .app-header__banner { position: absolute; inset: 0; z-index: 10; display: flex; align-items: center; gap: 8px; padding: 0 16px; background: rgba(var(--danger-rgb),.12); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 .app-header__banner-icon { color: var(--danger); flex-shrink: 0; animation: lim-blink 1s ease-in-out infinite; }
 .app-header__banner-msg { flex: 1; font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--danger); }
-.app-header__banner-btn { background: none; border: 1px solid rgba(var(--danger-rgb),.3); border-radius: 6px; color: var(--danger); padding: 3px 8px; cursor: pointer; flex-shrink: 0; transition: all .2s; display: flex; align-items: center; }
-.app-header__banner-btn:hover { background: rgba(var(--danger-rgb),.15); }
+.app-header__banner-btn { background: rgba(var(--danger-rgb),.15); border: 1px solid rgba(var(--danger-rgb),.3); border-radius: 6px; color: var(--danger); padding: 3px 8px; cursor: pointer; flex-shrink: 0; transition: all .2s; display: flex; align-items: center; }
+.app-header__banner-btn:active { opacity: .7; }
 .hdr-fade-enter-active { transition: opacity .2s ease .1s; }
 .hdr-fade-leave-active { transition: opacity .15s ease; }
 .hdr-fade-enter-from, .hdr-fade-leave-to { opacity: 0; }

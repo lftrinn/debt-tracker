@@ -48,7 +48,7 @@ body::before {
 .inp-s:focus { border-color: var(--accent); }
 textarea.inp-s { height: 130px; resize: none; font-size: 10px; line-height: 1.5; }
 .btn-p { width: 100%; background: var(--accent); color: var(--bg); border: none; border-radius: 9px; padding: 12px; font-family: var(--sans); font-size: 13px; font-weight: 800; cursor: pointer; letter-spacing: .05em; transition: all .2s; }
-.btn-p:hover { opacity: .9; transform: translateY(-1px); }
+.btn-p:active { opacity: .8; transform: scale(.98); }
 .btn-p:disabled { opacity: .4; cursor: not-allowed; transform: none; }
 .hint { font-family: var(--mono); font-size: 10px; color: var(--muted); line-height: 1.6; margin-bottom: 12px; }
 .hint b { color: var(--accent); }
@@ -119,8 +119,8 @@ textarea.inp-s { height: 130px; resize: none; font-size: 10px; line-height: 1.5;
 .popup-sheet:active .popup-handle-bar { background: var(--muted); }
 .popup-hdr { display: flex; align-items: center; justify-content: space-between; }
 .popup-title { font-family: var(--sans); font-size: 14px; font-weight: 700; color: var(--text); }
-.popup-close { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--muted); width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; transition: all .2s; }
-.popup-close:hover { color: var(--text); border-color: var(--text); }
+.popup-close { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; transition: all .2s; }
+.popup-close:active { border-color: var(--text); opacity: .7; }
 .popup-body { display: flex; flex-direction: column; gap: 12px; }
 .popup-hero { display: flex; }
 .popup-badge { display: inline-flex; align-items: center; gap: 4px; font-family: var(--sans); font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 6px; }
@@ -139,7 +139,7 @@ textarea.inp-s { height: 130px; resize: none; font-size: 10px; line-height: 1.5;
 .popup-val { font-family: var(--mono); font-size: 12px; color: var(--text); }
 .popup-actions { display: flex; flex-direction: column; gap: 8px; }
 .popup-btn { border: none; border-radius: 10px; padding: 12px; font-family: var(--sans); font-size: 13px; font-weight: 700; cursor: pointer; transition: opacity .2s; text-align: center; }
-.popup-btn:hover { opacity: .85; }
+.popup-btn:active { opacity: .75; }
 .popup-btn:disabled { opacity: .35; cursor: not-allowed; }
 .popup-btn.primary { background: var(--accent3); color: var(--bg); }
 .popup-btn.primary.done { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
