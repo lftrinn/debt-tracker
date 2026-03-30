@@ -20,13 +20,14 @@
     <div>
       <div class="cash-hero__label">{{ $t('cash.todayLabel') }}</div>
       <div
-        :class="['cash-hero__value', 'num-flash', hide.todaySpent ? '' : isOver ? 'cash-hero__value--red' : 'cash-hero__value--yellow']"
+        :class="['cash-hero__value', 'num-flash']"
+        :style="hide.todaySpent ? {} : { color: amountColor(todaySpent, 'expense') }"
         :key="'spent' + spentAnimKey"
       >
         <span v-if="hide.todaySpent" class="masked">•••••••</span>
         <template v-else>{{ fCurr(todaySpent) }}</template>
       </div>
-      <div class="cash-hero__sub">{{ $t('cash.monthly') }} <span v-if="hide.monthSpent" class="masked">•••</span><template v-else>{{ fCurr(monthSpent) }}</template></div>
+      <div class="cash-hero__sub">{{ $t('cash.monthly') }} <span v-if="hide.monthSpent" class="masked">•••</span><template v-else><span :style="{ color: amountColor(monthSpent, 'expense') }">{{ fCurr(monthSpent) }}</span></template></div>
     </div>
   </div>
 </template>
@@ -34,8 +35,10 @@
 <script setup>
 import Icon from '../ui/Icon.vue'
 import { useCurrency } from '../../composables/api/useCurrency'
+import { useAmountColor } from '../../composables/ui/useAmountColor'
 
 const { fCurr } = useCurrency()
+const { amountColor } = useAmountColor()
 
 defineProps({
   availCash: Number,

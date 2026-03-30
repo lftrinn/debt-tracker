@@ -50,26 +50,28 @@
         <span v-if="cashDaysLeft !== null && cashDaysLeft < dToSalary" class="alert-badge-warn">{{ hz('alert') ? '•/•' : $t('app.alert.days', { days: cashDaysLeft, salary: dToSalary }) }}</span>
       </div>
 
-      <CashHero
-        :availCash="availCash"
-        :dToSalary="dToSalary"
-        :todaySpent="todayOutflow"
-        :monthSpent="monthSpent"
-        :isOver="isOver"
-        :cashTrend="cashTrend"
-        :cashAnimKey="cashAnimKey"
-        :spentAnimKey="spentAnimKey"
-        :hide="{ balance: hz('cash.balance'), todaySpent: hz('cash.todaySpent'), monthSpent: hz('cash.monthSpent') }"
-      />
+      <div class="top-cols">
+        <CashHero
+          :availCash="availCash"
+          :dToSalary="dToSalary"
+          :todaySpent="todayOutflow"
+          :monthSpent="monthSpent"
+          :isOver="isOver"
+          :cashTrend="cashTrend"
+          :cashAnimKey="cashAnimKey"
+          :spentAnimKey="spentAnimKey"
+          :hide="{ balance: hz('cash.balance'), todaySpent: hz('cash.todaySpent'), monthSpent: hz('cash.monthSpent') }"
+        />
 
-      <DebtOverview
-        :totalDebt="totalDebt"
-        :debtCards="debtCards"
-        :debtTrend="debtTrend"
-        :debtAnimKey="debtAnimKey"
-        :hide="{ total: hz('debt.total'), cardBal: hz('debt.cardBal'), minPay: hz('debt.minPay'), amounts: hideAmounts }"
-        @update-card="updateCardDirect"
-      />
+        <DebtOverview
+          :totalDebt="totalDebt"
+          :debtCards="debtCards"
+          :debtTrend="debtTrend"
+          :debtAnimKey="debtAnimKey"
+          :hide="{ total: hz('debt.total'), cardBal: hz('debt.cardBal'), minPay: hz('debt.minPay'), amounts: hideAmounts }"
+          @update-card="updateCardDirect"
+        />
+      </div>
 
       <ProgressSection
         :repayPct="repayPct"

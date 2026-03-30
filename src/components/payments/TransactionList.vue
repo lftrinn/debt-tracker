@@ -4,7 +4,7 @@
     <div class="c-hdr" style="margin-bottom:8px">
       <span class="c-title">
         {{ $t('transactions.title') }}
-        <span class="trend-ico" :class="monthTrend">
+        <span class="trend-ico" :class="monthTrend" :style="monthTrend === 'up' ? { color: amountColor(monthIncome, 'income') } : monthTrend === 'down' ? { color: amountColor(monthExpense, 'expense') } : {}">
           <Icon v-if="monthTrend === 'up'" name="trending-up" :size="12" />
           <Icon v-else-if="monthTrend === 'down'" name="trending-down" :size="12" />
           <Icon v-else name="minus" :size="12" />
@@ -130,7 +130,7 @@
               <template v-if="tx.time"><span class="tx-list__item-meta-sep">·</span><span class="tx-list__item-time">{{ tx.time }}</span></template>
             </div>
           </div>
-          <div class="tx-list__item-amt" :style="{ color: tx.type === 'inc' ? 'var(--accent3)' : 'var(--accent2)' }">
+          <div class="tx-list__item-amt" :style="{ color: amountColor(txVndAmt(tx), tx.type === 'inc' ? 'income' : 'expense') }">
             <template v-if="hide"><span class="masked">•••••</span></template>
             <template v-else>
               <template v-if="tx.currency && tx.currency !== displayCurrency">
@@ -153,13 +153,20 @@ import Icon from '../ui/Icon.vue'
 import { useFormatters } from '../../composables/ui/useFormatters'
 import { useCategories } from '../../composables/data/useCategories'
 import { useCurrency, type Currency } from '../../composables/api/useCurrency'
+import { useAmountColor } from '../../composables/ui/useAmountColor'
 import { getLocalized } from '../../composables/data/useI18nData'
 import type { TransactionItem } from '../../types/data'
 
 const { locale, t } = useI18n()
 const { fDate, tStr } = useFormatters()
 const { resolveCat } = useCategories()
-const { fCurr, fCurrNative, fCurrFor, displayCurrency } = useCurrency()
+const { fCurr, fCurrNative, fCurrFor, displayCurrency, toVnd } = useCurrency()
+const { amountColor } = useAmountColor()
+
+function txVndAmt(tx: TransactionItem): number {
+  if (tx.currency && tx.currency !== 'VND') return toVnd(tx.amount, tx.currency as Currency)
+  return tx.amount
+}
 
 const props = defineProps<{
   transactions: TransactionItem[]

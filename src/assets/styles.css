@@ -168,3 +168,18 @@ input.popup-input, select.popup-input { height: 38px; }
 .popup-enter-from .popup-sheet { transform: translateY(100%); }
 .popup-leave-to { opacity: 0; }
 .popup-leave-to .popup-sheet { transform: translateY(100%); }
+
+/* ─── Tablet responsive (768px+) ──────────────────────────────────────────── */
+@media (min-width: 768px) {
+  .wrap { max-width: 768px; padding: 20px 24px 100px; }
+
+  /* 2-column grid: CashHero + DebtOverview side by side */
+  .top-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .top-cols > * { margin-bottom: 0 !important; }
+
+  /* Popup sheet wider on tablet */
+  .popup-sheet { max-width: 560px; }
+
+  /* Tab content có thêm padding */
+  .tab-nav { border-radius: 12px; }
+}

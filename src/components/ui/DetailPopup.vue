@@ -36,7 +36,8 @@
             <div class="popup-name">{{ item._variant === 'upcoming' ? getLocalized(item, 'name') : getLocalized(item, 'desc', locale) }}</div>
 
             <!-- Amount -->
-            <div class="popup-amt" :class="item._variant === 'tx' ? (item.type === 'inc' ? 'inc' : 'exp') : 'exp'">
+            <div class="popup-amt" :class="item._variant === 'tx' ? (item.type === 'inc' ? 'inc' : 'exp') : 'exp'"
+              :style="hide ? {} : { color: amountColor(item.amount || item.amt, item._variant === 'tx' ? (item.type === 'inc' ? 'income' : 'expense') : 'expense') }">
               <template v-if="hide">•••••</template>
               <template v-else>
                 <template v-if="item._variant === 'tx'">{{ item.type === 'inc' ? '+' : '-' }}{{ fCurrFull(item.amount || item.amt) }}</template>
@@ -205,6 +206,7 @@ import Icon from './Icon.vue'
 import { useFormatters } from '../../composables/ui/useFormatters'
 import { useCategories } from '../../composables/data/useCategories'
 import { useCurrency } from '../../composables/api/useCurrency'
+import { useAmountColor } from '../../composables/ui/useAmountColor'
 import { getLocalized } from '../../composables/data/useI18nData'
 import { translateText, ALL_LANGS } from '../../composables/api/useTranslation'
 
@@ -212,6 +214,7 @@ const { locale } = useI18n()
 const { fDate, tStr } = useFormatters()
 const { resolveCat, expenseCategories, incomeCategories } = useCategories()
 const { fCurr, fCurrFull, displayCurrency, baseCurrency, convertBetween, ratesLoading } = useCurrency()
+const { amountColor } = useAmountColor()
 
 const props = defineProps({
   item: [Object, null],

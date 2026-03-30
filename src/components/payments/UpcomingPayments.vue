@@ -28,7 +28,7 @@
         </div>
         <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;margin-left:8px">
           <div class="upcoming__amt-col">
-            <div class="upcoming__amt" :style="p.paid ? { color: 'var(--muted)' } : {}">
+            <div class="upcoming__amt" :style="p.paid ? { color: 'var(--muted)' } : { color: amountColor(p.amt, 'expense') }">
               <template v-if="hide.amount">•••••</template>
               <template v-else>{{ fCurr(p.amt) }}</template>
             </div>
@@ -164,10 +164,12 @@ import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Icon from '../ui/Icon.vue'
 import { useCurrency } from '../../composables/api/useCurrency'
+import { useAmountColor } from '../../composables/ui/useAmountColor'
 import { getLocalized } from '../../composables/data/useI18nData'
 
 const { t } = useI18n()
 const { fCurr, displayCurrency, convertBetween, ratesLoading } = useCurrency()
+const { amountColor } = useAmountColor()
 
 /** Mã tiền tệ hiển thị trong input suffix (VND / USD / JPY) */
 const currSymbol = computed(() => displayCurrency.value)
