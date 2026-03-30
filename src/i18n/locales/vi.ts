@@ -347,6 +347,11 @@ export default {
     categoryIncome: 'Khoản thu',
     saveButton: 'Lưu thay đổi',
     cancelButton: 'Huỷ',
+    noteLabel: 'Ghi chú',
+    tagsLabel: 'Tags',
+    timeLabel: 'Giờ',
+    notePlaceholder: 'Ghi chú...',
+    tagsPlaceholder: 'Tags (phẩy, cách nhau)',
     review: {
       title: 'Cập nhật bản dịch',
       subtitle: 'Bạn vừa chỉnh sửa nội dung. Chọn cách xử lý các ngôn ngữ đã nhập thủ công trước đó:',

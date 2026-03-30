@@ -347,6 +347,11 @@ export default {
     categoryIncome: 'Income',
     saveButton: 'Save changes',
     cancelButton: 'Cancel',
+    noteLabel: 'Note',
+    tagsLabel: 'Tags',
+    timeLabel: 'Time',
+    notePlaceholder: 'Note...',
+    tagsPlaceholder: 'Tags (comma separated)',
     review: {
       title: 'Update translations',
       subtitle: 'You just edited the content. Choose how to handle languages that were previously entered manually:',
