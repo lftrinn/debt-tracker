@@ -185,7 +185,6 @@ import { useAppSetup } from './composables/actions/useAppSetup'
 import { useTransactions } from './composables/actions/useTransactions'
 import { usePayments } from './composables/actions/usePayments'
 import { useDebtActions } from './composables/actions/useDebtActions'
-import { useNotifications } from './composables/ui/useNotifications'
 import { usePushNotifications } from './composables/ui/usePushNotifications'
 
 import LoadingScreen from './components/ui/LoadingScreen.vue'
@@ -210,9 +209,9 @@ import Icon from './components/ui/Icon.vue'
 const api = useApi()
 const { syncSt, syncMsg, syncTime, syncing, isConfigured } = api
 const { fN, tStr } = useFormatters()
-const { fCurr, fCurrFull, fetchRates, displayCurrency } = useCurrency()
+const { fCurr, fCurrFull, fetchRates } = useCurrency()
 fetchRates()
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const syncMsgText = computed(() => t(syncMsg.value))
 
 // ─── UI state ─────────────────────────────────────────────────────────────
@@ -231,8 +230,7 @@ let alertObserver: IntersectionObserver | null = null
 let overTimer: ReturnType<typeof setTimeout> | null = null
 
 // ─── Notifications ────────────────────────────────────────────────────────
-const { requestPermission, checkDailyLimit } = useNotifications()
-const { pushStatus, checkPushStatus, registerServiceWorker, enablePushNotifications, sendStatusNotification, sendDailyStatusOnAppReady, updateLocale } = usePushNotifications()
+const { pushStatus, checkPushStatus, registerServiceWorker, enablePushNotifications, sendDueNotification, sendPaydayNotification } = usePushNotifications()
 
 // ─── Toast ────────────────────────────────────────────────────────────────
 const { toastMsg, toastType, toastTrigger, toast } = useToast()
@@ -284,9 +282,9 @@ const localizedRules = computed(() => [
 const cashAnimKey = ref(0)
 const spentAnimKey = ref(0)
 const debtAnimKey = ref(0)
-watch(availCash, (newCash) => { cashAnimKey.value++; sendStatusNotification(newCash, todaySpent.value, dayLimit.value, totalDebt.value) })
+watch(availCash, () => { cashAnimKey.value++ })
 watch(todaySpent, () => { spentAnimKey.value++ })
-watch(totalDebt, (newDebt) => { debtAnimKey.value++; sendStatusNotification(availCash.value, todaySpent.value, dayLimit.value, newDebt) })
+watch(totalDebt, () => { debtAnimKey.value++ })
 
 // ─── Over-limit blink logic ───────────────────────────────────────────────
 watch([todaySpent, limSt], ([spent, st], [oldSpent]) => {
@@ -330,7 +328,6 @@ function dismissOverBanner(): void {
 
 // ─── SyncBar intersection observer ───────────────────────────────────────
 onMounted(() => {
-  requestPermission()
   registerServiceWorker()
   checkPushStatus()
   syncObserver = new IntersectionObserver(
@@ -352,34 +349,12 @@ onUnmounted(() => {
   if (overTimer) clearTimeout(overTimer)
 })
 
-// ─── Daily limit notification watch ───────────────────────────────────────
-watch(todaySpent, (newSpent, oldSpent) => {
-  if (newSpent > (oldSpent ?? 0)) {
-    // Push notification (qua Worker) khi đã subscribe, Web Notification nếu không
-    if (pushStatus.value === 'granted') {
-      sendStatusNotification(availCash.value, newSpent, dayLimit.value, totalDebt.value)
-    } else {
-      checkDailyLimit(newSpent, dayLimit.value)
-    }
-  }
-})
-
-// Gửi trạng thái hạn mức khi app sẵn sàng — chỉ 1 lần/ngày
+// ─── Push notification khi app sẵn sàng ──────────────────────────────────
 watch(appState, (state) => {
   if (state === 'ready') {
-    sendDailyStatusOnAppReady(availCash.value, todaySpent.value, dayLimit.value, totalDebt.value)
+    sendDueNotification(upcoming.value)
+    sendPaydayNotification(d.value.income?.pay_date ?? 5)
   }
-})
-
-// Re-subscribe với locale mới khi user đổi ngôn ngữ, rồi gửi lại notification ngay
-watch(locale, async () => {
-  await updateLocale()
-  sendStatusNotification(availCash.value, todaySpent.value, dayLimit.value, totalDebt.value, true)
-})
-
-// Gửi lại notification khi đổi display currency để cập nhật nội dung trên lock screen
-watch(displayCurrency, () => {
-  sendStatusNotification(availCash.value, todaySpent.value, dayLimit.value, totalDebt.value, true)
 })
 
 async function handleEnablePush(): Promise<void> {

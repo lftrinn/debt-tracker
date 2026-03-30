@@ -283,7 +283,6 @@ export default {
         unsupported: '非対応',
       },
       enableBtn: '通知を有効にする',
-      statusEnabled: '1日の上限ステータスを表示',
       workerUrl: 'Cloudflare Worker URL',
       workerUrlPlaceholder: 'https://debt-tracker-push.xxx.workers.dev',
       saveWorker: 'Worker URL を保存',
@@ -362,13 +361,13 @@ export default {
   },
   notification: {
     title: '支出アラート',
-    warn: '{spent}/{limit}を支出しました（{pct}%）',
-    over: '上限超過！本日{spent}/{limit}を支出',
-    summary: {
+    due: {
       title: 'Debt Tracker',
-      body: '現金: {cash} · 本日: {spent}/{limit}\n総負債: {debt}\n上限: {remaining}残り',
-      bodyWarn: '現金: {cash} · 本日: {spent}/{limit}\n総負債: {debt}\n⚠ 上限の{pct}%使用、残り{remaining}',
-      bodyOver: '現金: {cash} · 本日: {spent}/{limit}\n総負債: {debt}\n⚠ 上限超過 {over}',
+      single: '{name}が今日期限です',
+      multiple: '{name}が今日期限です（+{count}件）',
+    },
+    payday: {
+      body: '今日は給料日！アプリの情報を更新しましたか？',
     },
   },
   toast: {

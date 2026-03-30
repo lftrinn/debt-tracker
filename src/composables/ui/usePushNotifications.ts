@@ -1,16 +1,14 @@
 import { ref } from 'vue'
 import { i18n } from '../../i18n'
-import { useCurrency } from '../api/useCurrency'
+import type { UpcomingItem } from '@/types/data'
 
 const VAPID_PUBLIC_KEY = 'BE1CoUCSw3FJXmx5_ixw1nAY7Wlm3H15VLGVQG4XTL_n2qeFPOl4PTGnSsB6fjv8MbmGUqqIwOzZBmZMIAz2iVU'
 const DEFAULT_WORKER_URL = 'https://debt-tracker-push.tl-dellroyal.workers.dev'
 const PUSH_SUB_KEY = 'dt_push_sub'
 const WORKER_URL_KEY = 'dt_push_worker_url'
-// Throttle 30s và daily-once cho sendStatusNotification
-const STATUS_THROTTLE_KEY = 'dt_status_last_sent'
-const STATUS_DATE_KEY = 'dt_status_sent_date'
-// Toggle bật/tắt status notification (mặc định TẮT)
-const PUSH_STATUS_ENABLED_KEY = 'dt_push_status_enabled'
+// Deduplication: mỗi loại notification chỉ gửi 1 lần/ngày
+const DUE_DATE_KEY = 'dt_due_notif_date'
+const PAYDAY_DATE_KEY = 'dt_payday_notif_date'
 
 export type PushStatus = 'unknown' | 'granted' | 'denied' | 'unsupported'
 
@@ -26,11 +24,8 @@ function urlBase64ToUint8Array(b64url: string): Uint8Array {
   return Uint8Array.from(raw, (c) => c.charCodeAt(0))
 }
 
-// Singleton reactive refs để share state giữa các lần gọi composable
+// Singleton reactive ref để share state giữa các lần gọi composable
 const pushStatus = ref<PushStatus>('unknown')
-const pushStatusEnabled = ref<boolean>(
-  localStorage.getItem(PUSH_STATUS_ENABLED_KEY) === 'true'
-)
 
 /**
  * Build payload cho tất cả 3 locale.
@@ -60,11 +55,18 @@ function buildAllLocalePayloads(
 }
 
 /**
+ * Lấy tên khoản theo locale từ UpcomingItem.
+ */
+function getItemName(item: UpcomingItem, locale: string): string {
+  return item.nameI18n?.[locale as 'vi' | 'en' | 'ja'] ?? item.name
+}
+
+/**
  * Quản lý Web Push Notification qua Cloudflare Worker.
  * - registerServiceWorker() — đăng ký SW khi app khởi động
  * - enablePushNotifications() — gọi từ user gesture (button click)
- * - sendStatusNotification() — gửi 1 notification tổng hợp (tiền mặt + nợ + hạn mức), throttle 30s
- * - sendDailyStatusOnAppReady() — gửi trạng thái 1 lần/ngày khi app sẵn sàng
+ * - sendDueNotification() — gửi notification các khoản đến hạn hôm nay (1 lần/ngày)
+ * - sendPaydayNotification() — gửi notification nhắc ngày lương (1 lần/ngày)
  */
 export function usePushNotifications() {
   function checkPushStatus(): void {
@@ -178,98 +180,54 @@ export function usePushNotifications() {
   }
 
   /**
-   * Re-gửi subscription lên Worker với locale mới khi user đổi ngôn ngữ.
-   * Worker sẽ upsert record, cập nhật locale cho thiết bị này.
+   * Gửi notification các khoản thanh toán đến hạn hôm nay.
+   * Chỉ gửi khi có ít nhất 1 khoản chưa thanh toán đến hạn hôm nay.
+   * Deduplication: chỉ gửi 1 lần/ngày (localStorage dt_due_notif_date).
+   * Tag: 'debt-tracker-due'
    */
-  async function updateLocale(): Promise<void> {
-    if (!('serviceWorker' in navigator)) return
+  async function sendDueNotification(upcomingItems: UpcomingItem[]): Promise<void> {
     if (pushStatus.value !== 'granted') return
-    try {
-      const reg = await navigator.serviceWorker.ready
-      const sub = await reg.pushManager.getSubscription()
-      if (!sub) return
-      await sendSubscriptionToServer(sub)
-    } catch {
-      // silent
-    }
-  }
+    if (localStorage.getItem(DUE_DATE_KEY) === todayStr()) return
 
-  /** Bật/tắt status notification (persistent daily-limit badge). */
-  function togglePushStatus(): void {
-    pushStatusEnabled.value = !pushStatusEnabled.value
-    localStorage.setItem(PUSH_STATUS_ENABLED_KEY, String(pushStatusEnabled.value))
-  }
+    const today = todayStr()
+    const dueItems = upcomingItems.filter((item) => item._date === today && !item.paid)
+    if (dueItems.length === 0) return
 
-  /**
-   * Gửi 1 notification tổng hợp với tag 'debt-tracker-status' để replace notification cũ.
-   * Body gồm: tiền mặt khả dụng, chi tiêu hôm nay/hạn mức, tổng nợ.
-   * Khi >= 80% hạn mức: hiển thị cảnh báo; khi vượt 100%: hiển thị số tiền vượt.
-   * Throttle 30 giây (bỏ qua khi force=true). Bỏ qua nếu feature tắt hoặc chưa được cấp quyền.
-   */
-  async function sendStatusNotification(
-    availCash: number,
-    todaySpent: number,
-    dayLimit: number,
-    totalDebt: number,
-    force?: boolean
-  ): Promise<void> {
-    if (pushStatus.value !== 'granted') return
-    if (!pushStatusEnabled.value) return
-
-    // Throttle 30s — bỏ qua khi force=true (đổi locale/currency)
-    if (!force) {
-      const lastSent = parseInt(localStorage.getItem(STATUS_THROTTLE_KEY) || '0', 10)
-      if (Date.now() - lastSent < 30 * 1000) return
-    }
-    localStorage.setItem(STATUS_THROTTLE_KEY, String(Date.now()))
+    localStorage.setItem(DUE_DATE_KEY, today)
 
     const workerUrl = getWorkerUrl()
     if (!workerUrl) return
 
-    const { fCurr, fCurrFull } = useCurrency()
-    const pct = dayLimit > 0 ? todaySpent / dayLimit : 0
-    const isOver = dayLimit > 0 && todaySpent >= dayLimit
-    const isWarn = !isOver && pct >= 0.8
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tFn = (i18n.global as any).t as (
+      key: string,
+      named: Record<string, unknown>,
+      opts: { locale: string }
+    ) => string
 
-    let bodyKey: string
-    let values: Record<string, unknown>
-    if (isOver) {
-      bodyKey = 'notification.summary.bodyOver'
-      values = {
-        cash: fCurr(availCash),
-        spent: fCurr(todaySpent),
-        limit: fCurr(dayLimit),
-        debt: fCurrFull(totalDebt),
-        over: fCurr(todaySpent - dayLimit),
-      }
-    } else if (isWarn) {
-      bodyKey = 'notification.summary.bodyWarn'
-      values = {
-        cash: fCurr(availCash),
-        spent: fCurr(todaySpent),
-        limit: fCurr(dayLimit),
-        debt: fCurrFull(totalDebt),
-        pct: Math.round(pct * 100),
-        remaining: fCurr(dayLimit - todaySpent),
-      }
-    } else {
-      bodyKey = 'notification.summary.body'
-      values = {
-        cash: fCurr(availCash),
-        spent: fCurr(todaySpent),
-        limit: fCurr(dayLimit),
-        debt: fCurrFull(totalDebt),
-        remaining: fCurr(dayLimit > 0 ? dayLimit - todaySpent : 0),
-      }
-    }
-
-    const payloads = buildAllLocalePayloads('notification.summary.title', bodyKey, values)
+    const first = dueItems[0]
+    const extra = dueItems.length - 1
+    const locales = ['vi', 'en', 'ja']
+    const payloads = Object.fromEntries(
+      locales.map((l) => {
+        const name = getItemName(first, l)
+        const bodyKey = extra > 0 ? 'notification.due.multiple' : 'notification.due.single'
+        const values = extra > 0 ? { name, count: extra } : { name }
+        return [
+          l,
+          {
+            title: tFn('notification.due.title', {}, { locale: l }),
+            body: tFn(bodyKey, values, { locale: l }),
+          },
+        ]
+      })
+    )
 
     try {
       await fetch(`${workerUrl}/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payloads, tag: 'debt-tracker-status' }),
+        body: JSON.stringify({ payloads, tag: 'debt-tracker-due' }),
       })
     } catch {
       // silent — không crash khi offline
@@ -277,33 +235,43 @@ export function usePushNotifications() {
   }
 
   /**
-   * Gửi trạng thái khi app sẵn sàng — chỉ 1 lần/ngày.
-   * Dùng localStorage key dt_status_sent_date để track ngày đã gửi.
+   * Gửi notification nhắc nhận lương khi đến ngày pay_date.
+   * Deduplication: chỉ gửi 1 lần/ngày (localStorage dt_payday_notif_date).
+   * Tag: 'debt-tracker-payday'
    */
-  async function sendDailyStatusOnAppReady(
-    availCash: number,
-    todaySpent: number,
-    dayLimit: number,
-    totalDebt: number
-  ): Promise<void> {
-    if (localStorage.getItem(STATUS_DATE_KEY) === todayStr()) return
-    localStorage.setItem(STATUS_DATE_KEY, todayStr())
-    // Reset throttle để gửi được ngay trong ngày mới
-    localStorage.removeItem(STATUS_THROTTLE_KEY)
-    await sendStatusNotification(availCash, todaySpent, dayLimit, totalDebt)
+  async function sendPaydayNotification(payDate: number): Promise<void> {
+    if (pushStatus.value !== 'granted') return
+    if (localStorage.getItem(PAYDAY_DATE_KEY) === todayStr()) return
+
+    const today = new Date()
+    if (today.getDate() !== payDate) return
+
+    localStorage.setItem(PAYDAY_DATE_KEY, todayStr())
+
+    const workerUrl = getWorkerUrl()
+    if (!workerUrl) return
+
+    const payloads = buildAllLocalePayloads('notification.due.title', 'notification.payday.body', {})
+
+    try {
+      await fetch(`${workerUrl}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payloads, tag: 'debt-tracker-payday' }),
+      })
+    } catch {
+      // silent — không crash khi offline
+    }
   }
 
   return {
     pushStatus,
-    pushStatusEnabled,
     checkPushStatus,
     registerServiceWorker,
     getWorkerUrl,
     setWorkerUrl,
     enablePushNotifications,
-    updateLocale,
-    togglePushStatus,
-    sendStatusNotification,
-    sendDailyStatusOnAppReady,
+    sendDueNotification,
+    sendPaydayNotification,
   }
 }
