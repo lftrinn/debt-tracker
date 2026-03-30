@@ -364,17 +364,10 @@ export default {
     title: '支出アラート',
     warn: '{spent}/{limit}を支出しました（{pct}%）',
     over: '上限超過！本日{spent}/{limit}を支出',
-    status: {
-      title: '今日の上限',
-      body: '{spent}/{limit}を支出（{pct}%）',
-    },
-    cashUpdate: {
-      title: '現金残高',
-      body: '残高: {cash} · 本日: {spent}',
-    },
-    debtUpdate: {
-      title: '総負債',
-      body: '{debt}',
+    summary: {
+      title: 'Debt Tracker',
+      body: '現金: {cash} · 本日: {spent}/{limit}\n総負債: {debt}\n上限: {remaining}残り',
+      bodyOver: '現金: {cash} · 本日: {spent}/{limit}\n総負債: {debt}\n⚠ 上限超過 {over}',
     },
   },
   toast: {

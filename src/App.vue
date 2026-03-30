@@ -232,7 +232,7 @@ let overTimer: ReturnType<typeof setTimeout> | null = null
 
 // ─── Notifications ────────────────────────────────────────────────────────
 const { requestPermission, checkDailyLimit } = useNotifications()
-const { pushStatus, checkPushStatus, registerServiceWorker, enablePushNotifications, notifyOverLimit, sendDailyStatus, sendDailyStatusOnAppReady, updateLocale, sendCashUpdate, sendDebtUpdate } = usePushNotifications()
+const { pushStatus, checkPushStatus, registerServiceWorker, enablePushNotifications, notifyOverLimit, sendStatusNotification, sendDailyStatusOnAppReady, updateLocale } = usePushNotifications()
 
 // ─── Toast ────────────────────────────────────────────────────────────────
 const { toastMsg, toastType, toastTrigger, toast } = useToast()
@@ -284,9 +284,9 @@ const localizedRules = computed(() => [
 const cashAnimKey = ref(0)
 const spentAnimKey = ref(0)
 const debtAnimKey = ref(0)
-watch(availCash, (newCash) => { cashAnimKey.value++; sendCashUpdate(newCash, todaySpent.value) })
+watch(availCash, (newCash) => { cashAnimKey.value++; sendStatusNotification(newCash, todaySpent.value, dayLimit.value, totalDebt.value) })
 watch(todaySpent, () => { spentAnimKey.value++ })
-watch(totalDebt, (newDebt) => { debtAnimKey.value++; sendDebtUpdate(newDebt) })
+watch(totalDebt, (newDebt) => { debtAnimKey.value++; sendStatusNotification(availCash.value, todaySpent.value, dayLimit.value, newDebt) })
 
 // ─── Over-limit blink logic ───────────────────────────────────────────────
 watch([todaySpent, limSt], ([spent, st], [oldSpent]) => {
@@ -358,7 +358,7 @@ watch(todaySpent, (newSpent, oldSpent) => {
     // Push notification (qua Worker) khi đã subscribe, Web Notification nếu không
     if (pushStatus.value === 'granted') {
       notifyOverLimit(newSpent, dayLimit.value)
-      sendDailyStatus(newSpent, dayLimit.value)
+      sendStatusNotification(availCash.value, newSpent, dayLimit.value, totalDebt.value)
     } else {
       checkDailyLimit(newSpent, dayLimit.value)
     }
@@ -368,7 +368,7 @@ watch(todaySpent, (newSpent, oldSpent) => {
 // Gửi trạng thái hạn mức khi app sẵn sàng — chỉ 1 lần/ngày
 watch(appState, (state) => {
   if (state === 'ready') {
-    sendDailyStatusOnAppReady(todaySpent.value, dayLimit.value)
+    sendDailyStatusOnAppReady(availCash.value, todaySpent.value, dayLimit.value, totalDebt.value)
   }
 })
 
