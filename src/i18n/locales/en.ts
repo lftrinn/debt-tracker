@@ -367,6 +367,7 @@ export default {
     summary: {
       title: 'Debt Tracker',
       body: 'Cash: {cash} · Today: {spent}/{limit}\nTotal debt: {debt}\nDaily limit: {remaining} left',
+      bodyWarn: 'Cash: {cash} · Today: {spent}/{limit}\nTotal debt: {debt}\n⚠ Used {pct}% of daily limit, {remaining} left',
       bodyOver: 'Cash: {cash} · Today: {spent}/{limit}\nTotal debt: {debt}\n⚠ Over limit by {over}',
     },
   },

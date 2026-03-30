@@ -232,7 +232,7 @@ let overTimer: ReturnType<typeof setTimeout> | null = null
 
 // ─── Notifications ────────────────────────────────────────────────────────
 const { requestPermission, checkDailyLimit } = useNotifications()
-const { pushStatus, checkPushStatus, registerServiceWorker, enablePushNotifications, notifyOverLimit, sendStatusNotification, sendDailyStatusOnAppReady, updateLocale } = usePushNotifications()
+const { pushStatus, checkPushStatus, registerServiceWorker, enablePushNotifications, sendStatusNotification, sendDailyStatusOnAppReady, updateLocale } = usePushNotifications()
 
 // ─── Toast ────────────────────────────────────────────────────────────────
 const { toastMsg, toastType, toastTrigger, toast } = useToast()
@@ -357,7 +357,6 @@ watch(todaySpent, (newSpent, oldSpent) => {
   if (newSpent > (oldSpent ?? 0)) {
     // Push notification (qua Worker) khi đã subscribe, Web Notification nếu không
     if (pushStatus.value === 'granted') {
-      notifyOverLimit(newSpent, dayLimit.value)
       sendStatusNotification(availCash.value, newSpent, dayLimit.value, totalDebt.value)
     } else {
       checkDailyLimit(newSpent, dayLimit.value)

@@ -367,6 +367,7 @@ export default {
     summary: {
       title: 'Debt Tracker',
       body: '現金: {cash} · 本日: {spent}/{limit}\n総負債: {debt}\n上限: {remaining}残り',
+      bodyWarn: '現金: {cash} · 本日: {spent}/{limit}\n総負債: {debt}\n⚠ 上限の{pct}%使用、残り{remaining}',
       bodyOver: '現金: {cash} · 本日: {spent}/{limit}\n総負債: {debt}\n⚠ 上限超過 {over}',
     },
   },

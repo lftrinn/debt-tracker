@@ -6,9 +6,6 @@ const VAPID_PUBLIC_KEY = 'BE1CoUCSw3FJXmx5_ixw1nAY7Wlm3H15VLGVQG4XTL_n2qeFPOl4PT
 const DEFAULT_WORKER_URL = 'https://debt-tracker-push.tl-dellroyal.workers.dev'
 const PUSH_SUB_KEY = 'dt_push_sub'
 const WORKER_URL_KEY = 'dt_push_worker_url'
-// Chia sẻ localStorage keys với useNotifications để tránh notify trùng
-const NOTIF_DATE_KEY = 'dt_notif_date'
-const NOTIF_LEVELS_KEY = 'dt_notif_levels'
 // Throttle 30s và daily-once cho sendStatusNotification
 const STATUS_THROTTLE_KEY = 'dt_status_last_sent'
 const STATUS_DATE_KEY = 'dt_status_sent_date'
@@ -19,25 +16,6 @@ export type PushStatus = 'unknown' | 'granted' | 'denied' | 'unsupported'
 
 function todayStr(): string {
   return new Date().toISOString().slice(0, 10)
-}
-
-function getNotifiedLevels(): Set<number> {
-  const date = localStorage.getItem(NOTIF_DATE_KEY)
-  if (date !== todayStr()) return new Set()
-  try {
-    return new Set(JSON.parse(localStorage.getItem(NOTIF_LEVELS_KEY) || '[]') as number[])
-  } catch {
-    return new Set()
-  }
-}
-
-function markNotified(level: number): void {
-  const today = todayStr()
-  const stored = localStorage.getItem(NOTIF_DATE_KEY)
-  const levels = stored === today ? getNotifiedLevels() : new Set<number>()
-  levels.add(level)
-  localStorage.setItem(NOTIF_DATE_KEY, today)
-  localStorage.setItem(NOTIF_LEVELS_KEY, JSON.stringify([...levels]))
 }
 
 function urlBase64ToUint8Array(b64url: string): Uint8Array {
@@ -85,7 +63,6 @@ function buildAllLocalePayloads(
  * Quản lý Web Push Notification qua Cloudflare Worker.
  * - registerServiceWorker() — đăng ký SW khi app khởi động
  * - enablePushNotifications() — gọi từ user gesture (button click)
- * - notifyOverLimit() — gửi push qua Worker khi chi tiêu vượt hạn mức
  * - sendStatusNotification() — gửi 1 notification tổng hợp (tiền mặt + nợ + hạn mức), throttle 30s
  * - sendDailyStatusOnAppReady() — gửi trạng thái 1 lần/ngày khi app sẵn sàng
  */
@@ -224,58 +201,9 @@ export function usePushNotifications() {
   }
 
   /**
-   * Gửi push notification qua Worker khi chi tiêu vượt hạn mức.
-   * Dùng chung localStorage deduplication key với useNotifications.
-   * Mỗi level (80%, 100%) chỉ gửi 1 lần/ngày.
-   */
-  async function notifyOverLimit(todaySpent: number, dayLimit: number): Promise<void> {
-    if (dayLimit <= 0) return
-
-    const pct = todaySpent / dayLimit
-    const notified = getNotifiedLevels()
-
-    let level: number | null = null
-    if (pct >= 1 && !notified.has(100)) {
-      level = 100
-      markNotified(100)
-      markNotified(80)
-    } else if (pct >= 0.8 && !notified.has(80)) {
-      level = 80
-      markNotified(80)
-    }
-    if (level === null) return
-
-    const workerUrl = getWorkerUrl()
-    if (!workerUrl) return
-
-    const { fCurr } = useCurrency()
-    const spent = fCurr(todaySpent)
-    const limit = fCurr(dayLimit)
-    const pctRounded = Math.round(pct * 100)
-
-    const payloads =
-      level >= 100
-        ? buildAllLocalePayloads('notification.title', 'notification.over', { spent, limit })
-        : buildAllLocalePayloads('notification.title', 'notification.warn', {
-            spent,
-            limit,
-            pct: pctRounded,
-          })
-
-    try {
-      await fetch(`${workerUrl}/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ payloads }),
-      })
-    } catch {
-      // silent — push sẽ đến khi kết nối khôi phục
-    }
-  }
-
-  /**
    * Gửi 1 notification tổng hợp với tag 'debt-tracker-status' để replace notification cũ.
    * Body gồm: tiền mặt khả dụng, chi tiêu hôm nay/hạn mức, tổng nợ.
+   * Khi >= 80% hạn mức: hiển thị cảnh báo; khi vượt 100%: hiển thị số tiền vượt.
    * Throttle 30 giây. Bỏ qua nếu feature tắt hoặc chưa được cấp quyền.
    */
   async function sendStatusNotification(
@@ -296,25 +224,42 @@ export function usePushNotifications() {
     if (!workerUrl) return
 
     const { fCurr, fCurrFull } = useCurrency()
-    const isOver = dayLimit > 0 && todaySpent > dayLimit
+    const pct = dayLimit > 0 ? todaySpent / dayLimit : 0
+    const isOver = dayLimit > 0 && todaySpent >= dayLimit
+    const isWarn = !isOver && pct >= 0.8
 
-    const values = isOver
-      ? {
-          cash: fCurr(availCash),
-          spent: fCurr(todaySpent),
-          limit: fCurr(dayLimit),
-          debt: fCurrFull(totalDebt),
-          over: fCurr(todaySpent - dayLimit),
-        }
-      : {
-          cash: fCurr(availCash),
-          spent: fCurr(todaySpent),
-          limit: fCurr(dayLimit),
-          debt: fCurrFull(totalDebt),
-          remaining: fCurr(dayLimit > 0 ? dayLimit - todaySpent : 0),
-        }
+    let bodyKey: string
+    let values: Record<string, unknown>
+    if (isOver) {
+      bodyKey = 'notification.summary.bodyOver'
+      values = {
+        cash: fCurr(availCash),
+        spent: fCurr(todaySpent),
+        limit: fCurr(dayLimit),
+        debt: fCurrFull(totalDebt),
+        over: fCurr(todaySpent - dayLimit),
+      }
+    } else if (isWarn) {
+      bodyKey = 'notification.summary.bodyWarn'
+      values = {
+        cash: fCurr(availCash),
+        spent: fCurr(todaySpent),
+        limit: fCurr(dayLimit),
+        debt: fCurrFull(totalDebt),
+        pct: Math.round(pct * 100),
+        remaining: fCurr(dayLimit - todaySpent),
+      }
+    } else {
+      bodyKey = 'notification.summary.body'
+      values = {
+        cash: fCurr(availCash),
+        spent: fCurr(todaySpent),
+        limit: fCurr(dayLimit),
+        debt: fCurrFull(totalDebt),
+        remaining: fCurr(dayLimit > 0 ? dayLimit - todaySpent : 0),
+      }
+    }
 
-    const bodyKey = isOver ? 'notification.summary.bodyOver' : 'notification.summary.body'
     const payloads = buildAllLocalePayloads('notification.summary.title', bodyKey, values)
 
     try {
@@ -355,7 +300,6 @@ export function usePushNotifications() {
     enablePushNotifications,
     updateLocale,
     togglePushStatus,
-    notifyOverLimit,
     sendStatusNotification,
     sendDailyStatusOnAppReady,
   }

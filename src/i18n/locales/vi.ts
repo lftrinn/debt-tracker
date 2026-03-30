@@ -367,6 +367,7 @@ export default {
     summary: {
       title: 'Debt Tracker',
       body: 'Tiền mặt: {cash} · Chi hôm nay: {spent}/{limit}\nTổng nợ: {debt}\nHạn mức: còn {remaining}/ngày',
+      bodyWarn: 'Tiền mặt: {cash} · Chi hôm nay: {spent}/{limit}\nTổng nợ: {debt}\n⚠ Đã dùng {pct}% hạn mức, còn {remaining}/ngày',
       bodyOver: 'Tiền mặt: {cash} · Chi hôm nay: {spent}/{limit}\nTổng nợ: {debt}\n⚠ Vượt hạn mức {over}',
     },
   },
