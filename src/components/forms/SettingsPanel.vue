@@ -599,10 +599,10 @@ defineExpose({})
 .settings__lang-check { color: var(--accent); }
 
 /* Danh sách quy tắc có thể scroll khi nhiều items */
-.settings__rules-list { display: flex; flex-direction: column; max-height: 280px; overflow-y: auto; }
+.settings__rules-list { display: flex; flex-direction: column; }
 
 /* Hide zones treeview */
-.settings__hz-tree { display: flex; flex-direction: column; gap: 4px; max-height: 310px; overflow-y: auto; }
+.settings__hz-tree { display: flex; flex-direction: column; gap: 4px; }
 .settings__hz-group { margin-bottom: 2px; }
 .settings__hz-parent { display: flex; align-items: center; gap: 9px; padding: 8px 12px; background: var(--surface2); border: 1px solid var(--muted); border-radius: 9px; user-select: none; transition: all .15s; }
 .settings__hz-group--expanded .settings__hz-parent { border-radius: 9px 9px 4px 4px; }

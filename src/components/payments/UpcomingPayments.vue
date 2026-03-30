@@ -81,7 +81,7 @@
             <template v-if="addType === 'pay'">
               <div class="popup-field">
                 <label class="popup-label">{{ $t('upcoming.addPopup.selectDebt') }}</label>
-                <select class="popup-input popup-input--sm" v-model="payTarget">
+                <select class="popup-input" v-model="payTarget">
                   <option value="">{{ $t('upcoming.addPopup.selectDebtPlaceholder') }}</option>
                   <option v-for="c in debtCards" :key="c.id" :value="'cc:' + c.id">{{ getLocalized(c, 'name') }}{{ hide.amount ? '' : ' (' + t('debt.remaining') + ' ' + fCurr(c.balance) + ')' }}</option>
                   <option v-for="l in availableLoans" :key="l.id" :value="'sl:' + l.id">{{ getLocalized(l, 'name').split('—')[0].trim() }}{{ hide.amount ? '' : ' (' + t('debt.remaining') + ' ' + fCurr(l.remaining_balance) + ')' }}</option>
@@ -90,7 +90,7 @@
               <!-- Loan installment selector -->
               <div v-if="loanInstallments.length" class="popup-field">
                 <label class="popup-label">{{ $t('upcoming.addPopup.selectPeriod') }}</label>
-                <select class="popup-input popup-input--sm" v-model="payInstallment">
+                <select class="popup-input" v-model="payInstallment">
                   <option value="">{{ $t('upcoming.addPopup.selectPeriodPlaceholder') }}</option>
                   <option v-for="inst in loanInstallments" :key="inst.key" :value="inst.key">{{ inst.name }} — {{ inst.dateLabel }}{{ hide.amount ? '' : ' (' + fCurr(inst.amount) + ')' }}</option>
                 </select>
@@ -109,19 +109,19 @@
               </div>
               <div v-if="payName" class="popup-field">
                 <label class="popup-label">{{ $t('upcoming.addPopup.nameLabel') }}</label>
-                <input class="popup-input popup-input--sm" v-model="payName" readonly style="font-family:var(--sans);opacity:.7" />
+                <input class="popup-input" v-model="payName" readonly style="opacity:.7" />
               </div>
-              <div class="popup-row-2col">
-                <div class="popup-field" style="flex:1">
-                  <label class="popup-label">{{ $t('upcoming.addPopup.dateLabel') }}</label>
-                  <input type="date" class="popup-input popup-input--sm popup-input--date" v-model="payDate" placeholder="dd/mm/yyyy" />
+              <div class="popup-field">
+                <label class="popup-label">{{ $t('upcoming.addPopup.dateLabel') }}</label>
+                <div class="date-wrap">
+                  <input type="date" class="popup-input popup-input--date" v-model="payDate" placeholder="dd/mm/yyyy" />
                 </div>
-                <div class="popup-field" style="flex:1">
-                  <label class="popup-label">{{ $t('upcoming.addPopup.amountLabel') }}</label>
-                  <div class="upcoming__input-wrap">
-                    <input class="popup-input popup-input--sm" v-model.number="payAmt" type="number" inputmode="numeric" placeholder="0" />
-                    <span class="upcoming__input-suffix">{{ currSymbol }}</span>
-                  </div>
+              </div>
+              <div class="popup-field">
+                <label class="popup-label">{{ $t('upcoming.addPopup.amountLabel') }}</label>
+                <div class="upcoming__input-wrap">
+                  <input class="popup-input" v-model.number="payAmt" type="number" inputmode="numeric" placeholder="0" />
+                  <span class="upcoming__input-suffix">{{ currSymbol }}</span>
                 </div>
               </div>
             </template>
@@ -130,19 +130,19 @@
             <template v-if="addType === 'oneTime'">
               <div class="popup-field">
                 <label class="popup-label">{{ $t('upcoming.addPopup.expenseNameLabel') }}</label>
-                <input class="popup-input popup-input--sm" v-model="oneTimeName" :placeholder="$t('upcoming.addPopup.expensePlaceholder')" style="font-family:var(--sans)" />
+                <input class="popup-input" v-model="oneTimeName" :placeholder="$t('upcoming.addPopup.expensePlaceholder')" />
               </div>
-              <div class="popup-row-2col">
-                <div class="popup-field" style="flex:1">
-                  <label class="popup-label">{{ $t('upcoming.addPopup.dateLabel') }}</label>
-                  <input type="date" class="popup-input popup-input--sm popup-input--date" v-model="oneTimeDate" placeholder="dd/mm/yyyy" />
+              <div class="popup-field">
+                <label class="popup-label">{{ $t('upcoming.addPopup.dateLabel') }}</label>
+                <div class="date-wrap">
+                  <input type="date" class="popup-input popup-input--date" v-model="oneTimeDate" placeholder="dd/mm/yyyy" />
                 </div>
-                <div class="popup-field" style="flex:1">
-                  <label class="popup-label">{{ $t('upcoming.addPopup.amountLabel') }}</label>
-                  <div class="upcoming__input-wrap">
-                    <input class="popup-input popup-input--sm" v-model.number="oneTimeAmt" type="number" inputmode="numeric" placeholder="0" />
-                    <span class="upcoming__input-suffix">{{ currSymbol }}</span>
-                  </div>
+              </div>
+              <div class="popup-field">
+                <label class="popup-label">{{ $t('upcoming.addPopup.amountLabel') }}</label>
+                <div class="upcoming__input-wrap">
+                  <input class="popup-input" v-model.number="oneTimeAmt" type="number" inputmode="numeric" placeholder="0" />
+                  <span class="upcoming__input-suffix">{{ currSymbol }}</span>
                 </div>
               </div>
             </template>

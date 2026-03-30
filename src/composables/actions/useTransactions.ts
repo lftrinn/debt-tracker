@@ -119,7 +119,7 @@ export function useTransactions(
    * Amount lưu nguyên theo currency được chọn; card balance luôn cập nhật bằng VND.
    * descLang và descI18n được ghi nhận theo locale hiện tại; bản dịch chạy background.
    */
-  async function addExp({ desc, amount, cat, payMethod, currency, note, tags, time }: { desc: string; amount: number; cat: string; payMethod?: string; currency?: string; note?: string; tags?: string[]; time?: string }): Promise<void> {
+  async function addExp({ desc, amount, cat, payMethod, currency, note, time }: { desc: string; amount: number; cat: string; payMethod?: string; currency?: string; note?: string; time?: string }): Promise<void> {
     const isCash = !payMethod || payMethod === 'cash'
     const txCur = (currency || baseCurrency.value) as Currency
     const lang = currentLang()
@@ -136,7 +136,6 @@ export function useTransactions(
       descI18n: { [lang]: desc } as Partial<Record<AppLang, string>>,
       descI18nMeta: { [lang]: 'manual' as const } as Partial<Record<AppLang, 'auto' | 'manual'>>,
       ...(note ? { note } : {}),
-      ...(tags?.length ? { tags } : {}),
       ...(time ? { time } : {}),
     }
     const nd: AppData = {
@@ -163,7 +162,7 @@ export function useTransactions(
    * Thêm khoản thu nhập và cập nhật số dư tiền mặt (cash balance luôn theo VND).
    * descLang và descI18n được ghi nhận theo locale hiện tại; bản dịch chạy background.
    */
-  async function addInc({ desc, amount, cat, currency, note, tags, time }: { desc: string; amount: number; cat: string; currency?: string; note?: string; tags?: string[]; time?: string }): Promise<void> {
+  async function addInc({ desc, amount, cat, currency, note, time }: { desc: string; amount: number; cat: string; currency?: string; note?: string; time?: string }): Promise<void> {
     const txCur = (currency || baseCurrency.value) as Currency
     const lang = currentLang()
     const id = Date.now()
@@ -178,7 +177,6 @@ export function useTransactions(
       descI18n: { [lang]: desc } as Partial<Record<AppLang, string>>,
       descI18nMeta: { [lang]: 'manual' as const } as Partial<Record<AppLang, 'auto' | 'manual'>>,
       ...(note ? { note } : {}),
-      ...(tags?.length ? { tags } : {}),
       ...(time ? { time } : {}),
     }
     d.value = { ...d.value, incomes: [e, ...(d.value.incomes || [])] }
@@ -228,7 +226,7 @@ export function useTransactions(
   async function handlePopupSaveTx(item: {
     id: number
     type: string
-    _buf: { name: string; date: string; amt: number; cat: string; note?: string; tags?: string; time?: string }
+    _buf: { name: string; date: string; amt: number; cat: string; note?: string; time?: string }
     _translations?: Partial<Record<AppLang, TranslationDecision>>
     descI18n?: Partial<Record<AppLang, string>>
     descI18nMeta?: Partial<Record<AppLang, 'auto' | 'manual'>>
@@ -262,12 +260,8 @@ export function useTransactions(
     }
 
     const listKey = item.type === 'inc' ? 'incomes' : 'expenses'
-    // Parse note/tags/time từ buf (undefined nếu rỗng để JSON.stringify loại bỏ)
+    // Parse note/time từ buf (undefined nếu rỗng để JSON.stringify loại bỏ)
     const newNote = buf.note?.trim() || undefined
-    const newTags = (() => {
-      const tags = (buf.tags || '').split(',').map((t: string) => t.trim()).filter(Boolean)
-      return tags.length ? tags : undefined
-    })()
     const newTime = buf.time || undefined
 
     if (item.type === 'inc') {
@@ -280,7 +274,7 @@ export function useTransactions(
         ...d.value,
         incomes: (d.value.incomes || []).map((i) =>
           i.id === item.id
-            ? { ...i, desc: buf.name, date: buf.date, amount: buf.amt, cat: buf.cat, descLang: lang, descI18n: newDescI18n, descI18nMeta: newDescI18nMeta, note: newNote, tags: newTags, time: newTime }
+            ? { ...i, desc: buf.name, date: buf.date, amount: buf.amt, cat: buf.cat, descLang: lang, descI18n: newDescI18n, descI18nMeta: newDescI18nMeta, note: newNote, time: newTime }
             : i
         ),
         current_cash: { ...d.value.current_cash, balance: (d.value.current_cash?.balance || 0) + amtDiff },
@@ -290,7 +284,7 @@ export function useTransactions(
         ...d.value,
         expenses: (d.value.expenses || []).map((i) =>
           i.id === item.id
-            ? { ...i, desc: buf.name, date: buf.date, amount: buf.amt, cat: buf.cat, descLang: lang, descI18n: newDescI18n, descI18nMeta: newDescI18nMeta, note: newNote, tags: newTags, time: newTime }
+            ? { ...i, desc: buf.name, date: buf.date, amount: buf.amt, cat: buf.cat, descLang: lang, descI18n: newDescI18n, descI18nMeta: newDescI18nMeta, note: newNote, time: newTime }
             : i
         ),
       }

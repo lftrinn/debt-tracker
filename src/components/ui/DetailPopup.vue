@@ -62,10 +62,6 @@
                 <span class="popup-label">{{ $t('detail.noteLabel') }}</span>
                 <span class="popup-val popup-val--note">{{ item.note }}</span>
               </div>
-              <div v-if="item._variant === 'tx' && item.tags && item.tags.length" class="popup-row">
-                <span class="popup-label">{{ $t('detail.tagsLabel') }}</span>
-                <span class="popup-val"><span v-for="tag in item.tags" :key="tag" class="detail__tag">#{{ tag }}</span></span>
-              </div>
               <div v-if="item._variant === 'upcoming'" class="popup-row">
                 <span class="popup-label">{{ $t('detail.availCash') }}</span>
                 <span class="popup-val" :style="!hide && availCash < (item.amt || 0) ? { color: 'var(--accent2)' } : {}">{{ hide ? '•••••' : fCurrFull(availCash) }}</span>
@@ -154,10 +150,6 @@
               <label class="popup-label">{{ $t('detail.noteLabel') }}</label>
               <textarea class="popup-input popup-input--note" v-model="buf.note" :placeholder="$t('detail.notePlaceholder')" rows="2" />
             </div>
-            <div v-if="item._variant === 'tx'" class="popup-field">
-              <label class="popup-label">{{ $t('detail.tagsLabel') }}</label>
-              <input class="popup-input" v-model="buf.tags" :placeholder="$t('detail.tagsPlaceholder')" />
-            </div>
           </div>
 
           <div class="popup-actions">
@@ -231,7 +223,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'save-upcoming', 'save-tx', 'delete', 'toggle-paid', 'clone-item'])
 
 const editing = ref(false)
-const buf = ref({ name: '', date: '', amt: 0, cat: '', note: '', tags: '', time: '' })
+const buf = ref({ name: '', date: '', amt: 0, cat: '', note: '', time: '' })
 const editPayLevel = ref('min') // 'min' | 'custom' — only used for CC edit
 
 // ─── Review step state ────────────────────────────────────────────────────
@@ -353,7 +345,6 @@ function startEdit() {
       amt: i.amount,
       cat: resolved.key,
       note: i.note || '',
-      tags: i.tags ? i.tags.join(', ') : '',
       time: i.time || '',
     }
     // Populate display equiv nếu currencies khác nhau
@@ -630,8 +621,6 @@ function onTouchEnd(e) {
 .detail__dual-row .detail__input-wrap { flex: 1; min-width: 0; }
 .detail__dual-sep { font-family: var(--mono); font-size: 10px; color: var(--muted); flex-shrink: 0; }
 
-/* Tag badges in view mode */
-.detail__tag { display: inline-block; font-family: var(--mono); font-size: 9px; padding: 1px 5px; background: rgba(var(--accent-rgb),.1); border-radius: 4px; color: var(--accent); margin-right: 4px; }
 .popup-val--note { text-align: right; word-break: break-word; white-space: pre-wrap; max-width: 60%; }
 /* time input in edit mode */
 .popup-input--time { -webkit-appearance: none; appearance: none; font-family: var(--mono); font-size: 12px; }

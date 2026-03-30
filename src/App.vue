@@ -422,7 +422,6 @@ async function handleQuickAdd(tx: TransactionItem): Promise<void> {
     cat: tx.cat || 'khac',
     currency: tx.currency,
     note: tx.note,
-    tags: tx.tags,
     time: timeStr,
   }
   if (tx.type === 'inc') {

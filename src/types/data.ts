@@ -43,8 +43,6 @@ export interface Expense {
   descI18nMeta?: Partial<Record<'vi' | 'en' | 'ja', 'auto' | 'manual'>>
   /** Ghi chú tùy chọn */
   note?: string
-  /** Tags tùy ý */
-  tags?: string[]
   /** Giờ cụ thể (HH:mm) */
   time?: string
 }
@@ -65,8 +63,6 @@ export interface Income {
   descI18nMeta?: Partial<Record<'vi' | 'en' | 'ja', 'auto' | 'manual'>>
   /** Ghi chú tùy chọn */
   note?: string
-  /** Tags tùy ý */
-  tags?: string[]
   /** Giờ cụ thể (HH:mm) */
   time?: string
 }
