@@ -626,7 +626,7 @@ function onTouchEnd(e) {
 
 .popup-val--note { text-align: right; word-break: break-word; white-space: pre-wrap; max-width: 60%; }
 /* time input in edit mode */
-.popup-input--time { -webkit-appearance: none; appearance: none; font-family: var(--mono); font-size: 12px; }
+.popup-input--time { font-family: var(--mono); font-size: 12px; }
 .popup-input--note { height: auto; min-height: 56px; resize: none; line-height: 1.4; }
 
 /* Review step */

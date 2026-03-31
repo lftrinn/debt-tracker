@@ -375,5 +375,5 @@ function addInc() {
 .add-form__submit:active { opacity: .8; transform: scale(.98); }
 .add-form__submit:disabled { opacity: .3; cursor: not-allowed; transform: none; }
 .add-form__note { height: auto; min-height: 52px; resize: none; line-height: 1.4; }
-.add-form__time { flex: 0 0 90px; font-family: var(--mono); font-size: 12px; color: var(--text); padding: 10px 8px; height: 38px; box-sizing: border-box; -webkit-appearance: none; appearance: none; }
+.add-form__time { flex: 0 0 90px; font-family: var(--mono); font-size: 12px; color: var(--text); padding: 10px 8px; height: 38px; box-sizing: border-box; }
 </style>

@@ -101,7 +101,7 @@ textarea.inp-s { height: 130px; resize: none; font-size: 10px; line-height: 1.5;
 .date-wrap input[type=date] {
   width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
   padding: 9px 10px; color: var(--text); font-family: var(--mono); font-size: 11px;
-  outline: none; -webkit-appearance: none; appearance: none; box-sizing: border-box;
+  outline: none; box-sizing: border-box;
   line-height: 1.2; min-height: 38px;
 }
 .date-wrap input[type=date]:focus { border-color: var(--accent); }
@@ -146,7 +146,7 @@ textarea.inp-s { height: 130px; resize: none; font-size: 10px; line-height: 1.5;
 .popup-btn.secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
 .popup-btn.danger { background: rgba(var(--danger-rgb),.1); color: var(--danger); }
 .popup-field { display: flex; flex-direction: column; gap: 4px; }
-.popup-input { background: var(--bg); border: 1px solid var(--border); border-radius: 9px; padding: 11px 12px; color: var(--text); font-family: var(--mono); font-size: 12px; outline: none; transition: border-color .2s; -webkit-appearance: none; box-sizing: border-box; }
+.popup-input { background: var(--bg); border: 1px solid var(--border); border-radius: 9px; padding: 11px 12px; color: var(--text); font-family: var(--mono); font-size: 12px; outline: none; transition: border-color .2s; box-sizing: border-box; }
 .popup-input--sm { padding: 8px 10px; font-size: 11px; border-radius: 8px; font-family: var(--sans); height: 38px; box-sizing: border-box; }
 .popup-input--sm[type="number"] { font-family: var(--mono); }
 select.popup-input--sm { height: 38px; line-height: 1.2; }
@@ -155,7 +155,7 @@ select.popup-input--sm { height: 38px; line-height: 1.2; }
 /* Đảm bảo input và select trong popup có chiều cao đồng nhất 38px */
 input.popup-input, select.popup-input { height: 38px; }
 /* Safari date input fix — ensure height and placeholder */
-.popup-input--date { height: 38px; min-height: 38px; line-height: 1.2; color-scheme: dark; -webkit-appearance: none; appearance: none; box-sizing: border-box; }
+.popup-input--date { height: 38px; min-height: 38px; line-height: 1.2; color-scheme: dark; box-sizing: border-box; }
 .popup-input--date::-webkit-date-and-time-value { text-align: left; }
 .popup-input--date:invalid::-webkit-datetime-edit { color: var(--muted); }
 
