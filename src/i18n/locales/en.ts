@@ -145,6 +145,7 @@ export default {
     viewAll: 'View all ({n})',
     collapse: 'Collapse',
     allCats: 'All',
+    catCount: '{n} categories',
     search: 'Search transactions...',
     statsThisMonth: 'This month',
     statsAvg: 'Avg/day',

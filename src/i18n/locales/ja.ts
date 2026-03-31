@@ -145,6 +145,7 @@ export default {
     viewAll: 'すべて表示 ({n})',
     collapse: '折りたたむ',
     allCats: 'すべて',
+    catCount: '{n} カテゴリー',
     search: '取引を検索...',
     statsThisMonth: '今月',
     statsAvg: '1日平均',

@@ -145,6 +145,7 @@ export default {
     viewAll: 'Xem tất cả ({n})',
     collapse: 'Thu gọn',
     allCats: 'Tất cả',
+    catCount: '{n} danh mục',
     search: 'Tìm giao dịch...',
     statsThisMonth: 'Tháng này',
     statsAvg: 'TB/ngày',

@@ -44,10 +44,37 @@
               @click="setType('inc')"
             >{{ $t('transactions.filterInc') }}</button>
           </div>
-          <select class="tx-filter__cat-select" v-model="filterCat">
-            <option value="">{{ $t('transactions.allCats') }}</option>
-            <option v-for="c in activeCats" :key="c.key" :value="c.key">{{ c.label }}</option>
-          </select>
+          <!-- Category multi-select dropdown -->
+          <div class="tx-filter__cat-wrap" ref="catDropRef">
+            <button
+              class="tx-filter__cat-btn"
+              :class="{ 'tx-filter__cat-btn--active': catFilterActive }"
+              @click="toggleCatDrop"
+            >
+              <span class="tx-filter__cat-btn-label">{{ catBtnLabel }}</span>
+              <Icon name="chevron-down" :size="9" class="tx-filter__cat-chevron" :class="{ 'tx-filter__cat-chevron--open': catDropOpen }" />
+            </button>
+            <div v-if="catDropOpen" class="tx-filter__cat-drop">
+              <div class="tx-filter__cat-item" @click="selectAllCats">
+                <span class="tx-filter__cat-check" :class="{ 'tx-filter__cat-check--on': allCatsSelected }">
+                  <Icon v-if="allCatsSelected" name="check" :size="9" />
+                </span>
+                <span class="tx-filter__cat-item-label tx-filter__cat-item-label--all">{{ $t('transactions.allCats') }}</span>
+              </div>
+              <div
+                v-for="cat in activeCats"
+                :key="cat.key"
+                class="tx-filter__cat-item"
+                @click="toggleCat(cat.key)"
+              >
+                <span class="tx-filter__cat-check" :class="{ 'tx-filter__cat-check--on': selectedCats.includes(cat.key) }">
+                  <Icon v-if="selectedCats.includes(cat.key)" name="check" :size="9" />
+                </span>
+                <Icon :name="cat.icon" :size="11" class="tx-filter__cat-item-ico" />
+                <span class="tx-filter__cat-item-label">{{ cat.label }}</span>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="tx-filter__search-wrap">
           <Icon name="search" :size="11" class="tx-filter__search-ico" />
@@ -149,7 +176,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Icon from '../ui/Icon.vue'
 import { useFormatters } from '../../composables/ui/useFormatters'
@@ -187,7 +214,7 @@ const showFilter = ref(false)
 // ─── Filter state ─────────────────────────────────────────────────────────────
 
 const filterType = ref<'all' | 'exp' | 'inc'>('all')
-const filterCat = ref('')
+const selectedCats = ref<string[]>([])
 
 const activeCats = computed(() => {
   if (filterType.value === 'exp') return expenseCategories.value
@@ -195,9 +222,59 @@ const activeCats = computed(() => {
   return [...expenseCategories.value, ...incomeCategories.value]
 })
 
+// Reset selectedCats to all when filter type changes
+watch(filterType, () => {
+  selectedCats.value = activeCats.value.map(c => c.key)
+}, { immediate: true })
+
+const allCatsSelected = computed(() =>
+  activeCats.value.length > 0 && activeCats.value.every(c => selectedCats.value.includes(c.key))
+)
+
+const catFilterActive = computed(() => selectedCats.value.length > 0 && !allCatsSelected.value)
+
+const catBtnLabel = computed(() => {
+  if (!catFilterActive.value) return t('transactions.allCats')
+  if (selectedCats.value.length === 1) {
+    const cat = activeCats.value.find(c => c.key === selectedCats.value[0])
+    return cat?.label ?? selectedCats.value[0]
+  }
+  return t('transactions.catCount', { n: selectedCats.value.length })
+})
+
+// ─── Category dropdown ────────────────────────────────────────────────────────
+
+const catDropOpen = ref(false)
+const catDropRef = ref<HTMLElement | null>(null)
+
+function toggleCatDrop() {
+  catDropOpen.value = !catDropOpen.value
+}
+
+function toggleCat(key: string) {
+  const idx = selectedCats.value.indexOf(key)
+  if (idx >= 0) {
+    selectedCats.value = selectedCats.value.filter(k => k !== key)
+  } else {
+    selectedCats.value = [...selectedCats.value, key]
+  }
+}
+
+function selectAllCats() {
+  selectedCats.value = activeCats.value.map(c => c.key)
+}
+
+function onDocClick(e: MouseEvent) {
+  if (catDropRef.value && !catDropRef.value.contains(e.target as Node)) {
+    catDropOpen.value = false
+  }
+}
+
+onMounted(() => document.addEventListener('mousedown', onDocClick))
+onUnmounted(() => document.removeEventListener('mousedown', onDocClick))
+
 function setType(val: 'all' | 'exp' | 'inc') {
   filterType.value = val
-  filterCat.value = ''
 }
 
 // ─── Search ───────────────────────────────────────────────────────────────────
@@ -226,8 +303,8 @@ const typeFiltered = computed(() =>
 )
 
 const filteredItems = computed(() => {
-  let items = filterCat.value
-    ? typeFiltered.value.filter(tx => tx.cat === filterCat.value)
+  let items = catFilterActive.value
+    ? typeFiltered.value.filter(tx => selectedCats.value.includes(resolveCat(tx.cat).key))
     : typeFiltered.value
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase()
@@ -397,12 +474,12 @@ function onListScroll() {
   overflow: hidden;
   transition: max-height .3s cubic-bezier(.4,0,.2,1);
 }
-.tx-filter-wrap--open { max-height: 220px; }
+.tx-filter-wrap--open { max-height: 320px; overflow: visible; }
 
 /* ─── Filter bar ──────────────────────────────────────────────────────────── */
 .tx-filter { margin: 8px 0 6px; display: flex; flex-direction: column; gap: 6px; }
 
-/* Toggle buttons (Chi tiêu / Thu nhập) + Category select — cùng 1 dòng */
+/* Toggle buttons (Chi tiêu / Thu nhập) + Category dropdown — cùng 1 dòng */
 .tx-filter__type-row { display: flex; align-items: center; gap: 6px; }
 .tx-filter__toggle { display: flex; background: var(--surface2); border-radius: 7px; padding: 2px; flex-shrink: 0; }
 .tx-filter__toggle-btn {
@@ -415,12 +492,56 @@ function onListScroll() {
 }
 .tx-filter__toggle-btn--active { background: var(--bg); color: var(--text); }
 .tx-filter__toggle-btn:active { opacity: .7; }
-.tx-filter__cat-select {
-  flex: 1; min-width: 0;
+
+/* ─── Category dropdown ───────────────────────────────────────────────────── */
+.tx-filter__cat-wrap {
+  position: relative; flex: 1; min-width: 0;
+}
+.tx-filter__cat-btn {
+  width: 100%; display: flex; align-items: center; gap: 5px;
   background: var(--surface2); border: 1px solid var(--border); border-radius: 7px;
   padding: 4px 8px; font-family: var(--mono); font-size: 10px; color: var(--text);
-  outline: none; cursor: pointer; height: 30px; box-sizing: border-box;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  height: 30px; box-sizing: border-box; text-align: left;
+  transition: border-color .12s, color .12s;
 }
+.tx-filter__cat-btn--active { border-color: var(--accent); color: var(--accent); }
+.tx-filter__cat-btn:active { opacity: .8; }
+.tx-filter__cat-btn-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tx-filter__cat-chevron { flex-shrink: 0; color: var(--muted); transition: transform .15s; }
+.tx-filter__cat-chevron--open { transform: rotate(180deg); }
+:deep(.tx-filter__cat-chevron svg) { display: block; }
+
+.tx-filter__cat-drop {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 200;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 9px;
+  max-height: 210px; overflow-y: auto;
+  box-shadow: 0 6px 20px rgba(0,0,0,.5);
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.tx-filter__cat-drop::-webkit-scrollbar { display: none; }
+
+.tx-filter__cat-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transition: background .1s;
+}
+.tx-filter__cat-item:first-child { border-bottom: 1px solid var(--border); margin-bottom: 2px; }
+.tx-filter__cat-item:active { background: var(--border); }
+
+.tx-filter__cat-check {
+  width: 14px; height: 14px; flex-shrink: 0;
+  border: 1px solid var(--border); border-radius: 3px;
+  display: flex; align-items: center; justify-content: center;
+}
+.tx-filter__cat-check--on { background: var(--accent); border-color: var(--accent); }
+:deep(.tx-filter__cat-check svg) { display: block; }
+
+.tx-filter__cat-item-ico { flex-shrink: 0; opacity: .75; }
+:deep(.tx-filter__cat-item-ico svg) { display: block; }
+
+.tx-filter__cat-item-label { font-family: var(--mono); font-size: 10px; color: var(--text); }
+.tx-filter__cat-item-label--all { font-weight: 700; }
 
 /* Search */
 .tx-filter__search-wrap { position: relative; display: flex; align-items: center; }
