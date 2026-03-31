@@ -1,15 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { ref } from 'vue'
 import { useTransactions } from '../actions/useTransactions'
 import { makeData, VISA1, mockPush, mockToast, mockTStr, mockFindDebtId } from './helpers'
-
-vi.mock('../api/useTranslation', () => ({
-  translateToAll: vi.fn(),
-  translateText: vi.fn(),
-  ALL_LANGS: ['vi', 'en', 'ja'],
-}))
-
-import { translateToAll, translateText } from '../api/useTranslation'
 
 function setup(dataOverrides = {}) {
   const d = ref(makeData(dataOverrides))
@@ -21,20 +13,15 @@ function setup(dataOverrides = {}) {
   return { d, push, toast, ...tx }
 }
 
-beforeEach(() => {
-  // Mặc định: background translate không bao giờ resolve → không ảnh hưởng test khác
-  vi.mocked(translateToAll).mockImplementation(() => new Promise(() => {}))
-  vi.mocked(translateText).mockImplementation(() => new Promise(() => {}))
-})
-
 describe('useTransactions', () => {
   // ─── addExp ───────────────────────────────────────────────────────────
 
   describe('addExp', () => {
-    it('thêm expense tiền mặt vào đầu danh sách', async () => {
+    it('thêm expense tiền mặt vào đầu transactions', async () => {
       const { d, addExp } = setup()
       await addExp({ desc: 'Ăn trưa', amount: 50_000, cat: 'an' })
-      expect(d.value.expenses[0]).toMatchObject({
+      expect(d.value.transactions[0]).toMatchObject({
+        type: 'exp',
         desc: 'Ăn trưa',
         amount: 50_000,
         cat: 'an',
@@ -60,28 +47,31 @@ describe('useTransactions', () => {
 
     it('thanh toán bằng Visa → tăng balance thẻ', async () => {
       const { d, addExp } = setup({
-        debts: { credit_cards: [{ ...VISA1, balance: 5_000_000 }], small_loans: [] },
+        debts: [{ ...VISA1, balance: 5_000_000 }],
       })
       await addExp({ desc: 'Mua sắm', amount: 200_000, cat: 'mua', payMethod: 'visa1' })
-      const card = d.value.debts.credit_cards.find((c) => c.id === 'visa1')
+      const card = (d.value.debts || []).find((c) => c.id === 'visa1')
       expect(card?.balance).toBe(5_200_000)
     })
 
     it('expense Visa không ảnh hưởng thẻ khác', async () => {
       const { d, addExp } = setup({
-        debts: { credit_cards: [{ ...VISA1, balance: 5_000_000 }, { ...VISA1, id: 'visa2', name: 'Visa 2', balance: 3_000_000 }], small_loans: [] },
+        debts: [
+          { ...VISA1, balance: 5_000_000 },
+          { ...VISA1, id: 'visa2', name: 'Visa 2', balance: 3_000_000 },
+        ],
       })
       await addExp({ desc: 'Mua', amount: 100_000, cat: 'mua', payMethod: 'visa1' })
-      const visa2 = d.value.debts.credit_cards.find((c) => c.id === 'visa2')
+      const visa2 = (d.value.debts || []).find((c) => c.id === 'visa2')
       expect(visa2?.balance).toBe(3_000_000) // không đổi
     })
 
     it('payMethod cash → không thay đổi balance thẻ', async () => {
       const { d, addExp } = setup({
-        debts: { credit_cards: [{ ...VISA1, balance: 5_000_000 }], small_loans: [] },
+        debts: [{ ...VISA1, balance: 5_000_000 }],
       })
       await addExp({ desc: 'Ăn', amount: 50_000, cat: 'an', payMethod: 'cash' })
-      const card = d.value.debts.credit_cards.find((c) => c.id === 'visa1')
+      const card = (d.value.debts || []).find((c) => c.id === 'visa1')
       expect(card?.balance).toBe(5_000_000) // không đổi
     })
   })
@@ -89,10 +79,11 @@ describe('useTransactions', () => {
   // ─── addInc ───────────────────────────────────────────────────────────
 
   describe('addInc', () => {
-    it('thêm income vào đầu danh sách', async () => {
+    it('thêm income vào đầu transactions', async () => {
       const { d, addInc } = setup()
       await addInc({ desc: 'Lương', amount: 1_000_000, cat: 'luong' })
-      expect(d.value.incomes[0]).toMatchObject({
+      expect(d.value.transactions[0]).toMatchObject({
+        type: 'inc',
         desc: 'Lương',
         amount: 1_000_000,
         cat: 'luong',
@@ -122,35 +113,35 @@ describe('useTransactions', () => {
         current_cash: { balance: 1_000_000, reserved: 0, as_of: '2026-03-01' },
       })
       await addInc({ desc: 'Thưởng', amount: 500_000, cat: 'thuong' })
-      const incomeId = d.value.incomes[0].id
+      const incomeId = d.value.transactions[0].id
       await deleteTx({ id: incomeId, type: 'inc' })
-      expect(d.value.incomes).toHaveLength(0)
+      expect(d.value.transactions.filter((t) => t.type === 'inc')).toHaveLength(0)
       expect(d.value.current_cash.balance).toBe(1_000_000) // trở về ban đầu
     })
 
     it('xoá expense tiền mặt → xoá khỏi danh sách', async () => {
       const { d, addExp, deleteTx } = setup()
       await addExp({ desc: 'Ăn', amount: 30_000, cat: 'an' })
-      const expId = d.value.expenses[0].id
+      const expId = d.value.transactions[0].id
       await deleteTx({ id: expId, type: 'exp' })
-      expect(d.value.expenses).toHaveLength(0)
+      expect(d.value.transactions.filter((t) => t.type === 'exp')).toHaveLength(0)
     })
 
     it('xoá expense Visa → giảm balance thẻ', async () => {
       const { d, addExp, deleteTx } = setup({
-        debts: { credit_cards: [{ ...VISA1, balance: 5_000_000 }], small_loans: [] },
+        debts: [{ ...VISA1, balance: 5_000_000 }],
       })
       await addExp({ desc: 'Mua', amount: 200_000, cat: 'mua', payMethod: 'visa1' })
-      const expId = d.value.expenses[0].id
+      const expId = d.value.transactions[0].id
       await deleteTx({ id: expId, type: 'exp' })
-      const card = d.value.debts.credit_cards.find((c) => c.id === 'visa1')
+      const card = (d.value.debts || []).find((c) => c.id === 'visa1')
       expect(card?.balance).toBe(5_000_000) // trở về ban đầu
     })
 
     it('toast thành công khi xoá', async () => {
       const { d, toast, addExp, deleteTx } = setup()
       await addExp({ desc: 'X', amount: 10_000, cat: 'x' })
-      await deleteTx({ id: d.value.expenses[0].id, type: 'exp' })
+      await deleteTx({ id: d.value.transactions[0].id, type: 'exp' })
       expect(toast).toHaveBeenLastCalledWith('toast.txDeleted')
     })
   })
@@ -161,13 +152,14 @@ describe('useTransactions', () => {
     it('cập nhật expense theo _buf', async () => {
       const { d, addExp, handlePopupSaveTx } = setup()
       await addExp({ desc: 'Cũ', amount: 50_000, cat: 'an' })
-      const expId = d.value.expenses[0].id
+      const expId = d.value.transactions[0].id
       await handlePopupSaveTx({
         id: expId,
         type: 'exp',
         _buf: { name: 'Mới', date: '2026-03-29', amt: 80_000, cat: 'cafe' },
       })
-      expect(d.value.expenses[0]).toMatchObject({ desc: 'Mới', amount: 80_000, cat: 'cafe' })
+      const updated = d.value.transactions.find((t) => t.id === expId)
+      expect(updated).toMatchObject({ desc: 'Mới', amount: 80_000, cat: 'cafe' })
     })
 
     it('cập nhật income → điều chỉnh cash balance', async () => {
@@ -175,7 +167,7 @@ describe('useTransactions', () => {
         current_cash: { balance: 1_000_000, reserved: 0, as_of: '2026-03-01' },
       })
       await addInc({ desc: 'Lương', amount: 500_000, cat: 'luong' })
-      const incId = d.value.incomes[0].id
+      const incId = d.value.transactions[0].id
       await handlePopupSaveTx({
         id: incId,
         type: 'inc',
@@ -183,43 +175,6 @@ describe('useTransactions', () => {
       })
       // balance ban đầu 1_000_000 + thêm 500_000 = 1_500_000, rồi diff = 700_000 - 500_000 = +200_000
       expect(d.value.current_cash.balance).toBe(1_700_000)
-    })
-  })
-
-  // ─── backgroundTranslate stale check ─────────────────────────────────────
-
-  describe('backgroundTranslate stale check (race condition)', () => {
-    it('không ghi đè descI18n khi desc đã thay đổi sau khi edit', async () => {
-      // Translation đầu tiên (từ addExp) bị trễ — chưa resolve ngay
-      let resolveOldTranslation!: (v: Partial<Record<string, string>>) => void
-      vi.mocked(translateToAll)
-        .mockImplementationOnce(
-          () => new Promise((resolve) => { resolveOldTranslation = resolve }),
-        )
-        .mockImplementation(() => new Promise(() => {})) // translation thứ 2 không cần resolve
-
-      const { d, addExp, handlePopupSaveTx } = setup()
-      await addExp({ desc: 'Mua cơm', amount: 50_000, cat: 'an' })
-      const expId = d.value.expenses[0].id
-
-      // User edit expense (mô phỏng đổi locale sang 'en' rồi sửa tiêu đề)
-      await handlePopupSaveTx({
-        id: expId,
-        type: 'exp',
-        _buf: { name: 'Buy lunch', date: '2026-03-29', amt: 50_000, cat: 'an' },
-      })
-      expect(d.value.expenses[0].desc).toBe('Buy lunch')
-
-      // Race condition: translation cũ của addExp hoàn thành SAU khi user đã edit
-      resolveOldTranslation({ vi: 'Mua cơm', en: 'Buy rice', ja: '食べ物' })
-      await Promise.resolve()
-      await Promise.resolve()
-
-      // Stale check ngăn bản dịch cũ ghi đè tiêu đề mới
-      expect(d.value.expenses[0].desc).toBe('Buy lunch')
-      const descI18n = (d.value.expenses[0] as Record<string, unknown>).descI18n as Record<string, string>
-      expect(descI18n?.vi).not.toBe('Mua cơm')
-      expect(descI18n?.en).not.toBe('Buy rice')
     })
   })
 })
