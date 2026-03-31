@@ -69,7 +69,7 @@ export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
     const cards = (d.value.debts || []).filter((x) => x.type === 'credit_card')
     cards.forEach((c) => {
       const shortName = c.name.replace(' — Techcombank', '').replace(' — ', '').toLowerCase().trim()
-      const dueDate = c.payment_due_date || ''
+      const dueDate = c.payment_due_dates?.[0] || ''
       const cardObs = allObs.filter((ob) => {
         const obName = (ob.name || '').toLowerCase()
         const matchesCard = obName.includes(shortName)
@@ -102,7 +102,7 @@ export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
    */
   const debtCards = computed((): DebtCard[] => {
     return (d.value.debts || []).filter((x) => x.type === 'credit_card').map((c): DebtCard => {
-      const dueDate = c.payment_due_date || ''
+      const dueDate = c.payment_due_dates?.[0] || ''
       const daysLeft = dueDate ? dDiff(dueDate) : null
       const paid = minPaidByCard.value[c.id] || false
       let minUrg: DebtCard['minUrg'] = 'normal'
