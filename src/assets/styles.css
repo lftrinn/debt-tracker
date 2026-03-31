@@ -155,7 +155,7 @@ select.popup-input--sm { height: 38px; line-height: 1.2; }
 /* Đảm bảo input và select trong popup có chiều cao đồng nhất 38px */
 input.popup-input, select.popup-input { height: 38px; }
 /* Safari date input fix — ensure height and placeholder */
-.popup-input--date { height: 38px; min-height: 38px; line-height: 1.2; color-scheme: dark; }
+.popup-input--date { height: 38px; min-height: 38px; line-height: 1.2; color-scheme: dark; -webkit-appearance: none; appearance: none; box-sizing: border-box; }
 .popup-input--date::-webkit-date-and-time-value { text-align: left; }
 .popup-input--date:invalid::-webkit-datetime-edit { color: var(--muted); }
 
