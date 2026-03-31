@@ -135,13 +135,12 @@
             </div>
             <div v-if="item._variant === 'tx'" class="popup-field">
               <label class="popup-label">{{ $t('detail.categoryLabel') }}</label>
+              <div class="detail__cat-toggle">
+                <button :class="['tab-btn', editCatType === 'exp' ? 'active' : '']" style="flex:1;font-size:10px;padding:5px 0" @click="setCatType('exp')">{{ $t('detail.categoryExpense') }}</button>
+                <button :class="['tab-btn', editCatType === 'inc' ? 'active' : '']" style="flex:1;font-size:10px;padding:5px 0" @click="setCatType('inc')">{{ $t('detail.categoryIncome') }}</button>
+              </div>
               <select class="popup-input" v-model="buf.cat" style="font-family:var(--sans);font-size:12px">
-                <optgroup :label="$t('detail.categoryExpense')">
-                  <option v-for="c in expenseCategories" :key="c.key" :value="c.key">{{ c.label }}</option>
-                </optgroup>
-                <optgroup :label="$t('detail.categoryIncome')">
-                  <option v-for="c in incomeCategories" :key="c.key" :value="c.key">{{ c.label }}</option>
-                </optgroup>
+                <option v-for="c in editActiveCats" :key="c.key" :value="c.key">{{ c.label }}</option>
               </select>
             </div>
             <div v-if="item._variant === 'tx'" class="popup-field">
@@ -225,6 +224,17 @@ const emit = defineEmits(['close', 'save-upcoming', 'save-tx', 'delete', 'toggle
 const editing = ref(false)
 const buf = ref({ name: '', date: '', amt: 0, cat: '', note: '', time: '' })
 const editPayLevel = ref('min') // 'min' | 'custom' — only used for CC edit
+const editCatType = ref('exp') // 'exp' | 'inc' — toggle in category field
+
+const editActiveCats = computed(() =>
+  editCatType.value === 'inc' ? incomeCategories.value : expenseCategories.value
+)
+
+function setCatType(type) {
+  editCatType.value = type
+  const cats = type === 'inc' ? incomeCategories.value : expenseCategories.value
+  buf.value.cat = cats[0]?.key || ''
+}
 
 // ─── Review step state ────────────────────────────────────────────────────
 const reviewStep = ref(false)
@@ -338,6 +348,7 @@ function startEdit() {
     }
   } else {
     const resolved = resolveCat(i.cat)
+    editCatType.value = i.type === 'inc' ? 'inc' : 'exp'
     // Hiện bản dịch đúng locale khi edit — fallback về desc gốc nếu chưa có
     buf.value = {
       name: getLocalized(i, 'desc', locale.value),
@@ -628,6 +639,9 @@ function onTouchEnd(e) {
 /* time input in edit mode */
 .popup-input--time { font-family: var(--mono); font-size: 12px; }
 .popup-input--note { height: auto; min-height: 56px; resize: none; line-height: 1.4; }
+
+/* Category type toggle */
+.detail__cat-toggle { display: flex; gap: 4px; background: var(--surface2); border-radius: 8px; padding: 2px; margin-bottom: 6px; }
 
 /* Review step */
 .review__subtitle { font-size: 12px; color: rgba(var(--text-rgb),.55); margin: 0 0 14px; line-height: 1.5; }
