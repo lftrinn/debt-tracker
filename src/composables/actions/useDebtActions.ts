@@ -29,14 +29,7 @@ export function useDebtActions(
         if (balance != null) updated.balance = balance
         if (min != null) updated.minimum_payment = min
         if (minDueDate !== undefined) {
-          // Cập nhật payment_due_dates: thay thế ngày đầu tiên
-          const dates = [...(x.payment_due_dates || [])]
-          if (minDueDate) {
-            dates[0] = minDueDate
-          } else {
-            dates.splice(0, 1)
-          }
-          updated.payment_due_dates = dates
+          updated.payment_due_date = minDueDate || ''
         }
         return updated
       }),
@@ -85,7 +78,7 @@ export function useDebtActions(
         one_time_expenses: d.value.one_time_expenses || [],
         custom_daily_limit: d.value.custom_daily_limit || 0,
         current_cash: parsed.current_cash || d.value.current_cash,
-        schema_version: 2,
+        schema_version: 3,
       } as AppData
       d.value = merged
       ;(await pushData()) ? toast('toast.imported') : toast('toast.importedErr', 'err')

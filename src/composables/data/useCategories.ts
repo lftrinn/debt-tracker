@@ -20,6 +20,9 @@ const EXPENSE_ICONS: Record<string, string> = {
   yte: 'pill',
   giaitri: 'gamepad-2',
   hd: 'lightbulb',
+  dichvu: 'repeat',
+  sinhhoat: 'shirt',
+  xahoi: 'users',
   khac: 'package',
   thanhToan: 'credit-card',
 }
@@ -30,6 +33,7 @@ const INCOME_ICONS: Record<string, string> = {
   thuong: 'gift',
   hoantien: 'undo',
   dautu: 'bar-chart-3',
+  hotro: 'hand-heart',
   khac_thu: 'coins',
 }
 

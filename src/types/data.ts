@@ -13,19 +13,42 @@ export interface Transaction {
   note?: string
 }
 
+/** Installment — kỳ trả góp (active hoặc completed) */
+export interface Installment {
+  id?: string
+  merchant: string
+  registered?: string
+  total_amount?: number
+  term_months?: number
+  monthly_amount: number
+  period_current?: string
+  remaining_periods?: number
+  ends?: string
+  note?: string
+  status?: string
+  last_payment?: string
+}
+
 /** Debt gộp credit card và loan — thay thế CreditCard + SmallLoan riêng biệt */
 export interface Debt {
   id: string
   type: 'credit_card' | 'loan'
   name: string
-  payment_due_dates: string[]
+  payment_due_date: string
+  upcoming_due_dates?: string[]
+  // Shared fields
+  account_last4?: string
+  interest_rate_monthly?: number
+  interest_this_period?: number
+  payment_day?: number
   // Credit card fields
   credit_limit?: number
   balance?: number
   interest_rate_annual?: number
   minimum_payment?: number
   payment_due_time?: string
-  installments_active?: unknown[]
+  installments_active?: Installment[]
+  installments_completed?: Installment[]
   // Loan fields
   original_amount?: number
   term_months?: number
@@ -33,7 +56,9 @@ export interface Debt {
   remaining_periods?: number
   remaining_balance?: number
   ends?: string
-  interest_rate_monthly?: number
+  contract?: string
+  disbursed?: string
+  created?: string
 }
 
 export interface OneTimeExpense {
@@ -62,8 +87,11 @@ export interface AppData {
     as_of: string
   }
   income: {
+    monthly_gross?: number
     monthly_net: number
     pay_date: number
+    employer?: string
+    contract_end?: string
   }
   rules: {
     daily_limit: { until_salary: number; after_salary: number }
@@ -72,6 +100,19 @@ export interface AppData {
   }
   one_time_expenses?: OneTimeExpense[]
   paid_obligations?: string[]
+  fixed_expenses?: {
+    rent?: number
+    claude_pro?: number
+    internet?: number
+    food_budget?: number
+    note?: string
+  }
+  metadata?: {
+    owner?: string
+    updated_at?: string
+    currency?: string
+    note?: string
+  }
 }
 
 // ─── Derived / computed types (returned by composables) ──────────────────

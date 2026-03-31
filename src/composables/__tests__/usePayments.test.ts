@@ -131,7 +131,7 @@ describe('usePayments', () => {
 
     it('ghi nhận trả nợ sl → giảm remaining_balance', async () => {
       const { d, recPay } = setup({
-        debts: [{ id: 'sl1', type: 'loan', name: 'Vay A', remaining_balance: 2_000_000, payment_due_dates: [] }],
+        debts: [{ id: 'sl1', type: 'loan', name: 'Vay A', remaining_balance: 2_000_000, payment_due_date: '' }],
       })
       await recPay({ target: 'sl:sl1', amount: 500_000 })
       const loan = (d.value.debts || []).find((l) => l.id === 'sl1')

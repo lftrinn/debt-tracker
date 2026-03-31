@@ -19,7 +19,7 @@ describe('useDebtCards', () => {
       const d = ref(makeData({
         debts: [
           { ...VISA1, balance: 3_000_000 },
-          { id: 'sl1', type: 'loan', name: 'Vay A', remaining_balance: 500_000, payment_due_dates: [] },
+          { id: 'sl1', type: 'loan', name: 'Vay A', remaining_balance: 500_000, payment_due_date: '' },
         ],
       }))
       const { totalDebt } = useDebtCards(d)
@@ -30,7 +30,7 @@ describe('useDebtCards', () => {
       const d = ref(makeData({
         debts: [
           { ...VISA1, balance: 2_000_000 },
-          { id: 'sl1', type: 'loan', name: 'Vay A', remaining_balance: 0, payment_due_dates: [] },
+          { id: 'sl1', type: 'loan', name: 'Vay A', remaining_balance: 0, payment_due_date: '' },
         ],
       }))
       const { totalDebt } = useDebtCards(d)
@@ -92,7 +92,7 @@ describe('useDebtCards', () => {
     it('đã paid → ok', () => {
       vi.setSystemTime(new Date('2026-03-03T12:00:00'))
       const d = ref(makeData({
-        debts: [{ ...VISA1, payment_due_dates: ['2026-03-10'] }],
+        debts: [{ ...VISA1, payment_due_date: '2026-03-10' }],
         one_time_expenses: [{ id: 1, name: 'visa 1 minimum', date: '2026-03-10', amount: 500_000 }],
         paid_obligations: ['2026-03-10:visa 1 minimum'],
       }))
@@ -104,7 +104,7 @@ describe('useDebtCards', () => {
     it('đã quá hạn (daysLeft <= 0) → overdue', () => {
       vi.setSystemTime(new Date('2026-03-15T12:00:00'))
       const d = ref(makeData({
-        debts: [{ ...VISA1, payment_due_dates: ['2026-03-10'] }],
+        debts: [{ ...VISA1, payment_due_date: '2026-03-10' }],
       }))
       const { debtCards } = useDebtCards(d)
       expect(debtCards.value[0].minUrg).toBe('overdue')
@@ -113,7 +113,7 @@ describe('useDebtCards', () => {
     it('còn 2 ngày (daysLeft <= 3) → urgent', () => {
       vi.setSystemTime(new Date('2026-03-08T12:00:00'))
       const d = ref(makeData({
-        debts: [{ ...VISA1, payment_due_dates: ['2026-03-10'] }],
+        debts: [{ ...VISA1, payment_due_date: '2026-03-10' }],
       }))
       const { debtCards } = useDebtCards(d)
       expect(debtCards.value[0].minUrg).toBe('urgent')
@@ -122,7 +122,7 @@ describe('useDebtCards', () => {
     it('còn 5 ngày (daysLeft <= 7) → soon', () => {
       vi.setSystemTime(new Date('2026-03-05T12:00:00'))
       const d = ref(makeData({
-        debts: [{ ...VISA1, payment_due_dates: ['2026-03-10'] }],
+        debts: [{ ...VISA1, payment_due_date: '2026-03-10' }],
       }))
       const { debtCards } = useDebtCards(d)
       expect(debtCards.value[0].minUrg).toBe('soon')
@@ -131,15 +131,15 @@ describe('useDebtCards', () => {
     it('còn 20 ngày → normal', () => {
       vi.setSystemTime(new Date('2026-03-01T12:00:00'))
       const d = ref(makeData({
-        debts: [{ ...VISA1, payment_due_dates: ['2026-03-21'] }],
+        debts: [{ ...VISA1, payment_due_date: '2026-03-21' }],
       }))
       const { debtCards } = useDebtCards(d)
       expect(debtCards.value[0].minUrg).toBe('normal')
     })
 
-    it('payment_due_dates rỗng → normal', () => {
+    it('payment_due_date rỗng → normal', () => {
       const d = ref(makeData({
-        debts: [{ ...VISA1, payment_due_dates: [] }],
+        debts: [{ ...VISA1, payment_due_date: '' }],
       }))
       const { debtCards } = useDebtCards(d)
       expect(debtCards.value[0].minUrg).toBe('normal')
@@ -174,8 +174,8 @@ describe('useDebtCards', () => {
     it('lọc khoản vay đã trả hết (remaining_balance = 0)', () => {
       const d = ref(makeData({
         debts: [
-          { id: 'sl1', type: 'loan', name: 'Vay A', remaining_balance: 500_000, payment_due_dates: [] },
-          { id: 'sl2', type: 'loan', name: 'Vay B', remaining_balance: 0, payment_due_dates: [] },
+          { id: 'sl1', type: 'loan', name: 'Vay A', remaining_balance: 500_000, payment_due_date: '' },
+          { id: 'sl2', type: 'loan', name: 'Vay B', remaining_balance: 0, payment_due_date: '' },
         ],
       }))
       const { smallLoans } = useDebtCards(d)

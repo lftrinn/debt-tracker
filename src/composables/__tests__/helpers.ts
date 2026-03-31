@@ -1,10 +1,10 @@
 import { vi } from 'vitest'
 import type { AppData, Debt } from '@/types/data'
 
-/** Build a minimal valid AppData v2 for tests. Override any field as needed. */
+/** Build a minimal valid AppData v3 for tests. Override any field as needed. */
 export function makeData(overrides: Partial<AppData> = {}): AppData {
   return {
-    schema_version: 2,
+    schema_version: 3,
     transactions: [],
     debts: [],
     extra_paid: 0,
@@ -16,7 +16,7 @@ export function makeData(overrides: Partial<AppData> = {}): AppData {
   }
 }
 
-/** A credit card stub for tests (v2 schema) */
+/** A credit card stub for tests (v3 schema) */
 export const VISA1: Debt = {
   id: 'visa1',
   type: 'credit_card',
@@ -25,7 +25,7 @@ export const VISA1: Debt = {
   balance: 5_000_000,
   interest_rate_annual: 0.328,
   minimum_payment: 500_000,
-  payment_due_dates: ['2026-04-15'],
+  payment_due_date: '2026-04-15',
 }
 
 export const VISA2: Debt = {
@@ -36,7 +36,7 @@ export const VISA2: Debt = {
   balance: 8_000_000,
   interest_rate_annual: 0.358,
   minimum_payment: 800_000,
-  payment_due_dates: [],
+  payment_due_date: '',
 }
 
 /** Mock pushData that always succeeds */

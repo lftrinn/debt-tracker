@@ -242,11 +242,11 @@ const { hideAmounts, toggleHide, hideZones, setHideZone, hz } = useHideZones()
 
 // ─── Main data ref ────────────────────────────────────────────────────────
 const d = ref<AppData>({
-  schema_version: 2,
+  schema_version: 3,
   transactions: [],
   debts: [
-    { id: 'visa1', type: 'credit_card', name: 'Visa 1', credit_limit: 37000000, balance: 34946713, interest_rate_annual: 0.328, minimum_payment: 2663422, payment_due_dates: [] },
-    { id: 'visa2', type: 'credit_card', name: 'Visa 2', credit_limit: 53000000, balance: 49299000, interest_rate_annual: 0.358, minimum_payment: 4107271, payment_due_dates: [] },
+    { id: 'visa1', type: 'credit_card', name: 'Visa 1', credit_limit: 37000000, balance: 34946713, interest_rate_annual: 0.328, minimum_payment: 2663422, payment_due_date: '' },
+    { id: 'visa2', type: 'credit_card', name: 'Visa 2', credit_limit: 53000000, balance: 49299000, interest_rate_annual: 0.358, minimum_payment: 4107271, payment_due_date: '' },
   ],
   extra_paid: 0,
   custom_daily_limit: 0,

@@ -59,10 +59,10 @@ export function useAppSetup(
         if (!data.transactions) data.transactions = []
         if (data.extra_paid == null) data.extra_paid = 0
         if (data.custom_daily_limit == null) data.custom_daily_limit = 0
-        if (!data.schema_version) data.schema_version = 2
+        if (!data.schema_version) data.schema_version = 3
       } else if (opts.mode === 'new') {
         data = {
-          schema_version: 2,
+          schema_version: 3,
           transactions: [],
           debts: [],
           extra_paid: 0,
