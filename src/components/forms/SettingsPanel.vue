@@ -97,7 +97,7 @@
 
           <!-- HIDE ZONES -->
           <template v-if="open === 'hz'">
-            <div class="popup-body">
+            <div class="popup-body settings__scrollbody">
               <div class="hint" style="margin-bottom:8px">{{ $t('settings.hideZones.hint') }}</div>
               <div class="settings__hz-tree">
                 <div v-for="g in zoneTree" :key="g.label" class="settings__hz-group" :class="{ 'settings__hz-group--expanded': expandedGroups[g.label] }">
@@ -129,7 +129,7 @@
 
           <!-- RULES -->
           <template v-if="open === 'rules'">
-            <div class="popup-body">
+            <div class="popup-body settings__scrollbody">
               <div v-if="!rules.length" class="empty">{{ $t('settings.rules.empty') }}</div>
               <!-- Bọc danh sách quy tắc trong container có thể scroll khi nội dung dài -->
               <div v-else class="settings__rules-list">
@@ -654,4 +654,6 @@ defineExpose({})
 .settings__push-dot--denied { background: var(--danger); }
 .settings__push-enable-btn { width: 100%; margin-top: 2px; }
 
+/* Body có thể scroll — dùng cho danh sách dài (hz, rules) */
+.settings__scrollbody { max-height: calc(85vh - 160px); overflow-y: auto; }
 </style>

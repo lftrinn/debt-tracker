@@ -1,7 +1,15 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ref } from 'vue'
 import { useTransactions } from '../actions/useTransactions'
 import { makeData, VISA1, mockPush, mockToast, mockTStr, mockFindDebtId } from './helpers'
+
+vi.mock('../api/useTranslation', () => ({
+  translateToAll: vi.fn(),
+  translateText: vi.fn(),
+  ALL_LANGS: ['vi', 'en', 'ja'],
+}))
+
+import { translateToAll, translateText } from '../api/useTranslation'
 
 function setup(dataOverrides = {}) {
   const d = ref(makeData(dataOverrides))
@@ -12,6 +20,12 @@ function setup(dataOverrides = {}) {
   const tx = useTransactions(d, push, toast, tStr, findDebtId)
   return { d, push, toast, ...tx }
 }
+
+beforeEach(() => {
+  // Mặc định: background translate không bao giờ resolve → không ảnh hưởng test khác
+  vi.mocked(translateToAll).mockImplementation(() => new Promise(() => {}))
+  vi.mocked(translateText).mockImplementation(() => new Promise(() => {}))
+})
 
 describe('useTransactions', () => {
   // ─── addExp ───────────────────────────────────────────────────────────
@@ -169,6 +183,43 @@ describe('useTransactions', () => {
       })
       // balance ban đầu 1_000_000 + thêm 500_000 = 1_500_000, rồi diff = 700_000 - 500_000 = +200_000
       expect(d.value.current_cash.balance).toBe(1_700_000)
+    })
+  })
+
+  // ─── backgroundTranslate stale check ─────────────────────────────────────
+
+  describe('backgroundTranslate stale check (race condition)', () => {
+    it('không ghi đè descI18n khi desc đã thay đổi sau khi edit', async () => {
+      // Translation đầu tiên (từ addExp) bị trễ — chưa resolve ngay
+      let resolveOldTranslation!: (v: Partial<Record<string, string>>) => void
+      vi.mocked(translateToAll)
+        .mockImplementationOnce(
+          () => new Promise((resolve) => { resolveOldTranslation = resolve }),
+        )
+        .mockImplementation(() => new Promise(() => {})) // translation thứ 2 không cần resolve
+
+      const { d, addExp, handlePopupSaveTx } = setup()
+      await addExp({ desc: 'Mua cơm', amount: 50_000, cat: 'an' })
+      const expId = d.value.expenses[0].id
+
+      // User edit expense (mô phỏng đổi locale sang 'en' rồi sửa tiêu đề)
+      await handlePopupSaveTx({
+        id: expId,
+        type: 'exp',
+        _buf: { name: 'Buy lunch', date: '2026-03-29', amt: 50_000, cat: 'an' },
+      })
+      expect(d.value.expenses[0].desc).toBe('Buy lunch')
+
+      // Race condition: translation cũ của addExp hoàn thành SAU khi user đã edit
+      resolveOldTranslation({ vi: 'Mua cơm', en: 'Buy rice', ja: '食べ物' })
+      await Promise.resolve()
+      await Promise.resolve()
+
+      // Stale check ngăn bản dịch cũ ghi đè tiêu đề mới
+      expect(d.value.expenses[0].desc).toBe('Buy lunch')
+      const descI18n = (d.value.expenses[0] as Record<string, unknown>).descI18n as Record<string, string>
+      expect(descI18n?.vi).not.toBe('Mua cơm')
+      expect(descI18n?.en).not.toBe('Buy rice')
     })
   })
 })
