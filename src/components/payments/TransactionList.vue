@@ -32,6 +32,10 @@
         <div class="tx-filter__type-row">
           <div class="tx-filter__toggle">
             <button
+              :class="['tx-filter__toggle-btn', filterType === 'all' ? 'tx-filter__toggle-btn--active' : '']"
+              @click="setType('all')"
+            >{{ $t('transactions.filterAll') }}</button>
+            <button
               :class="['tx-filter__toggle-btn', filterType === 'exp' ? 'tx-filter__toggle-btn--active' : '']"
               @click="setType('exp')"
             >{{ $t('transactions.filterExp') }}</button>
@@ -182,14 +186,16 @@ const showFilter = ref(false)
 
 // ─── Filter state ─────────────────────────────────────────────────────────────
 
-const filterType = ref<'exp' | 'inc'>('exp')
+const filterType = ref<'all' | 'exp' | 'inc'>('all')
 const filterCat = ref('')
 
-const activeCats = computed(() =>
-  filterType.value === 'exp' ? expenseCategories.value : incomeCategories.value
-)
+const activeCats = computed(() => {
+  if (filterType.value === 'exp') return expenseCategories.value
+  if (filterType.value === 'inc') return incomeCategories.value
+  return [...expenseCategories.value, ...incomeCategories.value]
+})
 
-function setType(val: 'exp' | 'inc') {
+function setType(val: 'all' | 'exp' | 'inc') {
   filterType.value = val
   filterCat.value = ''
 }
@@ -214,7 +220,9 @@ function clearSearch() {
 // ─── Computed filtering ───────────────────────────────────────────────────────
 
 const typeFiltered = computed(() =>
-  props.transactions.filter(tx => tx.type === filterType.value)
+  filterType.value === 'all'
+    ? props.transactions
+    : props.transactions.filter(tx => tx.type === filterType.value)
 )
 
 const filteredItems = computed(() => {
