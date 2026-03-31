@@ -29,23 +29,21 @@
     <!-- Filter bar (collapsible) -->
     <div class="tx-filter-wrap" :class="{ 'tx-filter-wrap--open': showFilter }">
       <div class="tx-filter">
-        <div class="tx-filter__type">
-          <button
-            v-for="ft in typeFilters"
-            :key="ft.value"
-            class="tx-filter__btn"
-            :class="{ 'tx-filter__btn--active': filterType === ft.value }"
-            @click="setType(ft.value)"
-          >{{ ft.label }}</button>
-        </div>
-        <div v-if="availableCats.length > 1" class="tx-filter__cats">
-          <button
-            v-for="cat in availableCats"
-            :key="cat.key"
-            class="tx-filter__cat"
-            :class="{ 'tx-filter__cat--active': filterCat === cat.key }"
-            @click="filterCat = filterCat === cat.key ? '' : cat.key"
-          ><Icon :name="cat.icon" :size="9" class="tx-filter__cat-ico" />{{ cat.label }}</button>
+        <div class="tx-filter__type-row">
+          <div class="tx-filter__toggle">
+            <button
+              :class="['tx-filter__toggle-btn', filterType === 'exp' ? 'tx-filter__toggle-btn--active' : '']"
+              @click="setType('exp')"
+            >{{ $t('transactions.filterExp') }}</button>
+            <button
+              :class="['tx-filter__toggle-btn', filterType === 'inc' ? 'tx-filter__toggle-btn--active' : '']"
+              @click="setType('inc')"
+            >{{ $t('transactions.filterInc') }}</button>
+          </div>
+          <select class="tx-filter__cat-select" v-model="filterCat">
+            <option value="">{{ $t('transactions.allCats') }}</option>
+            <option v-for="c in activeCats" :key="c.key" :value="c.key">{{ c.label }}</option>
+          </select>
         </div>
         <div class="tx-filter__search-wrap">
           <Icon name="search" :size="11" class="tx-filter__search-ico" />
@@ -159,7 +157,7 @@ import type { TransactionItem } from '../../types/data'
 
 const { locale, t } = useI18n()
 const { fDate, tStr } = useFormatters()
-const { resolveCat } = useCategories()
+const { resolveCat, expenseCategories, incomeCategories } = useCategories()
 const { fCurr, fCurrNative, fCurrFor, displayCurrency, toVnd } = useCurrency()
 const { amountColor } = useAmountColor()
 
@@ -184,16 +182,14 @@ const showFilter = ref(false)
 
 // ─── Filter state ─────────────────────────────────────────────────────────────
 
-const filterType = ref<'all' | 'exp' | 'inc'>('all')
+const filterType = ref<'exp' | 'inc'>('exp')
 const filterCat = ref('')
 
-const typeFilters = computed(() => [
-  { value: 'all' as const, label: t('transactions.filterAll') },
-  { value: 'exp' as const, label: t('transactions.filterExp') },
-  { value: 'inc' as const, label: t('transactions.filterInc') },
-])
+const activeCats = computed(() =>
+  filterType.value === 'exp' ? expenseCategories.value : incomeCategories.value
+)
 
-function setType(val: 'all' | 'exp' | 'inc') {
+function setType(val: 'exp' | 'inc') {
   filterType.value = val
   filterCat.value = ''
 }
@@ -217,23 +213,9 @@ function clearSearch() {
 
 // ─── Computed filtering ───────────────────────────────────────────────────────
 
-const typeFiltered = computed(() => {
-  if (filterType.value === 'exp') return props.transactions.filter(tx => tx.type === 'exp')
-  if (filterType.value === 'inc') return props.transactions.filter(tx => tx.type === 'inc')
-  return props.transactions
-})
-
-const availableCats = computed(() => {
-  const seen = new Set<string>()
-  const result = []
-  for (const tx of typeFiltered.value) {
-    if (!seen.has(tx.cat)) {
-      seen.add(tx.cat)
-      result.push(resolveCat(tx.cat))
-    }
-  }
-  return result
-})
+const typeFiltered = computed(() =>
+  props.transactions.filter(tx => tx.type === filterType.value)
+)
 
 const filteredItems = computed(() => {
   let items = filterCat.value
@@ -412,31 +394,25 @@ function onListScroll() {
 /* ─── Filter bar ──────────────────────────────────────────────────────────── */
 .tx-filter { margin: 8px 0 6px; display: flex; flex-direction: column; gap: 6px; }
 
-.tx-filter__type { display: flex; gap: 4px; }
-.tx-filter__btn {
-  flex: 1; padding: 5px 8px;
+/* Toggle buttons (Chi tiêu / Thu nhập) + Category select — cùng 1 dòng */
+.tx-filter__type-row { display: flex; align-items: center; gap: 6px; }
+.tx-filter__toggle { display: flex; background: var(--surface2); border-radius: 7px; padding: 2px; flex-shrink: 0; }
+.tx-filter__toggle-btn {
+  padding: 4px 10px;
   font-family: var(--mono); font-size: 10px;
-  border: 1px solid var(--border); border-radius: 7px;
+  border: none; border-radius: 6px;
   background: transparent; color: var(--muted);
   cursor: pointer; -webkit-tap-highlight-color: transparent;
-  transition: background .12s, border-color .12s, color .12s;
+  transition: background .12s, color .12s;
 }
-.tx-filter__btn--active { background: var(--surface2); color: var(--text); border-color: var(--accent); }
-.tx-filter__btn:active { background: var(--border); }
-
-.tx-filter__cats { display: flex; gap: 4px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
-.tx-filter__cat {
-  display: inline-flex; align-items: center; white-space: nowrap;
-  padding: 3px 8px; font-family: var(--mono); font-size: 10px;
-  border: 1px solid var(--border); border-radius: 12px;
-  background: transparent; color: var(--muted);
-  cursor: pointer; -webkit-tap-highlight-color: transparent; flex-shrink: 0;
-  transition: background .12s, border-color .12s, color .12s;
+.tx-filter__toggle-btn--active { background: var(--bg); color: var(--text); }
+.tx-filter__toggle-btn:active { opacity: .7; }
+.tx-filter__cat-select {
+  flex: 1; min-width: 0;
+  background: var(--surface2); border: 1px solid var(--border); border-radius: 7px;
+  padding: 4px 8px; font-family: var(--mono); font-size: 10px; color: var(--text);
+  outline: none; cursor: pointer; height: 30px; box-sizing: border-box;
 }
-.tx-filter__cat--active { background: var(--surface2); color: var(--text); border-color: var(--accent); }
-.tx-filter__cat:active { background: var(--border); }
-.tx-filter__cat-ico { margin-right: 3px; }
-:deep(.tx-filter__cat-ico svg) { display: block; }
 
 /* Search */
 .tx-filter__search-wrap { position: relative; display: flex; align-items: center; }

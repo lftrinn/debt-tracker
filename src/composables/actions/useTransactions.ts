@@ -119,7 +119,7 @@ export function useTransactions(
    * Amount lưu nguyên theo currency được chọn; card balance luôn cập nhật bằng VND.
    * descLang và descI18n được ghi nhận theo locale hiện tại; bản dịch chạy background.
    */
-  async function addExp({ desc, amount, cat, payMethod, currency, note, time }: { desc: string; amount: number; cat: string; payMethod?: string; currency?: string; note?: string; time?: string }): Promise<void> {
+  async function addExp({ desc, amount, cat, payMethod, currency, date, note, time }: { desc: string; amount: number; cat: string; payMethod?: string; currency?: string; date?: string; note?: string; time?: string }): Promise<void> {
     const isCash = !payMethod || payMethod === 'cash'
     const txCur = (currency || baseCurrency.value) as Currency
     const lang = currentLang()
@@ -129,7 +129,7 @@ export function useTransactions(
       desc,
       amount,
       cat,
-      date: tStr(),
+      date: date || tStr(),
       payMethod: payMethod || 'cash',
       currency: txCur,
       descLang: lang,
@@ -162,7 +162,7 @@ export function useTransactions(
    * Thêm khoản thu nhập và cập nhật số dư tiền mặt (cash balance luôn theo VND).
    * descLang và descI18n được ghi nhận theo locale hiện tại; bản dịch chạy background.
    */
-  async function addInc({ desc, amount, cat, currency, note, time }: { desc: string; amount: number; cat: string; currency?: string; note?: string; time?: string }): Promise<void> {
+  async function addInc({ desc, amount, cat, currency, date, note, time }: { desc: string; amount: number; cat: string; currency?: string; date?: string; note?: string; time?: string }): Promise<void> {
     const txCur = (currency || baseCurrency.value) as Currency
     const lang = currentLang()
     const id = Date.now()
@@ -171,7 +171,7 @@ export function useTransactions(
       desc,
       amount,
       cat,
-      date: tStr(),
+      date: date || tStr(),
       currency: txCur,
       descLang: lang,
       descI18n: { [lang]: desc } as Partial<Record<AppLang, string>>,

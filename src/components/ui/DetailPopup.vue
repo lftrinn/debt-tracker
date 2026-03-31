@@ -108,9 +108,10 @@
               <input class="popup-input" v-model="buf.name" :readonly="isCcItem" :style="isCcItem ? { opacity: '.7' } : {}" :placeholder="$t('detail.namePlaceholder')" />
             </div>
             <div class="popup-field">
-              <label class="popup-label">{{ $t('detail.dateLabel') }}</label>
-              <div class="date-wrap">
-                <input type="date" class="popup-input popup-input--date" v-model="buf.date" :max="item._variant === 'tx' ? tStr() : undefined" placeholder="dd/mm/yyyy" />
+              <label class="popup-label">{{ $t('detail.dateLabel') }}<template v-if="item._variant === 'tx'"> / {{ $t('detail.timeLabel') }}</template></label>
+              <div class="popup-datetime-row">
+                <input type="date" class="popup-input" v-model="buf.date" :max="item._variant === 'tx' ? tStr() : undefined" style="flex:1;min-width:0" />
+                <input v-if="item._variant === 'tx'" type="time" class="popup-input popup-input--time" v-model="buf.time" style="flex:1;min-width:0" />
               </div>
             </div>
             <div class="popup-field">
@@ -142,10 +143,6 @@
                   <option v-for="c in incomeCategories" :key="c.key" :value="c.key">{{ c.label }}</option>
                 </optgroup>
               </select>
-            </div>
-            <div v-if="item._variant === 'tx'" class="popup-field">
-              <label class="popup-label">{{ $t('detail.timeLabel') }}</label>
-              <input type="time" class="popup-input popup-input--time" v-model="buf.time" />
             </div>
             <div v-if="item._variant === 'tx'" class="popup-field">
               <label class="popup-label">{{ $t('detail.noteLabel') }}</label>
@@ -615,6 +612,9 @@ function onTouchEnd(e) {
 </script>
 
 <style scoped>
+/* Date + time row */
+.popup-datetime-row { display: flex; gap: 6px; }
+
 /* Input wrap với currency badge bên trong (absolute right) */
 .detail__input-wrap { position: relative; display: flex; align-items: center; }
 .detail__input-wrap .popup-input { flex: 1; padding-right: 44px; min-width: 0; }

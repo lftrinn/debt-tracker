@@ -48,10 +48,11 @@
             <option v-for="c in CURRENCIES" :key="c" :value="c">{{ c }}</option>
           </select>
         </div>
-        <!-- Note + Time (optional) -->
+        <!-- Note + Date/Time (optional) -->
         <textarea class="add-form__input add-form__note" v-model="nNote" :placeholder="$t('addTx.expense.notePlaceholder')" rows="2" />
         <div class="add-form__row" style="gap:6px">
-          <input class="add-form__input add-form__time" type="time" v-model="nTime" />
+          <input class="add-form__input" type="date" v-model="nDate" :max="todayStr" style="flex:1" />
+          <input class="add-form__input add-form__time" type="time" v-model="nTime" style="flex:1" />
         </div>
         <button class="add-form__submit" @click="addExp" :disabled="syncing || !nDesc.trim() || !nAmt">
           {{ syncing ? $t('addTx.saving') : $t('addTx.add') }} <Icon name="arrow-right" :size="14" />
@@ -94,10 +95,11 @@
             <option v-for="c in incomeCategories" :key="c.key" :value="c.key">{{ c.label }}</option>
           </select>
         </div>
-        <!-- Note + Time (optional) -->
+        <!-- Note + Date/Time (optional) -->
         <textarea class="add-form__input add-form__note" v-model="iNote" :placeholder="$t('addTx.income.notePlaceholder')" rows="2" />
         <div class="add-form__row" style="gap:6px">
-          <input class="add-form__input add-form__time" type="time" v-model="iTime" />
+          <input class="add-form__input" type="date" v-model="iDate" :max="todayStr" style="flex:1" />
+          <input class="add-form__input add-form__time" type="time" v-model="iTime" style="flex:1" />
         </div>
         <button class="add-form__submit" style="background:var(--accent3);color:var(--bg)" @click="addInc" :disabled="syncing || !iDesc.trim() || !iAmt">
           {{ syncing ? $t('addTx.saving') : $t('addTx.add') }} <Icon name="arrow-right" :size="14" />
@@ -138,6 +140,7 @@ const nCurrency = ref(displayCurrency.value)
 const nAmtDisplay = ref(null) // tương đương theo displayCurrency
 const nNote = ref('')
 const nTime = ref(getCurrentTime())
+const nDate = ref(getCurrentDate())
 
 // ─── State thu nhập ───────────────────────────────────────────────────────
 const iDesc = ref('')
@@ -147,11 +150,19 @@ const iCurrency = ref(displayCurrency.value)
 const iAmtDisplay = ref(null)
 const iNote = ref('')
 const iTime = ref(getCurrentTime())
+const iDate = ref(getCurrentDate())
 
 function getCurrentTime() {
   const now = new Date()
   return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
 }
+
+function getCurrentDate() {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
+
+const todayStr = getCurrentDate()
 
 // ─── Sync currency dropdown khi display currency thay đổi ─────────────────
 watch(displayCurrency, (newCur) => {
@@ -239,6 +250,7 @@ watch(() => props.prefill, (data) => {
     iCurrency.value = data.currency || displayCurrency.value
     iNote.value = data.note || ''
     iTime.value = data.time || getCurrentTime()
+    iDate.value = data.date || getCurrentDate()
   } else {
     txType.value = 'exp'
     nDesc.value = data.desc || ''
@@ -247,6 +259,7 @@ watch(() => props.prefill, (data) => {
     nCurrency.value = data.currency || displayCurrency.value
     nNote.value = data.note || ''
     nTime.value = data.time || getCurrentTime()
+    nDate.value = data.date || getCurrentDate()
   }
   emit('prefill-consumed')
 }, { immediate: true })
@@ -306,6 +319,7 @@ function addExp() {
     cat: nCat.value,
     payMethod: nPayMethod.value,
     currency: nCurrency.value,
+    date: nDate.value,
     ...(nNote.value.trim() ? { note: nNote.value.trim() } : {}),
     ...(nTime.value ? { time: nTime.value } : {}),
   })
@@ -315,6 +329,7 @@ function addExp() {
   nCurrency.value = displayCurrency.value
   nNote.value = ''
   nTime.value = getCurrentTime()
+  nDate.value = getCurrentDate()
 }
 
 function addInc() {
@@ -324,6 +339,7 @@ function addInc() {
     amount: iAmt.value,
     cat: iCat.value,
     currency: iCurrency.value,
+    date: iDate.value,
     ...(iNote.value.trim() ? { note: iNote.value.trim() } : {}),
     ...(iTime.value ? { time: iTime.value } : {}),
   })
@@ -333,6 +349,7 @@ function addInc() {
   iCurrency.value = displayCurrency.value
   iNote.value = ''
   iTime.value = getCurrentTime()
+  iDate.value = getCurrentDate()
 }
 </script>
 
