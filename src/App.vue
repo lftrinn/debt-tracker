@@ -231,7 +231,7 @@ let alertObserver: IntersectionObserver | null = null
 let overTimer: ReturnType<typeof setTimeout> | null = null
 
 // ─── Notifications ────────────────────────────────────────────────────────
-const { pushStatus, checkPushStatus, registerServiceWorker, enablePushNotifications, sendDueNotification, sendPaydayNotification } = usePushNotifications()
+const { pushStatus, checkPushStatus, registerServiceWorker, enablePushNotifications, sendDueNotification, sendPaydayNotification, clearDueDedup } = usePushNotifications()
 
 // ─── Toast ────────────────────────────────────────────────────────────────
 const { toastMsg, toastType, toastTrigger, toast } = useToast()
@@ -399,6 +399,11 @@ function openDetail(item: object, variant: string): void {
 async function handlePopupSaveUpcomingWrapped(p: Parameters<typeof handlePopupSaveUpcoming>[0]): Promise<void> {
   popupItem.value = null
   await handlePopupSaveUpcoming(p)
+  // Nếu chỉnh ngày thành hôm nay → reset dedup và gửi lại notification
+  if (p._buf?.date === tStr()) {
+    clearDueDedup()
+    await sendDueNotification(upcoming.value)
+  }
 }
 
 async function handlePopupSaveTxWrapped(item: Parameters<typeof handlePopupSaveTx>[0]): Promise<void> {
