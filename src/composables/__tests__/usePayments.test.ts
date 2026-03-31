@@ -35,12 +35,12 @@ describe('usePayments', () => {
       expect(d.value.current_cash.balance).toBe(500_000)
     })
 
-    it('đánh dấu paid → thêm transaction với note', async () => {
+    it('đánh dấu paid → thêm expense với _obTag', async () => {
       const { d, togglePaid } = setup({
         current_cash: { balance: 1_000_000, reserved: 0, as_of: '2026-03-01' },
       })
       await togglePaid('2026-03-29:Trả Visa', 500_000, 'Trả Visa')
-      const taggedExp = d.value.transactions.find((t) => t.note === 'ob:2026-03-29:Trả Visa')
+      const taggedExp = d.value.expenses.find((e) => e._obTag === 'ob:2026-03-29:Trả Visa')
       expect(taggedExp).toBeDefined()
       expect(taggedExp?.amount).toBe(500_000)
     })
@@ -48,7 +48,7 @@ describe('usePayments', () => {
     it('đánh dấu paid khi có debtRef cc → giảm balance thẻ', async () => {
       const d = ref(makeData({
         current_cash: { balance: 1_000_000, reserved: 0, as_of: '2026-03-01' },
-        debts: [{ ...VISA1, balance: 5_000_000 }],
+        debts: { credit_cards: [{ ...VISA1, balance: 5_000_000 }], small_loans: [] },
       }))
       const push = mockPush()
       const toast = mockToast()
@@ -56,7 +56,7 @@ describe('usePayments', () => {
       const { togglePaid } = usePayments(d, push, toast, mockTStr(), findDebtId)
 
       await togglePaid('2026-03-29:Visa 1 min', 500_000, 'Visa 1 min')
-      const card = (d.value.debts || []).find((c) => c.id === 'visa1')
+      const card = d.value.debts.credit_cards.find((c) => c.id === 'visa1')
       expect(card?.balance).toBe(4_500_000)
     })
 
@@ -64,9 +64,9 @@ describe('usePayments', () => {
       const { d, togglePaid } = setup({
         current_cash: { balance: 500_000, reserved: 0, as_of: '2026-03-01' },
         paid_obligations: ['2026-03-29:Trả Visa'],
-        transactions: [{
-          id: 999, type: 'exp', desc: 'Trả Visa', amount: 500_000, cat: 'thanhToan',
-          date: '2026-03-29', note: 'ob:2026-03-29:Trả Visa',
+        expenses: [{
+          id: 999, desc: 'Trả Visa', amount: 500_000, cat: 'thanhToan',
+          date: '2026-03-29', _obTag: 'ob:2026-03-29:Trả Visa',
         }],
       })
       await togglePaid('2026-03-29:Trả Visa', 500_000)
@@ -77,26 +77,26 @@ describe('usePayments', () => {
       const { d, togglePaid } = setup({
         current_cash: { balance: 500_000, reserved: 0, as_of: '2026-03-01' },
         paid_obligations: ['2026-03-29:Trả Visa'],
-        transactions: [{
-          id: 999, type: 'exp', desc: 'Trả Visa', amount: 500_000, cat: 'thanhToan',
-          date: '2026-03-29', note: 'ob:2026-03-29:Trả Visa',
+        expenses: [{
+          id: 999, desc: 'Trả Visa', amount: 500_000, cat: 'thanhToan',
+          date: '2026-03-29', _obTag: 'ob:2026-03-29:Trả Visa',
         }],
       })
       await togglePaid('2026-03-29:Trả Visa', 500_000)
       expect(d.value.current_cash.balance).toBe(1_000_000) // 500_000 + 500_000
     })
 
-    it('hoàn tác paid → xoá transaction có note', async () => {
+    it('hoàn tác paid → xoá expense có _obTag', async () => {
       const { d, togglePaid } = setup({
         current_cash: { balance: 500_000, reserved: 0, as_of: '2026-03-01' },
         paid_obligations: ['2026-03-29:Trả Visa'],
-        transactions: [{
-          id: 999, type: 'exp', desc: 'Trả Visa', amount: 500_000, cat: 'thanhToan',
-          date: '2026-03-29', note: 'ob:2026-03-29:Trả Visa',
+        expenses: [{
+          id: 999, desc: 'Trả Visa', amount: 500_000, cat: 'thanhToan',
+          date: '2026-03-29', _obTag: 'ob:2026-03-29:Trả Visa',
         }],
       })
       await togglePaid('2026-03-29:Trả Visa', 500_000)
-      expect(d.value.transactions.find((t) => t.note === 'ob:2026-03-29:Trả Visa')).toBeUndefined()
+      expect(d.value.expenses.find((e) => e._obTag === 'ob:2026-03-29:Trả Visa')).toBeUndefined()
     })
 
     it('toast sau togglePaid', async () => {
@@ -113,34 +113,37 @@ describe('usePayments', () => {
   describe('recPay', () => {
     it('ghi nhận trả nợ cc → giảm balance thẻ', async () => {
       const { d, recPay } = setup({
-        debts: [{ ...VISA1, balance: 5_000_000 }],
+        debts: { credit_cards: [{ ...VISA1, balance: 5_000_000 }], small_loans: [] },
       })
       await recPay({ target: 'cc:visa1', amount: 1_000_000 })
-      const card = (d.value.debts || []).find((c) => c.id === 'visa1')
+      const card = d.value.debts.credit_cards.find((c) => c.id === 'visa1')
       expect(card?.balance).toBe(4_000_000)
     })
 
     it('trả hơn số nợ → balance tối thiểu 0', async () => {
       const { d, recPay } = setup({
-        debts: [{ ...VISA1, balance: 500_000 }],
+        debts: { credit_cards: [{ ...VISA1, balance: 500_000 }], small_loans: [] },
       })
       await recPay({ target: 'cc:visa1', amount: 1_000_000 })
-      const card = (d.value.debts || []).find((c) => c.id === 'visa1')
+      const card = d.value.debts.credit_cards.find((c) => c.id === 'visa1')
       expect(card?.balance).toBe(0)
     })
 
     it('ghi nhận trả nợ sl → giảm remaining_balance', async () => {
       const { d, recPay } = setup({
-        debts: [{ id: 'sl1', type: 'loan', name: 'Vay A', remaining_balance: 2_000_000, payment_due_dates: [] }],
+        debts: {
+          credit_cards: [],
+          small_loans: [{ id: 'sl1', name: 'Vay A', remaining_balance: 2_000_000 }],
+        },
       })
       await recPay({ target: 'sl:sl1', amount: 500_000 })
-      const loan = (d.value.debts || []).find((l) => l.id === 'sl1')
+      const loan = d.value.debts.small_loans.find((l) => l.id === 'sl1')
       expect(loan?.remaining_balance).toBe(1_500_000)
     })
 
     it('amount = 0 → không làm gì', async () => {
       const { d, push, recPay } = setup({
-        debts: [{ ...VISA1, balance: 5_000_000 }],
+        debts: { credit_cards: [{ ...VISA1, balance: 5_000_000 }], small_loans: [] },
       })
       await recPay({ target: 'cc:visa1', amount: 0 })
       expect(push).not.toHaveBeenCalled()
@@ -148,7 +151,7 @@ describe('usePayments', () => {
 
     it('toast thành công', async () => {
       const { toast, recPay } = setup({
-        debts: [{ ...VISA1, balance: 1_000_000 }],
+        debts: { credit_cards: [{ ...VISA1, balance: 1_000_000 }], small_loans: [] },
       })
       await recPay({ target: 'cc:visa1', amount: 500_000 })
       expect(toast).toHaveBeenCalledWith('toast.debtPaid')

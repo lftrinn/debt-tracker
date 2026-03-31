@@ -1,39 +1,87 @@
 // ─── Primitive data types (stored in JSONBin) ─────────────────────────────
 
-/** Transaction gộp chi tiêu (exp) và thu nhập (inc) — thay thế Expense + Income riêng biệt */
-export interface Transaction {
+export interface CreditCard {
+  id: string
+  name: string
+  credit_limit: number
+  balance: number
+  interest_rate_annual: number
+  minimum_payment: number
+  min_due_date?: string
+  /** Ngôn ngữ gốc của tên thẻ */
+  nameLang?: 'vi' | 'en' | 'ja'
+  /** Bản dịch name sang các ngôn ngữ khác */
+  nameI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
+}
+
+export interface SmallLoan {
+  id: string
+  name: string
+  remaining_balance: number
+  /** Ngôn ngữ gốc của tên khoản vay */
+  nameLang?: 'vi' | 'en' | 'ja'
+  /** Bản dịch name sang các ngôn ngữ khác */
+  nameI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
+}
+
+export interface Expense {
   id: number
-  type: 'exp' | 'inc'
   desc: string
   amount: number
   cat: string
   date: string
   payMethod?: string
-  time?: string
+  /** Đơn vị tiền của giao dịch — nếu không có, mặc định là base currency của app */
+  currency?: string
+  /** Internal tag linking an expense to a paid obligation. Format: "ob:<key>" */
+  _obTag?: string
+  /** Ngôn ngữ gốc khi user nhập desc */
+  descLang?: 'vi' | 'en' | 'ja'
+  /** Bản dịch desc sang các ngôn ngữ khác — fallback về desc nếu không có */
+  descI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
+  /** Trạng thái bản dịch: 'manual' = user tự nhập, 'auto' = đã dịch tự động */
+  descI18nMeta?: Partial<Record<'vi' | 'en' | 'ja', 'auto' | 'manual'>>
+  /** Ghi chú tùy chọn */
   note?: string
+  /** Giờ cụ thể (HH:mm) */
+  time?: string
 }
 
-/** Debt gộp credit card và loan — thay thế CreditCard + SmallLoan riêng biệt */
-export interface Debt {
-  id: string
-  type: 'credit_card' | 'loan'
+export interface Income {
+  id: number
+  desc: string
+  amount: number
+  cat: string
+  date: string
+  /** Đơn vị tiền của khoản thu — nếu không có, mặc định là base currency của app */
+  currency?: string
+  /** Ngôn ngữ gốc khi user nhập desc */
+  descLang?: 'vi' | 'en' | 'ja'
+  /** Bản dịch desc sang các ngôn ngữ khác — fallback về desc nếu không có */
+  descI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
+  /** Trạng thái bản dịch: 'manual' = user tự nhập, 'auto' = đã dịch tự động */
+  descI18nMeta?: Partial<Record<'vi' | 'en' | 'ja', 'auto' | 'manual'>>
+  /** Ghi chú tùy chọn */
+  note?: string
+  /** Giờ cụ thể (HH:mm) */
+  time?: string
+}
+
+export interface Obligation {
   name: string
-  payment_due_dates: string[]
-  // Credit card fields
-  credit_limit?: number
-  balance?: number
-  interest_rate_annual?: number
-  minimum_payment?: number
-  payment_due_time?: string
-  installments_active?: unknown[]
-  // Loan fields
-  original_amount?: number
-  term_months?: number
-  monthly_payment?: number
-  remaining_periods?: number
-  remaining_balance?: number
-  ends?: string
-  interest_rate_monthly?: number
+  amount: number
+  category?: string | null
+  monthly?: boolean
+  /** Normal date field */
+  date?: string
+  /** Legacy field with trailing space — kept for backward-compat with existing data */
+  'date '?: string
+  /** Ngôn ngữ gốc của tên obligation */
+  nameLang?: 'vi' | 'en' | 'ja'
+  /** Bản dịch name sang các ngôn ngữ khác */
+  nameI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
+  /** Trạng thái bản dịch: 'manual' = user tự nhập, 'auto' = đã dịch tự động */
+  nameI18nMeta?: Partial<Record<'vi' | 'en' | 'ja', 'auto' | 'manual'>>
 }
 
 export interface OneTimeExpense {
@@ -41,25 +89,43 @@ export interface OneTimeExpense {
   name: string
   date: string
   amount: number
+  /** Ngôn ngữ gốc của tên khoản chi */
+  nameLang?: 'vi' | 'en' | 'ja'
+  /** Bản dịch name sang các ngôn ngữ khác */
+  nameI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
+  /** Trạng thái bản dịch: 'manual' = user tự nhập, 'auto' = đã dịch tự động */
+  nameI18nMeta?: Partial<Record<'vi' | 'en' | 'ja', 'auto' | 'manual'>>
 }
 
-/** Một quy tắc trong must_not / must_do */
+export interface MonthlyPlan {
+  obligations: Obligation[]
+}
+
+/** Một quy tắc trong must_not / must_do — hỗ trợ cả dạng string cũ và object mới có i18n */
 export interface RuleItem {
   text: string
+  /** Ngôn ngữ gốc của text */
+  textLang?: 'vi' | 'en' | 'ja'
+  /** Bản dịch text sang các ngôn ngữ khác */
+  textI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
 }
 
 // ─── Root app data schema (shape of the JSONBin record) ───────────────────
 
 export interface AppData {
-  schema_version: number
-  transactions: Transaction[]
-  debts: Debt[]
+  expenses: Expense[]
+  incomes: Income[]
   extra_paid: number
   custom_daily_limit: number
   current_cash: {
     balance: number
     reserved: number
     as_of: string
+  }
+  debts: {
+    credit_cards: CreditCard[]
+    small_loans: SmallLoan[]
+    summary?: { total: number }
   }
   income: {
     monthly_net: number
@@ -70,6 +136,17 @@ export interface AppData {
     must_not: Array<string | RuleItem>
     must_do?: Array<string | RuleItem>
   }
+  payoff_timeline: {
+    projected_debt_by_month: Array<{ month: string; total_debt: number }>
+    milestones?: Array<{
+      month: string
+      event?: string
+      /** Bản dịch event sang các ngôn ngữ khác */
+      eventI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
+    }>
+  }
+  fixed_expenses?: Record<string, unknown>
+  monthly_plans?: Record<string, MonthlyPlan>
   one_time_expenses?: OneTimeExpense[]
   paid_obligations?: string[]
 }
@@ -95,7 +172,7 @@ export interface DebtCard {
   } | null
   thisMonthSpent: number
   thisMonthPaid: boolean
-  /** Số transaction dùng thẻ này trong tháng hiện tại */
+  /** Số expense dùng thẻ này trong tháng hiện tại */
   thisMonthSpentCount: number
   /** Số paid_obligations khớp thẻ này trong tháng hiện tại */
   thisMonthPaymentCount: number
@@ -105,14 +182,22 @@ export interface UpcomingItem {
   _key: string
   day: string
   mo: string
+  /** Tên gốc (ngôn ngữ gốc) — dùng để matching/lookup, KHÔNG dùng để hiển thị trực tiếp */
   name: string
+  /** Bản dịch name — component tự localize khi render */
+  nameI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
+  /** Trạng thái bản dịch: 'manual' = user tự nhập, 'auto' = đã dịch tự động */
+  nameI18nMeta?: Partial<Record<'vi' | 'en' | 'ja', 'auto' | 'manual'>>
   sub: string | null
   amt: number
   paid: boolean
   urg: 'ok' | 'overdue' | 'urgent' | 'soon'
   _date: string
-  source: 'one_time'
+  source: 'monthly_plan' | 'one_time'
   _id?: number
+  _mo?: string
+  _category?: string | null
+  _isLastPeriod?: boolean
   overdueDays: number
 }
 
@@ -123,8 +208,9 @@ export interface Milestone {
   st: 'done' | 'active' | 'future'
 }
 
-/** TransactionItem là Transaction (đã có field type) */
-export type TransactionItem = Transaction
+export interface TransactionItem extends Expense {
+  type: 'exp' | 'inc'
+}
 
 // ─── Utility types ────────────────────────────────────────────────────────
 
@@ -133,5 +219,5 @@ export type LimitStatus = 'safe' | 'warn' | 'over'
 export type TrendDirection = 'up' | 'down' | 'neutral'
 export type UrgencyLevel = 'ok' | 'overdue' | 'urgent' | 'soon' | 'normal'
 
-/** Result of matching an obligation name to a debt (credit card or loan) */
+/** Result of matching an obligation name to a debt (credit card or small loan) */
 export type DebtRef = { type: 'cc' | 'sl'; id: string }

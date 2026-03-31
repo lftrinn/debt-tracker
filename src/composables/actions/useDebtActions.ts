@@ -3,8 +3,7 @@ import type { AppData } from '@/types/data'
 import type { ToastType } from '../ui/useToast'
 
 /**
- * Xử lý các hành động quản lý nợ và cài đặt.
- * Schema v2: debts[] là flat array thay vì { credit_cards, small_loans }.
+ * Xử lý các hành động quản lý nợ và cài đặt: cập nhật thẻ, bổ sung tiền mặt, đặt hạn mức, và import JSON.
  * @param d - Reactive ref chứa toàn bộ dữ liệu ứng dụng
  * @param pushData - Hàm đẩy dữ liệu lên JSONBin, trả về true nếu thành công
  * @param toast - Hàm hiển thị thông báo ngắn
@@ -19,33 +18,34 @@ export function useDebtActions(
 ) {
   /**
    * Cập nhật trực tiếp thông tin thẻ tín dụng (số dư, thanh toán tối thiểu, ngày đến hạn).
+   * Chỉ cập nhật trường nào được truyền vào, các trường khác giữ nguyên.
+   * @param cardId - ID thẻ cần cập nhật
+   * @param balance - Số dư mới (tùy chọn)
+   * @param min - Số tiền thanh toán tối thiểu mới (tùy chọn)
+   * @param minDueDate - Ngày đến hạn thanh toán tối thiểu mới (tùy chọn)
    */
   async function updateCardDirect({ cardId, balance, min, minDueDate }: { cardId: string; balance?: number; min?: number; minDueDate?: string }): Promise<void> {
     d.value = {
       ...d.value,
-      debts: (d.value.debts || []).map((x) => {
-        if (x.type !== 'credit_card' || x.id !== cardId) return x
-        const updated = { ...x }
-        if (balance != null) updated.balance = balance
-        if (min != null) updated.minimum_payment = min
-        if (minDueDate !== undefined) {
-          // Cập nhật payment_due_dates: thay thế ngày đầu tiên
-          const dates = [...(x.payment_due_dates || [])]
-          if (minDueDate) {
-            dates[0] = minDueDate
-          } else {
-            dates.splice(0, 1)
+      debts: {
+        ...d.value.debts,
+        credit_cards: d.value.debts.credit_cards.map((c) => {
+          if (c.id !== cardId) return c
+          return {
+            ...c,
+            ...(balance != null ? { balance } : {}),
+            ...(min != null ? { minimum_payment: min } : {}),
+            ...(minDueDate !== undefined ? { min_due_date: minDueDate } : {}),
           }
-          updated.payment_due_dates = dates
-        }
-        return updated
-      }),
+        }),
+      },
     }
     ;(await pushData()) ? toast('toast.cardUpdated') : toast('toast.cardUpdatedErr', 'err')
   }
 
   /**
    * Bổ sung tiền mặt vào số dư và cập nhật ngày snapshot hiện tại.
+   * @param amount - Số tiền cần thêm (VND, phải dương)
    */
   async function addCash({ amount }: { amount: number }): Promise<void> {
     if (!amount || amount <= 0) return
@@ -61,7 +61,8 @@ export function useDebtActions(
   }
 
   /**
-   * Đặt hạn mức chi tiêu tùy chỉnh theo ngày.
+   * Đặt hạn mức chi tiêu tùy chỉnh theo ngày. Khi val > 0 thì ghi đè daily_limit từ rules.
+   * @param val - Hạn mức mới (VND/ngày)
    */
   async function updLimit(val: number): Promise<void> {
     if (val > 0) {
@@ -71,7 +72,10 @@ export function useDebtActions(
   }
 
   /**
-   * Import cấu hình từ JSON string, giữ nguyên transactions và paid_obligations hiện có.
+   * Import cấu hình nợ từ JSON string, giữ nguyên giao dịch và nghĩa vụ hiện có.
+   * Merge theo chiến lược: dùng config mới (debts, income, rules...) nhưng giữ expenses/incomes/paid_obligations của user.
+   * @param jsonStr - Chuỗi JSON cần import
+   * @param importErr - Ref để ghi thông báo lỗi nếu parse thất bại
    */
   async function importNewJson(jsonStr: string, importErr: Ref<string>): Promise<void> {
     if (!jsonStr) return
@@ -80,12 +84,12 @@ export function useDebtActions(
       const parsed = JSON.parse(jsonStr) as Partial<AppData>
       const merged: AppData = {
         ...parsed,
-        transactions: d.value.transactions || [],
+        expenses: d.value.expenses || [],
+        incomes: d.value.incomes || [],
         paid_obligations: d.value.paid_obligations || [],
         one_time_expenses: d.value.one_time_expenses || [],
         custom_daily_limit: d.value.custom_daily_limit || 0,
         current_cash: parsed.current_cash || d.value.current_cash,
-        schema_version: 2,
       } as AppData
       d.value = merged
       ;(await pushData()) ? toast('toast.imported') : toast('toast.importedErr', 'err')

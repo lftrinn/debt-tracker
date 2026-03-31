@@ -22,13 +22,13 @@ export function useCashData(
   dayLimit: ComputedRef<number>,
   actualPayDate: (year: number, month: number, nominalDay: number) => Date,
 ): CashDataResult {
-  // Chỉ tính chi tiêu tiền mặt (loại trừ giao dịch qua thẻ)
+  // Chỉ tính chi tiêu tiền mặt (loại trừ thanh toán nghĩa vụ _obTag và giao dịch qua thẻ)
   const spentSinceSnapshot = computed((): number => {
     const asOf = d.value.current_cash?.as_of
     if (!asOf) return 0
-    return (d.value.transactions || [])
-      .filter((t) => t.type === 'exp' && t.date >= asOf && (!t.payMethod || t.payMethod === 'cash'))
-      .reduce((s, t) => s + t.amount, 0)
+    return (d.value.expenses || [])
+      .filter((e) => e.date >= asOf && !e._obTag && (!e.payMethod || e.payMethod === 'cash'))
+      .reduce((s, e) => s + e.amount, 0)
   })
 
   /**
@@ -54,6 +54,17 @@ export function useCashData(
     const payStr = nextPay.toISOString().slice(0, 10)
 
     const amounts: number[] = []
+    const plans = d.value.monthly_plans || {}
+    Object.values(plans).forEach((plan) => {
+      ;(plan.obligations || []).forEach((ob) => {
+        if (ob.monthly) return
+        const dateStr = ob.date || ob['date ']
+        if (!dateStr) return
+        const key = dateStr + ':' + ob.name
+        if (paid.has(key)) return
+        if (dateStr >= todayStr && dateStr < payStr) amounts.push(ob.amount || 0)
+      })
+    })
     ;(d.value.one_time_expenses || []).forEach((ev) => {
       const key = ev.date + ':' + ev.name
       if (paid.has(key)) return
@@ -64,6 +75,7 @@ export function useCashData(
 
   /**
    * Tổng các nghĩa vụ chưa thanh toán từ hôm nay đến ngày lương tiếp theo.
+   * Dùng để ước tính tiền cần giữ lại, không nên tiêu vào.
    */
   const unpaidObsToPayday = computed((): number =>
     unpaidObsItems.value.reduce((s, a) => s + a, 0)
@@ -74,6 +86,7 @@ export function useCashData(
 
   /**
    * Ước tính số ngày tiền mặt còn đủ dùng dựa trên hạn mức chi tiêu ngày.
+   * Trả về null nếu hạn mức chưa được cài đặt.
    */
   const cashDaysLeft = computed((): number | null => {
     const lim = dayLimit.value

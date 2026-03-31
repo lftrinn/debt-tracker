@@ -119,6 +119,52 @@ describe('useUpcoming', () => {
     })
   })
 
+  // ─── upcoming — monthly_plan ──────────────────────────────────────────
+
+  describe('upcoming từ monthly_plans', () => {
+    it('obligation trong monthly_plan → xuất hiện', () => {
+      vi.setSystemTime(new Date('2026-03-03T12:00:00'))
+      const d = ref(makeData({
+        monthly_plans: {
+          '2026-03': {
+            obligations: [{ name: 'Visa 1 min', amount: 500_000, date: '2026-03-15', category: 'debt_minimum' }],
+          },
+        },
+      }))
+      const { upcoming } = useUpcoming(d)
+      const item = upcoming.value.find((x) => x.name === 'Visa 1 min')
+      expect(item).toBeDefined()
+      expect(item?.source).toBe('monthly_plan')
+      expect(item?.sub).toBe('Thanh toán tối thiểu')
+    })
+
+    it('obligation monthly = true → bỏ qua', () => {
+      vi.setSystemTime(new Date('2026-03-03T12:00:00'))
+      const d = ref(makeData({
+        monthly_plans: {
+          '2026-03': {
+            obligations: [{ name: 'Thuê nhà', amount: 2_000_000, date: '2026-03-05', monthly: true }],
+          },
+        },
+      }))
+      const { upcoming } = useUpcoming(d)
+      expect(upcoming.value).toHaveLength(0)
+    })
+
+    it('obligation không có date → bỏ qua', () => {
+      vi.setSystemTime(new Date('2026-03-03T12:00:00'))
+      const d = ref(makeData({
+        monthly_plans: {
+          '2026-03': {
+            obligations: [{ name: 'Không có ngày', amount: 100_000 }],
+          },
+        },
+      }))
+      const { upcoming } = useUpcoming(d)
+      expect(upcoming.value).toHaveLength(0)
+    })
+  })
+
   // ─── sắp xếp ──────────────────────────────────────────────────────────
 
   describe('sort', () => {

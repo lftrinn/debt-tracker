@@ -88,7 +88,7 @@
         :availCash="availCash"
         :debtCards="debtCards"
         :smallLoans="smallLoans"
-        :monthlyPlans="{}"
+        :monthlyPlans="d.monthly_plans || {}"
         :paidObligations="d.paid_obligations || []"
         :oneTimeExpenses="d.one_time_expenses || []"
         :hide="{ amount: hz('upcoming.amount'), shortage: hz('upcoming.shortage') }"
@@ -113,7 +113,7 @@
         :syncing="syncing"
         :expenses="expenses"
         :incomes="incomes"
-        :creditCards="(d.debts || []).filter(x => x.type === 'credit_card')"
+        :creditCards="d.debts?.credit_cards || []"
         :prefill="copyTxData"
         @add-expense="addExp"
         @add-income="addInc"
@@ -134,7 +134,7 @@
         :expenses="expenses"
         :incomes="incomes"
         :debtBreakdown="debtBreakdown"
-        :projectedDebt="[]"
+        :projectedDebt="d.payoff_timeline?.projected_debt_by_month || []"
         :hide="{ spend: hz('charts.spend'), debtLine: hz('charts.debtLine'), pie: hz('charts.pie') }"
       />
 
@@ -170,7 +170,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Ref } from 'vue'
-import type { AppData } from '@/types/data'
+import type { AppData, TransactionItem } from '@/types/data'
 import type { ToastType } from './composables/ui/useToast'
 import type { Locale } from './i18n'
 import { setLocale } from './i18n'
@@ -242,17 +242,22 @@ const { hideAmounts, toggleHide, hideZones, setHideZone, hz } = useHideZones()
 
 // ─── Main data ref ────────────────────────────────────────────────────────
 const d = ref<AppData>({
-  schema_version: 2,
-  transactions: [],
-  debts: [
-    { id: 'visa1', type: 'credit_card', name: 'Visa 1', credit_limit: 37000000, balance: 34946713, interest_rate_annual: 0.328, minimum_payment: 2663422, payment_due_dates: [] },
-    { id: 'visa2', type: 'credit_card', name: 'Visa 2', credit_limit: 53000000, balance: 49299000, interest_rate_annual: 0.358, minimum_payment: 4107271, payment_due_dates: [] },
-  ],
+  expenses: [],
+  incomes: [],
   extra_paid: 0,
   custom_daily_limit: 0,
   current_cash: { balance: 865000, reserved: 500000, as_of: '2026-03-27' },
+  debts: {
+    credit_cards: [
+      { id: 'visa1', name: 'Visa 1', credit_limit: 37000000, balance: 34946713, interest_rate_annual: 0.328, minimum_payment: 2663422 },
+      { id: 'visa2', name: 'Visa 2', credit_limit: 53000000, balance: 49299000, interest_rate_annual: 0.358, minimum_payment: 4107271 },
+    ],
+    small_loans: [],
+  },
   income: { monthly_net: 22923000, pay_date: 5 },
   rules: { daily_limit: { until_salary: 70000, after_salary: 100000 }, must_not: [] },
+  payoff_timeline: { projected_debt_by_month: [] },
+  fixed_expenses: {},
 })
 
 // ─── Computed debt data ───────────────────────────────────────────────────
@@ -415,13 +420,14 @@ async function handlePopupDelete(item: Record<string, unknown>): Promise<void> {
   }
 }
 
-async function handleQuickAdd(tx: { id: number; type: 'exp' | 'inc'; desc: string; amount: number; cat: string; date: string; payMethod?: string; note?: string }): Promise<void> {
+async function handleQuickAdd(tx: TransactionItem): Promise<void> {
   const now = new Date()
   const timeStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0')
   const common = {
     desc: tx.desc || '',
     amount: tx.amount || 0,
     cat: tx.cat || 'khac',
+    currency: tx.currency,
     note: tx.note,
     time: timeStr,
   }

@@ -39,13 +39,15 @@ export function getLocalized(
 }
 
 /**
- * Trả về text từ một rule item (string hoặc object).
- * @param rule - String đơn giản hoặc RuleItem
- * @returns Text của rule
+ * Trả về text đã bản địa hoá từ một rule item (string cũ hoặc object mới có i18n).
+ * @param rule - String đơn giản hoặc RuleItem có textI18n
+ * @param locale - Locale cần lấy; mặc định dùng locale hiện tại của app
+ * @returns Text đã bản địa hoá
  */
 export function getRuleText(
   rule: string | RuleItem,
+  locale?: string,
 ): string {
   if (typeof rule === 'string') return rule
-  return rule.text ?? ''
+  return getLocalized({ text: rule.text, textI18n: rule.textI18n }, 'text', locale)
 }

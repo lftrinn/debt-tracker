@@ -19,39 +19,50 @@ describe('useCashData', () => {
   // ─── spentSinceSnapshot ───────────────────────────────────────────────
 
   describe('spentSinceSnapshot', () => {
-    it('không có transactions → 0', () => {
+    it('không có expenses → 0', () => {
       const { spentSinceSnapshot } = setup()
       expect(spentSinceSnapshot.value).toBe(0)
     })
 
-    it('tính transaction tiền mặt sau as_of', () => {
+    it('tính expense tiền mặt sau as_of', () => {
       const { spentSinceSnapshot } = setup({
         current_cash: { balance: 1_000_000, reserved: 0, as_of: '2026-03-20' },
-        transactions: [
-          { id: 1, type: 'exp', desc: 'Ăn', amount: 50_000, cat: 'an', date: '2026-03-25', payMethod: 'cash' },
-          { id: 2, type: 'exp', desc: 'Cafe', amount: 30_000, cat: 'cafe', date: '2026-03-22' }, // no payMethod → cash
+        expenses: [
+          { id: 1, desc: 'Ăn', amount: 50_000, cat: 'an', date: '2026-03-25', payMethod: 'cash' },
+          { id: 2, desc: 'Cafe', amount: 30_000, cat: 'cafe', date: '2026-03-22' }, // no payMethod → cash
         ],
       })
       expect(spentSinceSnapshot.value).toBe(80_000)
     })
 
-    it('bỏ qua transaction trước as_of', () => {
+    it('bỏ qua expense trước as_of', () => {
       const { spentSinceSnapshot } = setup({
         current_cash: { balance: 1_000_000, reserved: 0, as_of: '2026-03-20' },
-        transactions: [
-          { id: 1, type: 'exp', desc: 'Cũ', amount: 100_000, cat: 'an', date: '2026-03-19' }, // trước as_of
-          { id: 2, type: 'exp', desc: 'Mới', amount: 50_000, cat: 'an', date: '2026-03-21' },
+        expenses: [
+          { id: 1, desc: 'Cũ', amount: 100_000, cat: 'an', date: '2026-03-19' }, // trước as_of
+          { id: 2, desc: 'Mới', amount: 50_000, cat: 'an', date: '2026-03-21' },
         ],
       })
       expect(spentSinceSnapshot.value).toBe(50_000)
     })
 
-    it('bỏ qua transaction thanh toán qua Visa', () => {
+    it('bỏ qua expense có _obTag (thanh toán nợ)', () => {
       const { spentSinceSnapshot } = setup({
         current_cash: { balance: 1_000_000, reserved: 0, as_of: '2026-03-01' },
-        transactions: [
-          { id: 1, type: 'exp', desc: 'Ăn', amount: 50_000, cat: 'an', date: '2026-03-10', payMethod: 'cash' },
-          { id: 2, type: 'exp', desc: 'Mua Visa', amount: 200_000, cat: 'mua', date: '2026-03-10', payMethod: 'visa1' },
+        expenses: [
+          { id: 1, desc: 'Ăn', amount: 50_000, cat: 'an', date: '2026-03-10' },
+          { id: 2, desc: 'Trả nợ', amount: 500_000, cat: 'thanhToan', date: '2026-03-10', _obTag: 'ob:key' },
+        ],
+      })
+      expect(spentSinceSnapshot.value).toBe(50_000)
+    })
+
+    it('bỏ qua expense thanh toán qua Visa', () => {
+      const { spentSinceSnapshot } = setup({
+        current_cash: { balance: 1_000_000, reserved: 0, as_of: '2026-03-01' },
+        expenses: [
+          { id: 1, desc: 'Ăn', amount: 50_000, cat: 'an', date: '2026-03-10', payMethod: 'cash' },
+          { id: 2, desc: 'Mua Visa', amount: 200_000, cat: 'mua', date: '2026-03-10', payMethod: 'visa1' },
         ],
       })
       expect(spentSinceSnapshot.value).toBe(50_000)
@@ -60,7 +71,7 @@ describe('useCashData', () => {
     it('trả về 0 nếu không có as_of', () => {
       const d = ref(makeData({
         current_cash: { balance: 1_000_000, reserved: 0, as_of: '' },
-        transactions: [{ id: 1, type: 'exp', desc: 'x', amount: 100_000, cat: 'an', date: '2026-03-10' }],
+        expenses: [{ id: 1, desc: 'x', amount: 100_000, cat: 'an', date: '2026-03-10' }],
       }))
       const dl = computed(() => 70_000)
       const { spentSinceSnapshot } = useCashData(d, dl, () => new Date())
@@ -74,7 +85,7 @@ describe('useCashData', () => {
     it('balance - reserved - spentSinceSnapshot', () => {
       const { availCash } = setup({
         current_cash: { balance: 1_000_000, reserved: 200_000, as_of: '2026-03-01' },
-        transactions: [{ id: 1, type: 'exp', desc: 'Ăn', amount: 50_000, cat: 'an', date: '2026-03-10' }],
+        expenses: [{ id: 1, desc: 'Ăn', amount: 50_000, cat: 'an', date: '2026-03-10' }],
       })
       expect(availCash.value).toBe(750_000)
     })
@@ -123,6 +134,7 @@ describe('useCashData', () => {
         current_cash: { balance: 100_000, reserved: 0, as_of: '2026-03-03' },
         custom_daily_limit: 100_000,
         income: { monthly_net: 22_923_000, pay_date: 25 },
+        // Dùng pay_date=25 để tránh timezone edge case (expense ngày 10 luôn < payStr dù ở UTC+7)
         one_time_expenses: [{ id: 1, name: 'Trả thẻ', date: '2026-03-10', amount: 200_000 }],
       })
       expect(cashDaysLeft.value).toBe(0)
@@ -141,6 +153,7 @@ describe('useCashData', () => {
     it('tính one_time_expenses chưa thanh toán trước pay date', () => {
       vi.setSystemTime(new Date('2026-03-03T12:00:00'))
       const { unpaidObsToPayday } = setup({
+        // pay_date=25: payStr ≥ '2026-03-24' trong mọi timezone ≤ UTC+12
         income: { monthly_net: 22_923_000, pay_date: 25 },
         one_time_expenses: [
           { id: 1, name: 'Trả nợ', date: '2026-03-10', amount: 300_000 },   // trước pay date
