@@ -1,396 +1,212 @@
 <template>
-  <div class="card">
-    <!-- Header -->
-    <div class="c-hdr" style="margin-bottom:8px">
-      <span class="c-title">
-        {{ $t('transactions.title') }}
-        <span class="trend-ico" :class="monthTrend" :style="monthTrend === 'up' ? { color: amountColor(monthIncome, 'income') } : monthTrend === 'down' ? { color: amountColor(monthExpense, 'expense') } : {}">
-          <Icon v-if="monthTrend === 'up'" name="trending-up" :size="12" />
-          <Icon v-else-if="monthTrend === 'down'" name="trending-down" :size="12" />
-          <Icon v-else name="minus" :size="12" />
-        </span>
-      </span>
-      <div class="tx-hdr-right">
-        <span class="badge">{{ transactions.length }}</span>
-        <button
-          class="tx-filter-toggle"
-          :class="{ 'tx-filter-toggle--active': showFilter }"
-          @click="showFilter = !showFilter"
-          :title="$t('transactions.toggleFilter')"
-        ><Icon name="sliders-horizontal" :size="12" /></button>
-      </div>
-    </div>
-    <div v-if="monthTrend !== 'neutral'" class="tx-list__trend">
-      <template v-if="hide">{{ $t('transactions.incShort') }} +••••• · {{ $t('transactions.expShort') }} -•••••</template>
-      <template v-else-if="monthTrend === 'up'">{{ $t('transactions.incShort') }} +{{ fCurr(monthIncome) }} · {{ $t('transactions.expShort') }} -{{ fCurr(monthExpense) }}</template>
-      <template v-else>{{ $t('transactions.expShort') }} -{{ fCurr(monthExpense) }} · {{ $t('transactions.incShort') }} +{{ fCurr(monthIncome) }}</template>
-    </div>
+  <div class="chien-ky">
+    <!-- Section header · Chiến Ký · X ngày -->
+    <SectionHeader
+      :icon="IconScroll"
+      :title="$t('chienKy.title')"
+      :vn="$t('chienKy.daysCount', { n: distinctDayCount })"
+    />
 
-    <!-- Filter bar (collapsible) -->
-    <div class="tx-filter-wrap" :class="{ 'tx-filter-wrap--open': showFilter }">
-      <div class="tx-filter">
-        <div class="tx-filter__type-row">
-          <div class="tx-filter__toggle">
-            <button
-              :class="['tx-filter__toggle-btn', filterType === 'all' ? 'tx-filter__toggle-btn--active' : '']"
-              @click="setType('all')"
-            >{{ $t('transactions.filterAll') }}</button>
-            <button
-              :class="['tx-filter__toggle-btn', filterType === 'exp' ? 'tx-filter__toggle-btn--active' : '']"
-              @click="setType('exp')"
-            >{{ $t('transactions.filterExp') }}</button>
-            <button
-              :class="['tx-filter__toggle-btn', filterType === 'inc' ? 'tx-filter__toggle-btn--active' : '']"
-              @click="setType('inc')"
-            >{{ $t('transactions.filterInc') }}</button>
-          </div>
-          <!-- Category multi-select dropdown -->
-          <div class="tx-filter__cat-wrap" ref="catDropRef">
-            <button
-              class="tx-filter__cat-btn"
-              :class="{ 'tx-filter__cat-btn--active': catFilterActive }"
-              @click="toggleCatDrop"
-            >
-              <span class="tx-filter__cat-btn-label">{{ catBtnLabel }}</span>
-              <Icon name="chevron-down" :size="9" class="tx-filter__cat-chevron" :class="{ 'tx-filter__cat-chevron--open': catDropOpen }" />
-            </button>
-            <div v-if="catDropOpen" class="tx-filter__cat-drop">
-              <div class="tx-filter__cat-item" @click="selectAllCats">
-                <span class="tx-filter__cat-check" :class="{ 'tx-filter__cat-check--on': allCatsSelected }">
-                  <Icon v-if="allCatsSelected" name="check" :size="9" />
-                </span>
-                <span class="tx-filter__cat-item-label tx-filter__cat-item-label--all">{{ $t('transactions.allCats') }}</span>
-              </div>
-              <div
-                v-for="cat in activeCats"
-                :key="cat.key"
-                class="tx-filter__cat-item"
-                @click="toggleCat(cat.key)"
-              >
-                <span class="tx-filter__cat-check" :class="{ 'tx-filter__cat-check--on': selectedCats.includes(cat.key) }">
-                  <Icon v-if="selectedCats.includes(cat.key)" name="check" :size="9" />
-                </span>
-                <Icon :name="cat.icon" :size="11" class="tx-filter__cat-item-ico" />
-                <span class="tx-filter__cat-item-label">{{ cat.label }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="tx-filter__search-wrap">
-          <Icon name="search" :size="11" class="tx-filter__search-ico" />
-          <input
-            class="tx-filter__search"
-            v-model="searchRaw"
-            :placeholder="$t('transactions.search')"
-            type="search"
-            autocomplete="off"
-          />
-          <button v-if="searchRaw" class="tx-filter__search-clear" @click="clearSearch">
-            <Icon name="x" :size="10" />
-          </button>
+    <!-- 3-stat row · Tổn / Hồi / Cân bằng -->
+    <div class="inv-stats">
+      <div class="inv-stat exp">
+        <div class="l">{{ $t('chienKy.statTon') }}</div>
+        <div class="v exp">−{{ hide ? '●●●' : fmtShort(totalExp) }}đ</div>
+      </div>
+      <div class="inv-stat inc">
+        <div class="l">{{ $t('chienKy.statHoi') }}</div>
+        <div class="v inc">+{{ hide ? '●●●' : fmtShort(totalInc) }}đ</div>
+      </div>
+      <div class="inv-stat net">
+        <div class="l">{{ $t('chienKy.statBalance') }}</div>
+        <div class="v net">
+          {{ totalNet >= 0 ? '+' : '−' }}{{ hide ? '●●●' : fmtShort(Math.abs(totalNet)) }}đ
         </div>
       </div>
     </div>
 
-    <!-- Quick stats -->
-    <div v-if="thisMonthExp > 0" class="tx-stats">
-      <span class="tx-stats__label">{{ $t('transactions.statsThisMonth') }}:</span>
-      <span class="tx-stats__num">{{ hide ? '•••••' : fCurr(thisMonthExp) }}</span>
-      <template v-if="changePercent !== null">
-        <span :class="['tx-stats__chg', changePercent >= 0 ? 'tx-stats__chg--up' : 'tx-stats__chg--dn']">
-          {{ changePercent >= 0 ? '↑' : '↓' }}{{ Math.abs(changePercent) }}%
-        </span>
-      </template>
-      <span class="tx-stats__sep">·</span>
-      <span class="tx-stats__label">{{ $t('transactions.statsAvg') }}:</span>
-      <span class="tx-stats__num">{{ hide ? '•••••' : fCurr(avgPerDay) }}</span>
-      <template v-if="topCatThisMonth">
-        <span class="tx-stats__sep">·</span>
-        <Icon :name="topCatThisMonth.cat.icon" :size="9" class="tx-stats__top-ico" />
-        <span class="tx-stats__label">{{ topCatThisMonth.cat.label }}</span>
-        <span class="tx-stats__num">{{ hide ? '•••••' : fCurr(topCatThisMonth.amount) }}</span>
-      </template>
+    <!-- Search box -->
+    <div class="inv-search">
+      <div class="inv-search-box">
+        <IconSearch :size="14" />
+        <input
+          v-model="searchRaw"
+          :placeholder="$t('chienKy.searchPlaceholder')"
+          type="search"
+          autocomplete="off"
+        />
+      </div>
+    </div>
+
+    <!-- Chip row · type filter -->
+    <div class="chip-row">
+      <div
+        v-for="c in chips"
+        :key="c.id"
+        :class="['chip', { active: filterType === c.id }]"
+        @click="filterType = c.id"
+      >
+        {{ c.label }}
+      </div>
     </div>
 
     <!-- Empty state -->
-    <div v-if="!filteredItems.length" class="tx-list__empty">{{ $t('transactions.empty') }}</div>
+    <div v-if="dayGroups.length === 0" class="chien-ky__empty">
+      {{ $t('chienKy.empty') }}
+    </div>
 
-    <!-- Sticky day header + fixed-height scrollable list -->
-    <div v-else class="tx-list__wrap">
-      <!-- Sticky header: stays in place, updates as user scrolls -->
-      <div class="tx-list__sticky-hdr">
-        <span class="tx-list__day-label">
-          {{ activeHeader.label }}
-          <span
-            v-if="activeHeader.totalInc > activeHeader.totalExp"
-            class="tx-list__day-trend tx-list__day-trend--up"
-          ><Icon name="trending-up" :size="10" /></span>
-          <span
-            v-else-if="activeHeader.totalExp > activeHeader.totalInc"
-            class="tx-list__day-trend tx-list__day-trend--down"
-          ><Icon name="trending-down" :size="10" /></span>
-        </span>
-        <span class="tx-list__day-meta">
-          <span v-if="activeHeader.totalInc > 0" class="tx-list__day-inc">{{ hide ? '+•••••' : '+' + fCurr(activeHeader.totalInc) }}</span>
-          <span v-if="activeHeader.totalExp > 0" class="tx-list__day-exp">{{ hide ? '-•••••' : '-' + fCurr(activeHeader.totalExp) }}</span>
+    <!-- Day-grouped transactions -->
+    <template v-for="day in dayGroups" :key="day.date">
+      <div class="day-h">
+        <span class="d">{{ dayLabel(day.date) }}</span>
+        <span :class="['net', day.net >= 0 ? 'pos' : 'neg']">
+          {{ day.net >= 0 ? '+' : '−' }}{{ hide ? '●●●' : fN(Math.abs(day.net)) }}đ
         </span>
       </div>
-      <!-- Scrollable area: fixed height ≈ 4 items -->
-      <div class="tx-list__scroll" ref="scrollEl" @scroll="onListScroll">
-        <div
-          v-for="tx in filteredItems"
-          :key="tx.id"
-          class="tx-list__item"
-          :class="tx.type === 'inc' ? 'tx-list__item--inc' : 'tx-list__item--exp'"
-          :data-date="tx.date"
-          @click="emit('open-detail', tx)"
-        >
-          <div class="tx-list__item-date" :class="tx.type === 'inc' ? 'tx-list__item-date--inc' : 'tx-list__item-date--exp'">
-            <span class="tx-list__item-date-day">{{ tx.date.split('-')[2] }}</span>
-            <span class="tx-list__item-date-mon">/{{ parseInt(tx.date.split('-')[1], 10) }}</span>
-          </div>
-          <div class="tx-list__item-info">
-            <div class="tx-list__item-name">{{ getLocalized(tx, 'desc', locale) }}</div>
-            <div class="tx-list__item-meta">
-              <Icon :name="resolveCat(tx.cat).icon" :size="11" class="tx-list__item-cat-ico" />
-              <span class="tx-list__item-meta-sep">·</span>
-              <span>{{ resolveCat(tx.cat).label }}</span>
-              <template v-if="tx.payMethod && tx.payMethod !== 'cash'"><span class="tx-list__item-meta-sep">·</span>💳</template>
-              <template v-if="tx.time"><span class="tx-list__item-meta-sep">·</span><span class="tx-list__item-time">{{ tx.time }}</span></template>
-            </div>
-          </div>
-          <div class="tx-list__item-amt" :style="{ color: amountColor(txVndAmt(tx), tx.type === 'inc' ? 'income' : 'expense') }">
-            <template v-if="hide"><span class="masked">•••••</span></template>
-            <template v-else>
-              <template v-if="tx.currency && tx.currency !== displayCurrency">
-                <span>{{ tx.type === 'inc' ? '+' : '-' }}{{ fCurrFor(tx.amount, tx.currency as Currency) }}</span>
-                <span class="tx-list__item-equiv">{{ fCurrNative(tx.amount, tx.currency as Currency) }}</span>
-              </template>
-              <template v-else>{{ tx.type === 'inc' ? '+' : '-' }}{{ fCurr(tx.amount) }}</template>
-            </template>
+      <div
+        v-for="tx in day.items"
+        :key="tx.id"
+        class="tx"
+        @click="$emit('open-detail', tx)"
+      >
+        <div class="tx-ic">
+          <component :is="spriteForTx(tx)" :size="16" />
+        </div>
+        <div class="tx-body">
+          <div class="tx-name">{{ getLocalized(tx, 'desc', locale) }}</div>
+          <div class="tx-meta">
+            <span v-if="tx.time">{{ tx.time }}</span>
+            <span v-if="tx.time"> · </span>
+            <span>{{ catLabel(tx.cat) }}</span>
           </div>
         </div>
+        <div :class="['tx-amt', tx.type]">
+          <template v-if="hide">●●●</template>
+          <template v-else>
+            {{ tx.type === 'inc' ? '+' : '−' }}{{ fCurr(txVndAmt(tx)) }}
+          </template>
+        </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, type FunctionalComponent } from 'vue'
 import { useI18n } from 'vue-i18n'
-import Icon from '../ui/Icon.vue'
-import { useFormatters } from '../../composables/ui/useFormatters'
-import { useCategories } from '../../composables/data/useCategories'
-import { useCurrency, type Currency } from '../../composables/api/useCurrency'
-import { useAmountColor } from '../../composables/ui/useAmountColor'
-import { getLocalized } from '../../composables/data/useI18nData'
-import type { TransactionItem } from '../../types/data'
+import {
+  IconScroll,
+  IconSearch,
+  SPRITE,
+  IconLotus,
+  type IconProps,
+} from '@/components/ui/quest-icons'
+import SectionHeader from '@/components/cards/SectionHeader.vue'
+import { useFormatters } from '@/composables/ui/useFormatters'
+import { useCurrency, type Currency } from '@/composables/api/useCurrency'
+import { useDisplayMode } from '@/composables/ui/useDisplayMode'
+import { categoryFor } from '@/composables/data/useTutienNames'
+import { useCategories } from '@/composables/data/useCategories'
+import { getLocalized } from '@/composables/data/useI18nData'
+import type { TransactionItem } from '@/types/data'
 
 const { locale, t } = useI18n()
-const { fDate, tStr } = useFormatters()
-const { resolveCat, expenseCategories, incomeCategories } = useCategories()
-const { fCurr, fCurrNative, fCurrFor, displayCurrency, toVnd } = useCurrency()
-const { amountColor } = useAmountColor()
-
-function txVndAmt(tx: TransactionItem): number {
-  if (tx.currency && tx.currency !== 'VND') return toVnd(tx.amount, tx.currency as Currency)
-  return tx.amount
-}
+const { fN, tStr } = useFormatters()
+const { fCurr, toVnd } = useCurrency()
+const { mode: displayMode } = useDisplayMode()
+const { resolveCat } = useCategories()
 
 const props = defineProps<{
   transactions: TransactionItem[]
   hide: boolean
 }>()
 
-const emit = defineEmits<{
+defineEmits<{
   'open-detail': [tx: TransactionItem]
-  'delete-tx': [tx: TransactionItem]
-  'quick-add': [tx: TransactionItem]
 }>()
 
-// ─── Filter toggle ─────────────────────────────────────────────────────────────
-const showFilter = ref(false)
-
-// ─── Filter state ─────────────────────────────────────────────────────────────
-
-const filterType = ref<'all' | 'exp' | 'inc'>('all')
-const selectedCats = ref<string[]>([])
-
-const activeCats = computed(() => {
-  if (filterType.value === 'exp') return expenseCategories.value
-  if (filterType.value === 'inc') return incomeCategories.value
-  return [...expenseCategories.value, ...incomeCategories.value]
-})
-
-// Reset selectedCats to all when filter type changes
-watch(filterType, () => {
-  selectedCats.value = activeCats.value.map(c => c.key)
-}, { immediate: true })
-
-const allCatsSelected = computed(() =>
-  activeCats.value.length > 0 && activeCats.value.every(c => selectedCats.value.includes(c.key))
-)
-
-const catFilterActive = computed(() => selectedCats.value.length > 0 && !allCatsSelected.value)
-
-const catBtnLabel = computed(() => {
-  if (!catFilterActive.value) return t('transactions.allCats')
-  if (selectedCats.value.length === 1) {
-    const cat = activeCats.value.find(c => c.key === selectedCats.value[0])
-    return cat?.label ?? selectedCats.value[0]
-  }
-  return t('transactions.catCount', { n: selectedCats.value.length })
-})
-
-// ─── Category dropdown ────────────────────────────────────────────────────────
-
-const catDropOpen = ref(false)
-const catDropRef = ref<HTMLElement | null>(null)
-
-function toggleCatDrop() {
-  catDropOpen.value = !catDropOpen.value
-}
-
-function toggleCat(key: string) {
-  const idx = selectedCats.value.indexOf(key)
-  if (idx >= 0) {
-    selectedCats.value = selectedCats.value.filter(k => k !== key)
-  } else {
-    selectedCats.value = [...selectedCats.value, key]
-  }
-}
-
-function selectAllCats() {
-  selectedCats.value = activeCats.value.map(c => c.key)
-}
-
-function onDocClick(e: MouseEvent) {
-  if (catDropRef.value && !catDropRef.value.contains(e.target as Node)) {
-    catDropOpen.value = false
-  }
-}
-
-onMounted(() => document.addEventListener('mousedown', onDocClick))
-onUnmounted(() => document.removeEventListener('mousedown', onDocClick))
-
-function setType(val: 'all' | 'exp' | 'inc') {
-  filterType.value = val
-}
-
-// ─── Search ───────────────────────────────────────────────────────────────────
-
+// ─── Filter state ──────────────────────────────────────────────────────────
+type ChipId = 'all' | 'exp' | 'inc'
+const filterType = ref<ChipId>('all')
 const searchRaw = ref('')
 const searchQuery = ref('')
 let searchTimer: ReturnType<typeof setTimeout> | undefined
-
 watch(searchRaw, (v) => {
   clearTimeout(searchTimer)
   searchTimer = setTimeout(() => { searchQuery.value = v }, 200)
 })
 
-function clearSearch() {
-  clearTimeout(searchTimer)
-  searchRaw.value = ''
-  searchQuery.value = ''
+// ─── Chips ────────────────────────────────────────────────────────────────
+const chips = computed<Array<{ id: ChipId; label: string }>>(() => [
+  { id: 'all', label: t('chienKy.chipAll') },
+  { id: 'exp', label: t('chienKy.chipExp') },
+  { id: 'inc', label: t('chienKy.chipInc') },
+])
+
+// ─── Tx → VND amount cho display ──────────────────────────────────────────
+function txVndAmt(tx: TransactionItem): number {
+  if (tx.currency && tx.currency !== 'VND') return toVnd(tx.amount, tx.currency as Currency)
+  return tx.amount
 }
 
-// ─── Computed filtering ───────────────────────────────────────────────────────
-
-const typeFiltered = computed(() =>
-  filterType.value === 'all'
-    ? props.transactions
-    : props.transactions.filter(tx => tx.type === filterType.value)
-)
-
+// ─── Filter pipeline ──────────────────────────────────────────────────────
 const filteredItems = computed(() => {
-  let items = catFilterActive.value
-    ? typeFiltered.value.filter(tx => selectedCats.value.includes(resolveCat(tx.cat).key))
-    : typeFiltered.value
-  if (searchQuery.value) {
-    const q = searchQuery.value.toLowerCase()
-    items = items.filter(tx => {
+  let items = filterType.value === 'all'
+    ? props.transactions
+    : props.transactions.filter((tx) => tx.type === filterType.value)
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.trim().toLowerCase()
+    items = items.filter((tx) => {
       const locName = getLocalized(tx, 'desc', locale.value).toLowerCase()
-      const rawName = tx.desc.toLowerCase()
-      const note = tx.note?.toLowerCase() ?? ''
+      const rawName = (tx.desc || '').toLowerCase()
+      const note = (tx.note || '').toLowerCase()
       return locName.includes(q) || rawName.includes(q) || note.includes(q)
     })
   }
   return items
 })
 
-// ─── Monthly trend (header) ───────────────────────────────────────────────────
-
-const currentMonthPrefix = computed(() => tStr().slice(0, 7))
-
-const monthIncome = computed(() =>
-  props.transactions
-    .filter(tx => tx.type === 'inc' && tx.date.startsWith(currentMonthPrefix.value))
-    .reduce((s, tx) => s + tx.amount, 0)
-)
-
-const monthExpense = computed(() =>
-  props.transactions
-    .filter(tx => tx.type === 'exp' && tx.date.startsWith(currentMonthPrefix.value))
-    .reduce((s, tx) => s + tx.amount, 0)
-)
-
-const monthTrend = computed(() => {
-  if (monthIncome.value > monthExpense.value) return 'up'
-  if (monthExpense.value > monthIncome.value) return 'down'
-  return 'neutral'
-})
-
-// ─── Quick stats (based on ALL transactions, not filtered) ────────────────────
-
-const lastMonthPrefix = computed(() => {
-  const [y, m] = currentMonthPrefix.value.split('-').map(Number)
-  if (m === 1) return `${y - 1}-12`
-  return `${y}-${String(m - 1).padStart(2, '0')}`
-})
-
-const thisMonthExp = computed(() =>
-  props.transactions
-    .filter(tx => tx.type === 'exp' && tx.date.startsWith(currentMonthPrefix.value))
-    .reduce((s, tx) => s + tx.amount, 0)
-)
-
-const lastMonthExp = computed(() =>
-  props.transactions
-    .filter(tx => tx.type === 'exp' && tx.date.startsWith(lastMonthPrefix.value))
-    .reduce((s, tx) => s + tx.amount, 0)
-)
-
-const changePercent = computed<number | null>(() => {
-  if (lastMonthExp.value === 0) return null
-  return Math.round((thisMonthExp.value - lastMonthExp.value) / lastMonthExp.value * 100)
-})
-
-const daysElapsed = computed(() => parseInt(tStr().split('-')[2], 10))
-
-const avgPerDay = computed(() =>
-  daysElapsed.value > 0 ? Math.round(thisMonthExp.value / daysElapsed.value) : 0
-)
-
-const topCatThisMonth = computed(() => {
-  const catTotals = new Map<string, number>()
-  for (const tx of props.transactions) {
-    if (tx.type === 'exp' && tx.date.startsWith(currentMonthPrefix.value)) {
-      catTotals.set(tx.cat, (catTotals.get(tx.cat) || 0) + tx.amount)
-    }
+// ─── Day groups (sorted desc by date) ─────────────────────────────────────
+interface DayGroup {
+  date: string
+  items: TransactionItem[]
+  net: number
+}
+const dayGroups = computed<DayGroup[]>(() => {
+  const map = new Map<string, TransactionItem[]>()
+  for (const tx of filteredItems.value) {
+    if (!map.has(tx.date)) map.set(tx.date, [])
+    map.get(tx.date)!.push(tx)
   }
-  if (!catTotals.size) return null
-  let topKey = '', topAmt = 0
-  for (const [k, v] of catTotals) {
-    if (v > topAmt) { topAmt = v; topKey = k }
+  const groups: DayGroup[] = []
+  for (const [date, items] of map) {
+    items.sort((a, b) => (b.time || '').localeCompare(a.time || ''))
+    const net = items.reduce((s, tx) => {
+      const amt = txVndAmt(tx)
+      return s + (tx.type === 'inc' ? amt : -amt)
+    }, 0)
+    groups.push({ date, items, net })
   }
-  return { cat: resolveCat(topKey), amount: topAmt }
+  groups.sort((a, b) => b.date.localeCompare(a.date))
+  return groups
 })
 
-// ─── Sticky day header ────────────────────────────────────────────────────────
+const distinctDayCount = computed(() => dayGroups.value.length)
 
-const scrollEl = ref<HTMLElement | null>(null)
-const activeHeaderDate = ref('')
+// ─── Stats (across filtered items) ────────────────────────────────────────
+const totalExp = computed(() =>
+  filteredItems.value
+    .filter((tx) => tx.type === 'exp')
+    .reduce((s, tx) => s + txVndAmt(tx), 0),
+)
+const totalInc = computed(() =>
+  filteredItems.value
+    .filter((tx) => tx.type === 'inc')
+    .reduce((s, tx) => s + txVndAmt(tx), 0),
+)
+const totalNet = computed(() => totalInc.value - totalExp.value)
 
+// ─── Day label · "HÔM NAY · DD.MM" / "HÔM QUA · DD.MM" / "DD.MM" ──────────
 const yesterdayStr = computed(() => {
   const d = new Date()
   d.setDate(d.getDate() - 1)
@@ -401,262 +217,208 @@ const yesterdayStr = computed(() => {
   )
 })
 
-// Per-day totals derived from the currently filtered list
-const dayTotals = computed(() => {
-  const map = new Map<string, { totalExp: number; totalInc: number }>()
-  for (const tx of filteredItems.value) {
-    if (!map.has(tx.date)) map.set(tx.date, { totalExp: 0, totalInc: 0 })
-    const day = map.get(tx.date)!
-    if (tx.type === 'exp') day.totalExp += tx.amount
-    else day.totalInc += tx.amount
-  }
-  return map
-})
+function fmtDay(dateStr: string): string {
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return dateStr
+  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`
+}
 
-const activeHeader = computed(() => {
-  const date = activeHeaderDate.value
+function dayLabel(dateStr: string): string {
   const today = tStr()
-  const label = !date
-    ? ''
-    : date === today
-      ? t('transactions.today')
-      : date === yesterdayStr.value
-        ? t('transactions.yesterday')
-        : fDate(date, locale.value)
-  const totals = dayTotals.value.get(date) ?? { totalExp: 0, totalInc: 0 }
-  return { label, ...totals }
-})
+  const short = fmtDay(dateStr)
+  if (dateStr === today) return `${t('chienKy.dayToday')} · ${short}`
+  if (dateStr === yesterdayStr.value) return `${t('chienKy.dayYesterday')} · ${short}`
+  return short
+}
 
-// When filter/search changes: reset header to first item and scroll to top
-watch(filteredItems, async (items) => {
-  activeHeaderDate.value = items[0]?.date || ''
-  await nextTick()
-  if (scrollEl.value) scrollEl.value.scrollTop = 0
-}, { immediate: true })
+// ─── Sprite + label per cat ───────────────────────────────────────────────
+function spriteForTx(tx: TransactionItem): FunctionalComponent<IconProps> {
+  const cat = categoryFor(tx.cat)
+  return SPRITE[cat.sp] ?? IconLotus
+}
 
-function onListScroll() {
-  const el = scrollEl.value
-  if (!el) return
-  const scrollTop = el.scrollTop
-  const items = el.querySelectorAll<HTMLElement>('.tx-list__item[data-date]')
-  for (const item of items) {
-    if (item.offsetTop + item.offsetHeight > scrollTop) {
-      const d = item.dataset.date
-      if (d) activeHeaderDate.value = d
-      return
-    }
+function catLabel(catKey: string): string {
+  if (displayMode.value === 'tutien') {
+    return categoryFor(catKey).display
   }
+  // Real mode: dùng i18n labels từ useCategories
+  return resolveCat(catKey).label
+}
+
+// ─── Format gọn cho stats ─────────────────────────────────────────────────
+function fmtShort(n: number): string {
+  // Ưu tiên fCurr (chuyển sang display currency) cho stats
+  return fCurr(Math.abs(n))
 }
 </script>
 
 <style scoped>
-/* Trend */
-.tx-list__trend { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-bottom: 8px; padding: 0 2px; }
+.chien-ky { display: flex; flex-direction: column; }
 
-/* ─── Header right: badge + filter toggle ─────────────────────────────────── */
-.tx-hdr-right { display: flex; align-items: center; gap: 6px; }
-
-.tx-filter-toggle {
-  display: flex; align-items: center; justify-content: center;
-  width: 24px; height: 24px;
-  background: transparent; border: 1px solid var(--border); border-radius: 7px;
-  color: var(--muted); cursor: pointer; -webkit-tap-highlight-color: transparent;
-  transition: background .12s, border-color .12s, color .12s;
-  flex-shrink: 0;
+/* ─── INV STATS · 3-box row · port từ design ─────────────────────────────── */
+.inv-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+  margin-top: 14px;
 }
-.tx-filter-toggle:active { background: var(--border); }
-.tx-filter-toggle--active { background: var(--surface2); border-color: var(--accent); color: var(--accent); }
-:deep(.tx-filter-toggle svg) { display: block; }
-
-/* ─── Collapsible filter wrapper ──────────────────────────────────────────── */
-.tx-filter-wrap {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height .3s cubic-bezier(.4,0,.2,1);
-}
-.tx-filter-wrap--open { max-height: 320px; overflow: visible; }
-
-/* ─── Filter bar ──────────────────────────────────────────────────────────── */
-.tx-filter { margin: 8px 0 6px; display: flex; flex-direction: column; gap: 6px; }
-
-/* Toggle buttons (Chi tiêu / Thu nhập) + Category dropdown — cùng 1 dòng */
-.tx-filter__type-row { display: flex; align-items: center; gap: 6px; }
-.tx-filter__toggle { display: flex; background: var(--surface2); border-radius: 7px; padding: 2px; flex-shrink: 0; }
-.tx-filter__toggle-btn {
-  padding: 4px 10px;
-  font-family: var(--mono); font-size: 10px;
-  border: none; border-radius: 6px;
-  background: transparent; color: var(--muted);
-  cursor: pointer; -webkit-tap-highlight-color: transparent;
-  transition: background .12s, color .12s;
-}
-.tx-filter__toggle-btn--active { background: var(--bg); color: var(--text); }
-.tx-filter__toggle-btn:active { opacity: .7; }
-
-/* ─── Category dropdown ───────────────────────────────────────────────────── */
-.tx-filter__cat-wrap {
-  position: relative; flex: 1; min-width: 0;
-}
-.tx-filter__cat-btn {
-  width: 100%; display: flex; align-items: center; gap: 5px;
-  background: var(--surface2); border: 1px solid var(--border); border-radius: 7px;
-  padding: 4px 8px; font-family: var(--mono); font-size: 10px; color: var(--text);
-  cursor: pointer; -webkit-tap-highlight-color: transparent;
-  height: 30px; box-sizing: border-box; text-align: left;
-  transition: border-color .12s, color .12s;
-}
-.tx-filter__cat-btn--active { border-color: var(--accent); color: var(--accent); }
-.tx-filter__cat-btn:active { opacity: .8; }
-.tx-filter__cat-btn-label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tx-filter__cat-chevron { flex-shrink: 0; color: var(--muted); transition: transform .15s; }
-.tx-filter__cat-chevron--open { transform: rotate(180deg); }
-:deep(.tx-filter__cat-chevron svg) { display: block; }
-
-.tx-filter__cat-drop {
-  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 200;
-  background: var(--surface2); border: 1px solid var(--border); border-radius: 9px;
-  max-height: 210px; overflow-y: auto;
-  box-shadow: 0 6px 20px rgba(0,0,0,.5);
-  scrollbar-width: none; -ms-overflow-style: none;
-}
-.tx-filter__cat-drop::-webkit-scrollbar { display: none; }
-
-.tx-filter__cat-item {
-  display: flex; align-items: center; gap: 8px;
-  padding: 7px 10px; cursor: pointer; -webkit-tap-highlight-color: transparent;
-  transition: background .1s;
-}
-.tx-filter__cat-item:first-child { border-bottom: 1px solid var(--border); margin-bottom: 2px; }
-.tx-filter__cat-item:active { background: var(--border); }
-
-.tx-filter__cat-check {
-  width: 14px; height: 14px; flex-shrink: 0;
-  border: 1px solid var(--border); border-radius: 3px;
-  display: flex; align-items: center; justify-content: center;
-}
-.tx-filter__cat-check--on { background: var(--accent); border-color: var(--accent); }
-:deep(.tx-filter__cat-check svg) { display: block; }
-
-.tx-filter__cat-item-ico { flex-shrink: 0; opacity: .75; }
-:deep(.tx-filter__cat-item-ico svg) { display: block; }
-
-.tx-filter__cat-item-label { font-family: var(--mono); font-size: 10px; color: var(--text); }
-.tx-filter__cat-item-label--all { font-weight: 700; }
-
-/* Search */
-.tx-filter__search-wrap { position: relative; display: flex; align-items: center; }
-.tx-filter__search-ico { position: absolute; left: 8px; color: var(--muted); flex-shrink: 0; pointer-events: none; }
-:deep(.tx-filter__search-ico svg) { display: block; }
-.tx-filter__search {
-  width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 7px;
-  padding: 5px 28px 5px 26px; font-family: var(--mono); font-size: 10px; color: var(--text);
-  outline: none; box-sizing: border-box; -webkit-appearance: none; appearance: none;
-}
-.tx-filter__search:focus { border-color: var(--accent); }
-.tx-filter__search::placeholder { color: var(--muted); }
-.tx-filter__search-clear {
-  position: absolute; right: 6px; display: flex; align-items: center; justify-content: center;
-  width: 18px; height: 18px; background: none; border: none; color: var(--muted);
-  cursor: pointer; padding: 0; -webkit-tap-highlight-color: transparent;
-}
-.tx-filter__search-clear:active { color: var(--text); }
-
-/* ─── Quick stats ─────────────────────────────────────────────────────────── */
-.tx-stats {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 3px 5px;
-  padding: 4px 2px 8px; font-family: var(--mono); font-size: 10px; color: var(--muted);
-  border-bottom: 1px solid var(--border); margin-bottom: 6px;
-}
-.tx-stats__num { color: var(--text); font-weight: 700; }
-.tx-stats__sep { color: var(--border); }
-.tx-stats__chg { font-weight: 700; font-size: 10px; }
-.tx-stats__chg--up { color: var(--accent2); }
-.tx-stats__chg--dn { color: var(--accent3); }
-.tx-stats__top-ico { opacity: .7; flex-shrink: 0; }
-:deep(.tx-stats__top-ico svg) { display: block; }
-
-/* ─── List wrapper ────────────────────────────────────────────────────────── */
-.tx-list__empty { text-align: center; padding: 18px; color: var(--muted); font-size: 11px; font-family: var(--mono); }
-.tx-list__wrap { display: flex; flex-direction: column; }
-
-/* Sticky day header — sits above the scroll area, does not scroll */
-.tx-list__sticky-hdr {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 5px 2px 4px;
-}
-.tx-list__day-label {
-  font-family: var(--mono); font-size: 10px; font-weight: 700;
-  color: var(--muted); text-transform: uppercase; letter-spacing: .5px;
-  display: inline-flex; align-items: center; gap: 4px;
-}
-.tx-list__day-trend { display: inline-flex; align-items: center; }
-.tx-list__day-trend--up { color: var(--accent3); }
-.tx-list__day-trend--down { color: var(--accent2); }
-:deep(.tx-list__day-trend svg) { display: block; }
-.tx-list__day-meta { display: flex; gap: 6px; align-items: center; }
-.tx-list__day-inc { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--accent3); }
-.tx-list__day-exp { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--accent2); }
-
-/* Fixed-height scrollable list — shows ≈4 items, scrolls internally */
-.tx-list__scroll {
-  /* 4 × 48px items + 3 × 6px gaps = 210px */
-  height: calc(4 * 48px + 3 * 6px);
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.inv-stat {
+  padding: 11px 12px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 4px;
   position: relative;
-  -webkit-overflow-scrolling: touch;
-  scroll-snap-type: y mandatory;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
 }
-.tx-list__scroll::-webkit-scrollbar { display: none; }
+.inv-stat::before {
+  content: ''; position: absolute;
+  left: 0; top: 8px; bottom: 8px;
+  width: 2px;
+}
+.inv-stat.exp::before { background: var(--crimson); }
+.inv-stat.inc::before { background: var(--jade); }
+.inv-stat.net::before { background: var(--gold); }
+.inv-stat .l {
+  font-family: var(--serif); font-style: italic; font-weight: 600;
+  font-size: 10px; color: var(--muted);
+  letter-spacing: 0.06em;
+}
+.inv-stat .v {
+  font-family: var(--mono); font-weight: 700; font-size: 14px;
+  margin-top: 5px;
+  letter-spacing: -0.02em;
+}
+.inv-stat .v.exp { color: var(--crimson); }
+.inv-stat .v.inc { color: var(--jade); }
+.inv-stat .v.net { color: var(--gold-2); }
 
-/* Items */
-.tx-list__item {
-  display: flex; align-items: center; gap: 10px; padding: 6px 11px;
-  background: var(--surface2); border-radius: 9px; border-left: 3px solid transparent;
-  animation: si .2s ease; transition: background .15s, border-color .2s;
-  cursor: pointer; -webkit-tap-highlight-color: transparent;
-  height: 48px; box-sizing: border-box; overflow: hidden;
-  flex-shrink: 0;
-  scroll-snap-align: start;
+/* ─── INV SEARCH · single search input ───────────────────────────────────── */
+.inv-search {
+  display: flex; gap: 6px;
+  margin-top: 12px;
 }
-.tx-list__item--exp { border-left-color: var(--accent2); }
-.tx-list__item--inc { border-left-color: var(--accent3); }
-.tx-list__item:active { background: var(--border); }
-@keyframes si { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
-
-/* Date badge (replaces icon circle) */
-.tx-list__item-date {
-  width: 28px; min-height: 28px; display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  flex-shrink: 0; border-radius: 7px;
-  padding: 2px 0;
+.inv-search-box {
+  flex: 1; position: relative;
+  display: flex; align-items: center;
 }
-.tx-list__item-date--exp { background: rgba(var(--accent2-rgb),.1); }
-.tx-list__item-date--inc { background: rgba(var(--accent3-rgb),.1); }
-.tx-list__item-date-day {
-  font-family: var(--mono); font-size: 12px; font-weight: 700; line-height: 1;
-}
-.tx-list__item-date--exp .tx-list__item-date-day { color: var(--accent2); }
-.tx-list__item-date--inc .tx-list__item-date-day { color: var(--accent3); }
-.tx-list__item-date-mon {
-  font-family: var(--mono); font-size: 8px; line-height: 1; margin-top: 1px;
+.inv-search-box :deep(svg) {
+  position: absolute; left: 11px;
   color: var(--muted);
+  pointer-events: none;
+}
+.inv-search-box input {
+  width: 100%;
+  padding: 10px 12px 10px 34px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--text);
+  outline: none;
+  font-family: var(--serif-vn); font-size: 12px;
+  -webkit-appearance: none; appearance: none;
+}
+.inv-search-box input:focus { border-color: var(--gold); }
+.inv-search-box input::placeholder { color: var(--muted); }
+
+/* ─── CHIP ROW · pill filter chips ───────────────────────────────────────── */
+.chip-row {
+  display: flex; gap: 5px;
+  margin-top: 10px; flex-wrap: wrap;
+}
+.chip {
+  padding: 7px 11px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  font-family: var(--serif); font-style: italic; font-weight: 600;
+  font-size: 10px; color: var(--text-2);
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  display: flex; align-items: center; gap: 5px;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.chip.active {
+  background: rgba(var(--gold-rgb), 0.15);
+  border-color: var(--gold);
+  color: var(--gold);
 }
 
-.tx-list__item-info { flex: 1; min-width: 0; }
-.tx-list__item-name { font-size: 12px; line-height: 16px; font-weight: 600; color: var(--c-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tx-list__item-meta {
-  display: flex; align-items: center; gap: 3px;
-  font-family: var(--mono); font-size: 9px; line-height: 12px; color: var(--muted); margin-top: 2px;
+/* ─── DAY HEADER · per-day grouping ──────────────────────────────────────── */
+.day-h {
+  margin: 14px 2px 8px;
+  display: flex; align-items: center; justify-content: space-between;
 }
-.tx-list__item-cat-ico { flex-shrink: 0; }
-:deep(.tx-list__item-cat-ico svg) { display: block; }
-.tx-list__item-meta-sep { opacity: .35; }
-.tx-list__item-time { font-family: var(--mono); font-size: 9px; color: var(--muted); }
-.tx-list__item-amt { font-family: var(--mono); font-size: 12px; font-weight: 700; flex-shrink: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 1px; align-self: center; }
-.tx-list__item-equiv { font-size: 9px; font-weight: 400; color: var(--muted); }
+.day-h .d {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--serif); font-style: italic; font-weight: 700;
+  font-size: 12px; color: var(--gold);
+  letter-spacing: 0.04em;
+}
+.day-h .d::before {
+  content: '✦'; color: var(--jade);
+  font-style: normal;
+}
+.day-h .net {
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.day-h .net.pos { color: var(--jade); }
+.day-h .net.neg { color: var(--crimson); }
+
+/* ─── TX ITEM · ic + body + amt ──────────────────────────────────────────── */
+.tx {
+  display: flex; align-items: center; gap: 11px;
+  padding: 10px 12px;
+  margin-bottom: 5px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: transform 0.15s, border-color 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+.tx:active {
+  transform: translateX(2px);
+  border-color: var(--gold);
+}
+
+.tx-ic {
+  width: 34px; height: 34px; flex-shrink: 0;
+  background: var(--paper-3);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-2);
+}
+
+.tx-body { flex: 1; min-width: 0; }
+.tx-name {
+  font-family: var(--serif-vn); font-size: 13px; font-weight: 600;
+  color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tx-meta {
+  font-family: var(--mono); font-size: 9px;
+  color: var(--muted);
+  margin-top: 3px;
+  letter-spacing: 0.02em;
+}
+
+.tx-amt {
+  font-family: var(--mono); font-weight: 700; font-size: 13px;
+  flex-shrink: 0;
+  text-align: right;
+  letter-spacing: -0.02em;
+}
+.tx-amt.exp { color: var(--crimson); }
+.tx-amt.inc { color: var(--jade); }
+
+/* Empty state */
+.chien-ky__empty {
+  text-align: center;
+  padding: 24px 12px;
+  font-family: var(--serif); font-style: italic;
+  font-size: 12px; color: var(--muted);
+  border: 1px dashed var(--line);
+  border-radius: 5px;
+  margin-top: 10px;
+}
 </style>

@@ -110,9 +110,102 @@ export interface RuleItem {
   textI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
 }
 
-// ─── Root app data schema (shape of the JSONBin record) ───────────────────
+// ═══ V2 SCHEMA · Unified items[] + meta (Phase 11) ═══════════════════════
 
+/**
+ * Discriminator type cho mọi entity trong items[]. Switch theo `type` để hiểu
+ * fields nào meaningful cho item đó.
+ */
+export type ItemType =
+  | 'account'             // Tài khoản (current cash balance, e.g. vcb_checking)
+  | 'income'              // Recurring income source (salary plan)
+  | 'fixed_expense'       // Recurring expense plan (rent, utilities)
+  | 'one_time_expense'    // Specific upcoming expense (tuition, party)
+  | 'debt'                // Credit card or loan
+  | 'hidden_installment'  // BNPL/subscription bên trong debt (children)
+  | 'rule'                // Operational rule (must_not, buffer, etc.)
+  | 'risk'                // Risk warning
+  | 'milestone'           // Target date for clearing debt
+  | 'expense_log'         // [A1] Recorded expense transaction (tx history)
+  | 'income_log'          // [A1] Recorded income transaction
+
+/**
+ * Unified item shape · "All entries share one object shape".
+ * Fields not relevant cho a given type are null.
+ */
+export interface Item {
+  id: string
+  type: ItemType
+  name: string
+  issuer: string | null
+  account_last_4: string | null
+  amount: number | null
+  credit_limit: number | null
+  available_credit: number | null
+  minimum_payment: number | null
+  apr: number | null
+  monthly_rate: number | null
+  per_period: number | null
+  periods_remaining: number | null
+  frequency: 'monthly' | 'one_time' | 'weekly' | 'yearly' | null
+  due_day_of_month: number | null
+  statement_day_of_month: number | null
+  due_date: string | null
+  ends_on: string | null
+  as_of: string | null
+  priority_score: number | null
+  non_cancellable: boolean | null
+  severity: 'low' | 'medium' | 'high' | null
+  note: string | null
+  children: Item[]
+
+  // Phase 11 extensions for transaction logs (expense_log/income_log)
+  cat?: string | null
+  pay_method?: string | null
+  currency?: string | null
+  time?: string | null
+  /** [B2] Reference đến debt id khi item là expense_log của payment */
+  ref_id?: string | null
+
+  // Preserve i18n design fields (Phase 0+ design additions)
+  nameLang?: 'vi' | 'en' | 'ja'
+  nameI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
+  nameI18nMeta?: Partial<Record<'vi' | 'en' | 'ja', 'auto' | 'manual'>>
+  noteI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
+}
+
+/**
+ * App-level metadata. [C1] daily_limit di chuyển từ rules sang meta.
+ */
+export interface Meta {
+  owner: string
+  currency: 'VND' | 'USD' | 'JPY'
+  generated_at: string
+  as_of_month: string
+  strategy: string
+  strategy_note: string
+  debt_free_target: string
+  schema_note: string
+
+  // [C1] daily_limit ở meta thay vì rules
+  daily_limit: { until_salary: number; after_salary: number }
+  custom_daily_limit: number
+  extra_paid: number
+}
+
+// ─── Root app data schema (Phase 11 hybrid: v2 fields + derived legacy views) ─
+
+/**
+ * AppData v2 = { meta, items[] } trên disk (JSONBin serialization).
+ * Trong memory cũng giữ legacy fields (expenses, debts, etc.) như DERIVED views,
+ * tự động sync sau pull/push qua useV2Adapter để composables không phải refactor.
+ */
 export interface AppData {
+  // V2 source-of-truth fields (Phase 11)
+  meta?: Meta
+  items?: Item[]
+
+  // Legacy derived views (populated by applyV2ToLegacy after pull)
   expenses: Expense[]
   incomes: Income[]
   extra_paid: number
@@ -141,7 +234,6 @@ export interface AppData {
     milestones?: Array<{
       month: string
       event?: string
-      /** Bản dịch event sang các ngôn ngữ khác */
       eventI18n?: Partial<Record<'vi' | 'en' | 'ja', string>>
     }>
   }

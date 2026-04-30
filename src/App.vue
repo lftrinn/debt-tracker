@@ -22,6 +22,9 @@
   <!-- TOAST -->
   <ToastMessage :message="toastMsg" :type="toastType" :trigger="toastTrigger" />
 
+  <!-- LEVEL UP TOAST -->
+  <LevelUpToast :show="lvlUpShow" :level="playerLvl" />
+
   <!-- DETAIL POPUP -->
   <DetailPopup
     :item="popupItem"
@@ -36,78 +39,103 @@
     @clone-item="handleCopy"
   />
 
-  <!-- MAIN -->
+  <!-- MAIN · Tru Ma Lục shell ─────────────────────────────────────────── -->
   <div v-if="appState === 'ready' || appState === 'error'">
-    <AppHeader :today="today" :hideAmounts="hideAmounts" :hideAlert="hz('alert')" :scrolled="syncBarScrolled" :syncStatus="syncSt" :syncMsg="syncMsgText" :syncTime="syncTime" :limSt="limSt" :limBlink="limBlink" :overBanner="overBanner" :overMsg="overMsg" :cashDaysLeft="cashDaysLeft" :dToSalary="dToSalary" @reload="hardReload" @toggle-hide="toggleHide" @scroll-alert="scrollToAlert" @dismiss-over="dismissOverBanner" />
+    <TutienHeader
+      :name="playerName"
+      :realm="playerRealm"
+      :lvl="playerLvl"
+      :coins="availCash"
+      :hide="hideAmounts"
+      @toggle-hide="toggleHide"
+      @tap-avatar="tab = 'cfg'"
+    />
 
     <div class="wrap">
       <SyncBar ref="syncBarRef" :status="syncSt" :message="syncMsgText" :syncTime="syncTime" :today="today" />
 
-      <div ref="alertRef" v-if="isOver" class="alert over"><Icon name="alert-triangle" :size="14" /> {{ $t('app.alert.over') }}{{ hz('alert') ? '•••' : fCurrFull(todaySpent - dayLimit) }}</div>
-      <div ref="alertRef" v-else-if="dayLimit > 0" class="alert ok">
-        <Icon name="check" :size="14" />
-        <span class="alert-main">{{ $t('app.alert.okMain', { amount: hz('alert') ? '****' : fCurr(dayLimit - todaySpent), limit: hz('alert') ? '****' : fCurr(dayLimit) }) }}</span>
-        <span v-if="cashDaysLeft !== null && cashDaysLeft < dToSalary" class="alert-badge-warn">{{ hz('alert') ? '•/•' : $t('app.alert.days', { days: cashDaysLeft, salary: dToSalary }) }}</span>
-      </div>
+      <!-- HOME · Đại Trận ──────────────────────────────────────────── -->
+      <template v-if="tab === 'home'">
+        <div class="xp-bar">
+          <span class="lab">Tu vi</span>
+          <div class="track"><div class="fill" :style="{ width: playerXpPct + '%' }"></div></div>
+          <span class="next">{{ playerXp }}/{{ playerXpMax }}</span>
+        </div>
 
-      <div class="top-cols">
-        <CashHero
-          :availCash="availCash"
-          :dToSalary="dToSalary"
-          :todaySpent="todayOutflow"
-          :monthSpent="monthSpent"
-          :isOver="isOver"
-          :cashTrend="cashTrend"
-          :cashAnimKey="cashAnimKey"
-          :spentAnimKey="spentAnimKey"
-          :hide="{ balance: hz('cash.balance'), todaySpent: hz('cash.todaySpent'), monthSpent: hz('cash.monthSpent') }"
+        <div v-if="isOver" class="alert over"><Icon name="alert-triangle" :size="14" /> {{ $t('app.alert.over') }}{{ hz('alert') ? '•••' : fCurrFull(todaySpent - dayLimit) }}</div>
+        <div v-else-if="dayLimit > 0" class="alert ok">
+          <Icon name="check" :size="14" />
+          <span class="alert-main">{{ $t('app.alert.okMain', { amount: hz('alert') ? '****' : fCurr(dayLimit - todaySpent), limit: hz('alert') ? '****' : fCurr(dayLimit) }) }}</span>
+          <span v-if="cashDaysLeft !== null && cashDaysLeft < dToSalary" class="alert-badge-warn">{{ hz('alert') ? '•/•' : $t('app.alert.days', { days: cashDaysLeft, salary: dToSalary }) }}</span>
+        </div>
+
+        <!-- Tâm Ma · Final boss = totalDebt -->
+        <BossCard
+          :display="boss.display"
+          :real="boss.real"
+          :realm="boss.realm"
+          :hp="totalDebt"
+          :hpMax="origDebt"
+          :nextDate="boss.nextDate"
+          :nextAmt="boss.nextAmt"
+          :hide="hideAmounts"
+          :useDisplay="useTutien"
         />
 
-        <DebtOverview
-          :totalDebt="totalDebt"
-          :debtCards="debtCards"
-          :debtTrend="debtTrend"
-          :debtAnimKey="debtAnimKey"
-          :hide="{ total: hz('debt.total'), cardBal: hz('debt.cardBal'), minPay: hz('debt.minPay'), amounts: hideAmounts }"
+        <!-- Linh Khí Ngày + Kim Nguyên Bảo -->
+        <ManaCards
+          :manaLeft="manaLeft"
+          :manaPct="manaPctUsed"
+          :manaOver="isOver"
+          :dayLimit="dayLimit"
+          :gold="availCash"
+          :goldDays="cashDaysLeft"
+          :hide="{ mana: hz('cash.todaySpent'), gold: hz('cash.balance') }"
+        />
+
+        <!-- Kiếp Số · Quests = upcoming payments -->
+        <SectionHeader
+          :icon="IconScroll"
+          :title="$t('section.kiepSo')"
+          vn="quests"
+          :act="$t('section.viewAll')"
+          @click-act="tab = 'inv'"
+        />
+        <QuestList
+          :items="upcoming"
+          :hide="hz('upcoming.amount')"
+          :max="4"
+          @open-detail="openDetail($event, 'upcoming')"
+        />
+
+        <!-- Ma Chướng · Enemies = credit cards mini-bosses -->
+        <SectionHeader
+          :icon="IconDemon"
+          :title="$t('section.maChuong')"
+          :vn="String((d.debts?.credit_cards || []).length)"
+        />
+        <EnemyRow
+          :cards="d.debts?.credit_cards || []"
+          :hide="{ hp: hz('debt.cardBal'), amounts: hideAmounts }"
+          :useDisplay="useTutien"
           @update-card="updateCardDirect"
         />
-      </div>
 
-      <ProgressSection
-        :repayPct="repayPct"
-        :origDebt="origDebt"
-        :totalDebt="totalDebt"
-        :freeMonthStr="freeMonthStr"
-        :hide="{ origDebt: hz('progress.origDebt'), remaining: hz('progress.remaining') }"
-      />
+        <!-- Tâm Pháp · Achievements -->
+        <SectionHeader
+          :icon="IconTrophy"
+          :title="$t('section.tamPhap')"
+          vn="achievement"
+        />
+        <AchievementList
+          :paidCount="(d.paid_obligations || []).length"
+          :isOver="isOver"
+          :repayPct="repayPct"
+          :max="3"
+        />
+      </template>
 
-      <UpcomingPayments
-        ref="upcomingRef"
-        :items="upcoming"
-        :label="upcomingLabel"
-        :availCash="availCash"
-        :debtCards="debtCards"
-        :smallLoans="smallLoans"
-        :monthlyPlans="d.monthly_plans || {}"
-        :paidObligations="d.paid_obligations || []"
-        :oneTimeExpenses="d.one_time_expenses || []"
-        :hide="{ amount: hz('upcoming.amount'), shortage: hz('upcoming.shortage') }"
-        @open-detail="openDetail($event, 'upcoming')"
-        @toggle-paid="togglePaid"
-        @record-payment="recPay"
-        @add-one-time="addOneTime"
-      />
-
-      <!-- Tabs -->
-      <div class="tab-nav">
-        <button class="tab-btn" :class="{ active: tab === 'add' }" @click="tab = 'add'">{{ $t('app.tabs.add') }}</button>
-        <button class="tab-btn" :class="{ active: tab === 'list' }" @click="tab = 'list'">{{ $t('app.tabs.history') }}</button>
-        <button class="tab-btn" :class="{ active: tab === 'chart' }" @click="tab = 'chart'">{{ $t('app.tabs.charts') }}</button>
-        <button class="tab-btn" :class="{ active: tab === 'tl' }" @click="tab = 'tl'">{{ $t('app.tabs.timeline') }}</button>
-        <button class="tab-btn" :class="{ active: tab === 'cfg' }" @click="tab = 'cfg'">{{ $t('app.tabs.settings') }}</button>
-      </div>
-
-      <!-- Tab content -->
+      <!-- ADD · Xuất Kiếm ──────────────────────────────────────────── -->
       <AddTransaction
         v-if="tab === 'add'"
         :syncing="syncing"
@@ -120,8 +148,9 @@
         @prefill-consumed="copyTxData = null"
       />
 
+      <!-- INV · Chiến Ký ───────────────────────────────────────────── -->
       <TransactionList
-        v-if="tab === 'list'"
+        v-if="tab === 'inv'"
         :transactions="sortedTx"
         :hide="hz('transactions')"
         @open-detail="openDetail($event, 'tx')"
@@ -129,8 +158,9 @@
         @quick-add="handleQuickAdd"
       />
 
+      <!-- CHT · Tu Vi Ký ───────────────────────────────────────────── -->
       <ChartsPanel
-        v-if="tab === 'chart'"
+        v-if="tab === 'cht'"
         :expenses="expenses"
         :incomes="incomes"
         :debtBreakdown="debtBreakdown"
@@ -138,8 +168,18 @@
         :hide="{ spend: hz('charts.spend'), debtLine: hz('charts.debtLine'), pie: hz('charts.pie') }"
       />
 
-      <TimelinePanel v-if="tab === 'tl'" :milestones="milestones" :hide="{ debt: hz('timeline.debt'), eventAmt: hz('timeline.eventAmt') }" />
+      <!-- MAP · Lộ Đồ ──────────────────────────────────────────────── -->
+      <TimelinePanel
+        v-if="tab === 'map'"
+        :milestones="milestones"
+        :hide="{ debt: hz('timeline.debt'), eventAmt: hz('timeline.eventAmt') }"
+        :paidCount="(d.paid_obligations || []).length"
+        :isOver="isOver"
+        :repayPct="repayPct"
+        :streakDays="streakDays"
+      />
 
+      <!-- CFG · Đạo Tâm (truy cập qua tap avatar) ──────────────────── -->
       <SettingsPanel
         v-if="tab === 'cfg'"
         ref="settingsRef"
@@ -155,19 +195,27 @@
         :hide="{ cardInfo: hz('settings.cardInfo'), dailyLim: hz('settings.dailyLim'), dropdown: hz('settings.dropdown'), cashInfo: hz('settings.cashInfo') }"
         :hideZones="hideZones"
         :pushStatus="pushStatus"
+        :playerName="playerName"
+        :playerRealm="playerRealm"
+        :playerLvl="playerLvl"
+        :hideFlag="hideAmounts"
         @update-limit="updLimit"
         @import-json="handleImportJson"
         @set-hide-zone="({ key, val }: { key: string; val: boolean }) => setHideZone(key, val)"
         @enable-push="handleEnablePush"
         @save-push-worker="handleSavePushWorker"
         @logout="logout"
+        @reload="hardReload"
+        @toggle-hide="toggleHide"
       />
     </div>
+
+    <BottomTabBar :tab="tab" @set-tab="(id) => tab = id" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Ref } from 'vue'
 import type { AppData, TransactionItem } from '@/types/data'
@@ -191,20 +239,36 @@ import { usePushNotifications } from './composables/ui/usePushNotifications'
 import LoadingScreen from './components/ui/LoadingScreen.vue'
 import ErrorPopup from './components/ui/ErrorPopup.vue'
 import SetupScreen from './components/forms/SetupScreen.vue'
-import AppHeader from './components/layout/AppHeader.vue'
+import TutienHeader from './components/layout/TutienHeader.vue'
+import BottomTabBar from './components/layout/BottomTabBar.vue'
 import SyncBar from './components/layout/SyncBar.vue'
-import CashHero from './components/cards/CashHero.vue'
-import DebtOverview from './components/cards/DebtOverview.vue'
-import ProgressSection from './components/cards/ProgressSection.vue'
-import UpcomingPayments from './components/payments/UpcomingPayments.vue'
+import BossCard from './components/cards/BossCard.vue'
+import ManaCards from './components/cards/ManaCards.vue'
+import EnemyRow from './components/cards/EnemyRow.vue'
+import SectionHeader from './components/cards/SectionHeader.vue'
+import AchievementList from './components/cards/AchievementList.vue'
+import QuestList from './components/payments/QuestList.vue'
 import AddTransaction from './components/forms/AddTransaction.vue'
 import TransactionList from './components/payments/TransactionList.vue'
 import ChartsPanel from './components/charts/ChartsPanel.vue'
 import TimelinePanel from './components/charts/TimelinePanel.vue'
 import SettingsPanel from './components/forms/SettingsPanel.vue'
 import ToastMessage from './components/ui/ToastMessage.vue'
+import LevelUpToast from './components/ui/LevelUpToast.vue'
 import DetailPopup from './components/ui/DetailPopup.vue'
 import Icon from './components/ui/Icon.vue'
+
+// Phase 10 cleanup: components CashHero/DebtOverview/ProgressSection/UpcomingPayments/AppHeader
+// đã bị xoá sau khi Phase 1+2 thay bằng TutienHeader + BossCard + ManaCards + EnemyRow + QuestList.
+import { IconScroll, IconDemon, IconTrophy } from './components/ui/quest-icons'
+
+// Tu Tiên foundations — useTheme/useDisplayMode singletons khởi tạo qua import
+// (side effect ở module level: theme đồng bộ class body.light)
+import { useDisplayMode } from './composables/ui/useDisplayMode'
+import './composables/ui/useTheme' // ensure theme class applied
+import { realmOf, finalBossFor } from './composables/data/useTutienNames'
+import { applyV2ToLegacy, blankItem } from './composables/data/useV2Adapter'
+import type { Item, Meta } from './types/data'
 
 // ─── API & Formatters ─────────────────────────────────────────────────────
 const api = useApi()
@@ -217,18 +281,12 @@ const syncMsgText = computed(() => t(syncMsg.value))
 
 // ─── UI state ─────────────────────────────────────────────────────────────
 const appState = ref<'loading' | 'setup' | 'ready' | 'error'>(isConfigured.value ? 'loading' : 'setup')
-const tab = ref('add')
+/** TabId: 5 tab dưới (BottomTabBar) + 'cfg' (truy cập qua tap avatar) */
+type TabId = 'home' | 'inv' | 'add' | 'cht' | 'map' | 'cfg'
+const tab = ref<TabId>('home')
 const importErr = ref('')
 const settingsRef = ref<InstanceType<typeof SettingsPanel> | null>(null)
-const upcomingRef = ref<InstanceType<typeof UpcomingPayments> | null>(null)
 const syncBarRef = ref<InstanceType<typeof SyncBar> | null>(null)
-const syncBarScrolled = ref(false)
-const alertRef = ref<HTMLElement | null>(null)
-const limBlink = ref(false)
-const overBanner = ref(false)
-let syncObserver: IntersectionObserver | null = null
-let alertObserver: IntersectionObserver | null = null
-let overTimer: ReturnType<typeof setTimeout> | null = null
 
 // ─── Notifications ────────────────────────────────────────────────────────
 const { pushStatus, checkPushStatus, registerServiceWorker, enablePushNotifications, sendDueNotification, sendPaydayNotification, clearDueDedup } = usePushNotifications()
@@ -241,24 +299,253 @@ const toastFn = (key: string, type?: ToastType) => toast(t(key), type)
 const { hideAmounts, toggleHide, hideZones, setHideZone, hz } = useHideZones()
 
 // ─── Main data ref ────────────────────────────────────────────────────────
-const d = ref<AppData>({
+// ─── Default seed (v2 schema) · Phase 11 ──────────────────────────────────
+// User's actual planning snapshot for May 2026. items[] = source of truth khi
+// serialize lên JSONBin; legacy fields được derive qua applyV2ToLegacy.
+const seedMeta: Meta = {
+  owner: 'Tran Nhat Quang',
+  currency: 'VND',
+  generated_at: '2026-05-01',
+  as_of_month: '2026-05',
+  strategy: 'avalanche_modified',
+  strategy_note: 'Pay minimum on all debts; surplus targets item with highest priority_score until cleared, then next.',
+  debt_free_target: '2027-02',
+  schema_note: "All entries share one object shape. Fields not relevant to a given type are null. The 'children' array uses the same object shape recursively. Switch on 'type' to interpret which fields are meaningful.",
+  daily_limit: { until_salary: 70000, after_salary: 100000 },
+  custom_daily_limit: 0,
+  extra_paid: 0,
+}
+
+/** Helper: tạo Item rồi merge với overrides. */
+function mk(id: string, type: Item['type'], name: string, overrides: Partial<Item> = {}): Item {
+  return { ...blankItem(id, type, name), ...overrides }
+}
+
+const seedItems: Item[] = [
+  mk('vcb_checking', 'account', 'VCB checking', {
+    issuer: 'VCB',
+    amount: 1668727,
+    as_of: '2026-04-30',
+    note: 'Primary checking; salary is deposited here.',
+  }),
+  mk('salary_april_2026', 'income', 'Luong thang 04/2026 (received 05/05)', {
+    issuer: 'Dr.JOY',
+    amount: 22792714,
+    per_period: 22792714,
+    frequency: 'monthly',
+    due_day_of_month: 5,
+    due_date: '2026-05-05',
+    as_of: '2026-04-30',
+    note: 'Net actual from payslip: gross 26,000,000 - insurance 2,730,000 - PIT 380,143 - union 130,000 + lunch 200,000 - 1.08h unpaid leave.',
+  }),
+  mk('rent_may_2026', 'fixed_expense', 'Tien nha thang 05', {
+    amount: 4838000,
+    per_period: 4838000,
+    frequency: 'monthly',
+    due_day_of_month: 5,
+    due_date: '2026-05-05',
+    note: 'May actual: room 4,000,000 + electricity 187kWh*4,000 + water 30,000 + service 60,000.',
+  }),
+  mk('living_expense', 'fixed_expense', 'Sinh hoat', {
+    amount: 3000000,
+    per_period: 3000000,
+    frequency: 'monthly',
+  }),
+  mk('misc_expense_may_2026', 'fixed_expense', 'Chi phi khac (May reduced)', {
+    amount: 1287711,
+    per_period: 3000000,
+    frequency: 'monthly',
+    note: 'Baseline 3,000,000/month; reduced this month to absorb tuition shortfall (1,712,289 cut).',
+  }),
+  mk('tuition_may_2026', 'one_time_expense', 'Hoc phi 13 tin chi', {
+    amount: 7046000,
+    frequency: 'one_time',
+    due_day_of_month: 18,
+    due_date: '2026-05-18',
+    note: '13 credits x 542,000 VND/credit.',
+  }),
+  mk('visa_1', 'debt', 'Techcombank Visa 1 (...1882)', {
+    issuer: 'Techcombank',
+    account_last_4: '1882',
+    amount: 50893290,
+    credit_limit: 53000000,
+    available_credit: 523823,
+    minimum_payment: 3943427,
+    apr: 0.359,
+    monthly_rate: 0.0299,
+    frequency: 'monthly',
+    due_day_of_month: 13,
+    statement_day_of_month: 28,
+    due_date: '2026-05-13',
+    as_of: '2026-04-28',
+    priority_score: 2,
+    severity: 'high',
+    note: 'Near credit-limit ceiling (98.9% used). Pay minimum only until visa_2 cleared, then attack.',
+    children: [
+      mk('v1_inst_hyperskill', 'hidden_installment', 'HYPERSKILL', {
+        issuer: 'HYPERSKILL', amount: 435442, per_period: 435442, periods_remaining: 1,
+        frequency: 'monthly', due_day_of_month: 28, statement_day_of_month: 28,
+        ends_on: '2026-05-28', as_of: '2026-04-28',
+        note: 'Auto-debits on V1 statement day. 11/12 paid, 1 left.',
+      }),
+      mk('v1_inst_claude', 'hidden_installment', 'CLAUDE.AI SUBSCRIPTION', {
+        issuer: 'ANTHROPIC', amount: 403142, per_period: 403142, periods_remaining: 1,
+        frequency: 'monthly', due_day_of_month: 28, statement_day_of_month: 28,
+        ends_on: '2026-05-28', as_of: '2026-04-28',
+        non_cancellable: true,
+        note: 'Cannot cancel. 5/6 paid, 1 left.',
+      }),
+      mk('v1_inst_fpt_tiktok', 'hidden_installment', 'FPT*TIKTOKSHOP', {
+        issuer: 'FPT', amount: 378232, per_period: 189116, periods_remaining: 2,
+        frequency: 'monthly', due_day_of_month: 28, statement_day_of_month: 28,
+        ends_on: '2026-06-28', as_of: '2026-04-28',
+        note: '4/6 paid, 2 left.',
+      }),
+      mk('v1_inst_9pay_tiktok', 'hidden_installment', '9PAY*TikTok Shop', {
+        issuer: '9PAY', amount: 347074, per_period: 173537, periods_remaining: 2,
+        frequency: 'monthly', due_day_of_month: 28, statement_day_of_month: 28,
+        ends_on: '2026-06-28', as_of: '2026-04-28',
+        note: '4/6 paid, 2 left.',
+      }),
+    ],
+  }),
+  mk('visa_2', 'debt', 'Techcombank Visa 2 (...5444)', {
+    issuer: 'Techcombank',
+    account_last_4: '5444',
+    amount: 33647382,
+    credit_limit: 37000000,
+    available_credit: 2732346,
+    minimum_payment: 1976998,
+    apr: 0.362,
+    monthly_rate: 0.0302,
+    frequency: 'monthly',
+    due_day_of_month: 5,
+    statement_day_of_month: 20,
+    due_date: '2026-05-05',
+    as_of: '2026-04-20',
+    priority_score: 1,
+    severity: 'medium',
+    note: 'Highest interest rate; smallest balance — clear first, then redirect surplus to visa_1.',
+    children: [
+      mk('v2_inst_9pay_tiktok', 'hidden_installment', '9PAY*TIKTOKSHOP', {
+        issuer: '9PAY', amount: 620272, per_period: 310136, periods_remaining: 2,
+        frequency: 'monthly', due_day_of_month: 20, statement_day_of_month: 20,
+        ends_on: '2026-06-20', as_of: '2026-04-20',
+        note: '4/6 paid, 2 left.',
+      }),
+    ],
+  }),
+  mk('hd_saison', 'debt', 'HD Saison loan DL037340629', {
+    issuer: 'HD Saison',
+    amount: 2167404,
+    minimum_payment: 1083702,
+    per_period: 1083702,
+    periods_remaining: 2,
+    frequency: 'monthly',
+    due_day_of_month: 12,
+    due_date: '2026-05-12',
+    ends_on: '2026-06-12',
+    as_of: '2026-04-30',
+    priority_score: 0,
+    severity: 'low',
+    note: 'Fixed schedule; periods 8/9 and 9/9 left.',
+  }),
+  mk('shopee_1', 'debt', 'Shopee installment 1', {
+    issuer: 'Shopee',
+    amount: 1257232,
+    minimum_payment: 628616,
+    per_period: 628616,
+    periods_remaining: 2,
+    frequency: 'monthly',
+    due_day_of_month: 1,
+    due_date: '2026-06-01',
+    ends_on: '2026-07-01',
+    as_of: '2026-04-30',
+    priority_score: 0,
+    severity: 'low',
+    note: "Due day 1 → must be paid from previous month's salary. Periods 5/6 and 6/6 left.",
+  }),
+  mk('shopee_2', 'debt', 'Shopee installment 2', {
+    issuer: 'Shopee',
+    amount: 694987,
+    minimum_payment: 694987,
+    per_period: 694987,
+    periods_remaining: 1,
+    frequency: 'monthly',
+    due_day_of_month: 27,
+    due_date: '2026-05-27',
+    ends_on: '2026-05-27',
+    as_of: '2026-04-30',
+    priority_score: 0,
+    severity: 'low',
+    note: 'Final period (3/3).',
+  }),
+  mk('rule_no_new_credit', 'rule', 'No new credit card charges', {
+    severity: 'high',
+    note: 'No new credit card transactions; avoid auto-debits where possible.',
+  }),
+  mk('rule_pay_minimum_before_due', 'rule', 'Pay minimum before due date', {
+    severity: 'high',
+    note: 'Pay minimum on every credit card before 17:00 on due_date.',
+  }),
+  mk('rule_extra_payment_timing', 'rule', 'Apply extra payment before statement day', {
+    severity: 'medium',
+    note: 'Pay extra to target debt before its statement_day_of_month to maximize interest reduction.',
+  }),
+  mk('rule_buffer_floor', 'rule', 'Maintain buffer of 1,000,000', {
+    amount: 1000000,
+    severity: 'medium',
+    note: 'Keep at least 1,000,000 in vcb_checking as emergency buffer.',
+  }),
+  mk('risk_v1_credit_limit_breach', 'risk', 'Visa 1 may breach credit limit', {
+    issuer: 'Techcombank',
+    account_last_4: '1882',
+    credit_limit: 53000000,
+    available_credit: 523823,
+    as_of: '2026-04-28',
+    severity: 'high',
+    note: 'Available credit only ~524k; any unexpected auto-debit may breach limit.',
+  }),
+  mk('risk_may_2026_tightness', 'risk', 'May 2026 cash flow tight', {
+    amount: 1712289,
+    as_of: '2026-05-01',
+    severity: 'high',
+    note: 'Tuition + minimum payments leave shortfall ~1,712,289 VND; absorbed by reducing misc expense this month.',
+  }),
+  mk('milestone_shopee_2_cleared', 'milestone', 'Shopee 2 cleared', {
+    due_date: '2026-05-27', note: 'Linked to: shopee_2',
+  }),
+  mk('milestone_hd_saison_cleared', 'milestone', 'HD Saison cleared', {
+    due_date: '2026-06-12', note: 'Linked to: hd_saison',
+  }),
+  mk('milestone_shopee_1_cleared', 'milestone', 'Shopee 1 cleared', {
+    due_date: '2026-07-01', note: 'Linked to: shopee_1',
+  }),
+  mk('milestone_visa_2_cleared', 'milestone', 'Visa 2 cleared', {
+    due_date: '2026-10-15', note: 'Linked to: visa_2',
+  }),
+  mk('milestone_visa_1_cleared', 'milestone', 'Visa 1 cleared (debt-free)', {
+    due_date: '2027-02-15', note: 'Linked to: visa_1. Debt-free milestone.',
+  }),
+]
+
+/** Build initial AppData từ v2 seed → derive legacy fields qua applyV2ToLegacy. */
+const seedV2: AppData = applyV2ToLegacy({
+  meta: seedMeta,
+  items: seedItems,
+  // Legacy field stubs (sẽ được overwrite bởi applyV2ToLegacy)
   expenses: [],
   incomes: [],
   extra_paid: 0,
   custom_daily_limit: 0,
-  current_cash: { balance: 865000, reserved: 500000, as_of: '2026-03-27' },
-  debts: {
-    credit_cards: [
-      { id: 'visa1', name: 'Visa 1', credit_limit: 37000000, balance: 34946713, interest_rate_annual: 0.328, minimum_payment: 2663422 },
-      { id: 'visa2', name: 'Visa 2', credit_limit: 53000000, balance: 49299000, interest_rate_annual: 0.358, minimum_payment: 4107271 },
-    ],
-    small_loans: [],
-  },
-  income: { monthly_net: 22923000, pay_date: 5 },
+  current_cash: { balance: 0, reserved: 0, as_of: '' },
+  debts: { credit_cards: [], small_loans: [] },
+  income: { monthly_net: 0, pay_date: 5 },
   rules: { daily_limit: { until_salary: 70000, after_salary: 100000 }, must_not: [] },
   payoff_timeline: { projected_debt_by_month: [] },
-  fixed_expenses: {},
 })
+
+const d = ref<AppData>(seedV2)
 
 // ─── Computed debt data ───────────────────────────────────────────────────
 const {
@@ -269,9 +556,79 @@ const {
   upcomingLabel, upcoming, milestones, freeMonthStr, findDebtId,
 } = useDebtData(d)
 
-const overMsg = computed(() =>
-  isOver.value ? `${t('app.alert.over')}${hz('alert') ? '•••' : fCurrFull(todaySpent.value - dayLimit.value)}` : ''
+// ─── Player tu vi · derived from repayPct (Phase 1 placeholder) ───────────
+// Phase 2+ sẽ tính lvl/xp dựa trên streak, payment count, achievements.
+const { mode: displayMode } = useDisplayMode()
+const useTutien = computed(() => displayMode.value === 'tutien')
+const playerXpMax = 500
+const playerLvl = computed(() => Math.max(1, Math.floor(repayPct.value / 5) + 1))
+const playerRealm = computed(() => realmOf(playerLvl.value))
+const playerXp = computed(() => Math.min(playerXpMax, Math.floor(repayPct.value * 5)))
+const playerXpPct = computed(() => (playerXp.value / playerXpMax) * 100)
+const playerName = computed(() =>
+  displayMode.value === 'tutien' ? 'Lưu Vân Đạo Hữu' : 'Đạo Hữu'
 )
+
+// ─── BossCard · Tâm Ma Tổng (final boss = totalDebt) ─────────────────────
+function fmtDueShort(dateStr: string): string {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return dateStr
+  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+const boss = computed(() => {
+  const fb = finalBossFor(totalDebt.value)
+  const next = upcoming.value[0]
+  return {
+    display: fb.display,
+    real: t('boss.totalDebtReal'),
+    realm: fb.realm,
+    nextDate: next ? fmtDueShort(next._date) : '—',
+    nextAmt: next ? next.amt : 0,
+  }
+})
+
+// ─── ManaCards · Linh khí ngày + Kim nguyên bảo ──────────────────────────
+const manaLeft = computed(() => Math.max(0, dayLimit.value - todaySpent.value))
+const manaPctUsed = computed(() => {
+  if (dayLimit.value <= 0) return 0
+  return Math.min(100, (todaySpent.value / dayLimit.value) * 100)
+})
+
+// ─── LevelUpToast trigger · watch playerLvl, pop toast 2.6s khi đột phá ─
+const lvlUpShow = ref(false)
+let lvlUpTimer: ReturnType<typeof setTimeout> | null = null
+watch(playerLvl, (newLvl, oldLvl) => {
+  if (oldLvl === undefined) return
+  if (newLvl > oldLvl) {
+    lvlUpShow.value = false
+    nextTick(() => {
+      lvlUpShow.value = true
+      if (lvlUpTimer) clearTimeout(lvlUpTimer)
+      lvlUpTimer = setTimeout(() => { lvlUpShow.value = false }, 2700)
+    })
+  }
+})
+
+// ─── Streak · số ngày liên tiếp không phá giới (max 30) ──────────────────
+const streakDays = computed(() => {
+  if (!dayLimit.value || dayLimit.value <= 0) return 0
+  let streak = 0
+  for (let i = 0; i < 30; i++) {
+    const d = new Date()
+    d.setDate(d.getDate() - i)
+    const dateKey =
+      d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0')
+    const daySum = expenses.value
+      .filter((e) => e.date === dateKey)
+      .reduce((s, e) => s + e.amount, 0)
+    if (daySum <= dayLimit.value) streak++
+    else break
+  }
+  return streak
+})
 
 /** Danh sách quy tắc đã bản địa hoá từ must_not + must_do (nếu có) */
 const localizedRules = computed(() => [
@@ -279,75 +636,10 @@ const localizedRules = computed(() => [
   ...(d.value.rules?.must_do || []).map((r) => getRuleText(r)),
 ])
 
-// ─── Animation keys ───────────────────────────────────────────────────────
-const cashAnimKey = ref(0)
-const spentAnimKey = ref(0)
-const debtAnimKey = ref(0)
-watch(availCash, () => { cashAnimKey.value++ })
-watch(todaySpent, () => { spentAnimKey.value++ })
-watch(totalDebt, () => { debtAnimKey.value++ })
-
-// ─── Over-limit blink logic ───────────────────────────────────────────────
-watch([todaySpent, limSt], ([spent, st], [oldSpent]) => {
-  if (st === 'over' && (oldSpent === undefined || spent > oldSpent)) {
-    limBlink.value = true
-    overBanner.value = false
-    if (overTimer) clearTimeout(overTimer)
-    overTimer = setTimeout(() => {
-      if (limBlink.value) overBanner.value = true
-    }, 5000)
-  }
-  if (st !== 'over') {
-    limBlink.value = false
-    overBanner.value = false
-    if (overTimer) clearTimeout(overTimer)
-  }
-})
-
-watch(alertRef, (el) => {
-  alertObserver?.disconnect()
-  if (!el) return
-  alertObserver = new IntersectionObserver(([entry]) => {
-    if (entry.isIntersecting && limBlink.value) {
-      limBlink.value = false
-      overBanner.value = false
-      if (overTimer) clearTimeout(overTimer)
-    }
-  }, { threshold: 0.5 })
-  alertObserver.observe(el)
-}, { immediate: true })
-
-function scrollToAlert(): void {
-  dismissOverBanner()
-  alertRef.value?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-}
-function dismissOverBanner(): void {
-  overBanner.value = false
-  limBlink.value = false
-  if (overTimer) clearTimeout(overTimer)
-}
-
-// ─── SyncBar intersection observer ───────────────────────────────────────
+// ─── Service worker + push notification setup ───────────────────────────
 onMounted(() => {
   registerServiceWorker()
   checkPushStatus()
-  syncObserver = new IntersectionObserver(
-    ([entry]) => { syncBarScrolled.value = !entry.isIntersecting },
-    { threshold: 0 }
-  )
-  const checkEl = () => {
-    const el = (syncBarRef.value as any)?.el
-    if (el) { syncObserver!.observe(el); return true }
-    return false
-  }
-  if (!checkEl()) {
-    const stop = watch(syncBarRef, () => { if (checkEl()) stop() }, { immediate: false })
-  }
-})
-onUnmounted(() => {
-  syncObserver?.disconnect()
-  alertObserver?.disconnect()
-  if (overTimer) clearTimeout(overTimer)
 })
 
 // ─── Push notification khi app sẵn sàng ──────────────────────────────────
@@ -440,28 +732,18 @@ async function handleQuickAdd(tx: TransactionItem): Promise<void> {
 
 function handleCopy(item: Record<string, unknown>): void {
   popupItem.value = null
-  if (item._variant === 'upcoming') {
-    const isDebt = item._category === 'debt_minimum' || item._category === 'installment'
-    setTimeout(() => {
-      ;(upcomingRef.value as any)?.openWithPrefill({
-        type: isDebt ? 'pay' : 'oneTime',
-        name: item.name,
-        date: item._date || item.date || '',
-        amount: item.amt || item.amount || 0,
-      })
-    }, 100)
-  } else {
-    tab.value = 'add'
-    setTimeout(() => {
-      const addEl = document.querySelector('.add-tx')
-      if (addEl) (addEl as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, 50)
-    copyTxData.value = {
-      desc: (item.desc || item.name || '') as string,
-      amount: (item.amount || item.amt || 0) as number,
-      cat: (item.cat || 'an') as string,
-      type: (item.type || 'exp') as 'exp' | 'inc',
-    }
+  // Cả upcoming và transaction đều prefill vào Add tab (Phase 2: bỏ inline upcoming form)
+  // Upcoming clone tạm map sang dạng expense — Phase 7 sẽ phân biệt one-time vs payment.
+  tab.value = 'add'
+  setTimeout(() => {
+    const addEl = document.querySelector('.add-tx')
+    if (addEl) (addEl as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, 50)
+  copyTxData.value = {
+    desc: (item.desc || item.name || '') as string,
+    amount: (item.amount || item.amt || 0) as number,
+    cat: (item.cat || 'an') as string,
+    type: (item.type || 'exp') as 'exp' | 'inc',
   }
 }
 

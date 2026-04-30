@@ -1,46 +1,154 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600;1,700&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 :root {
-  --bg: #0a0a0f;
-  --surface: #111118;
-  --surface2: #1a1a24;
-  --border: #2a2a3a;
-  --accent: #e8ff47;
-  --accent2: #ff6b4a;
-  --accent3: #4aefb8;
-  --accent4: #a78bfa;
-  --accent5: #38bdf8;
-  --accent6: #fb923c;
-  --text: #f0f0f5;
-  --muted: #6b6b85;
-  --danger: #ff4a6b;
-  /* RGB channels for rgba() usage */
-  --accent-rgb: 232,255,71;
-  --accent2-rgb: 255,107,74;
-  --accent3-rgb: 74,239,184;
-  --danger-rgb: 255,74,107;
-  --text-rgb: 255,255,255;
-  --mono: 'JetBrains Mono', monospace;
-  --sans: 'Inter', sans-serif;
+  /* ═══ DESIGN TOKENS — Tru Ma Lục Design System v1.0 ═══════════════════ */
+
+  /* Ink / paper · 6 bậc nền tối (Hư Vô → Vân Sa) */
+  --ink:      #06050d;
+  --ink-1:    #0c0a16;
+  --ink-2:    #14111f;
+  --paper:    #1a1828;
+  --paper-2:  #221f33;
+  --paper-3:  #2c2940;
+
+  /* Lines · viền vàng tinh tế · 3 mức */
+  --line:     rgba(196,164,108,.22);
+  --line-2:   rgba(196,164,108,.4);
+  --line-3:   rgba(196,164,108,.6);
+
+  /* Semantic accent · 10 màu mang ngữ nghĩa */
+  --gold:         #c4a46c;     /* linh kim · brand */
+  --gold-2:       #e8c987;     /* hoàng đan · số liệu */
+  --gold-3:       #8a6f44;     /* đồng khí · gradient deep */
+  --jade:         #6dbf9c;     /* bích ngọc · positive */
+  --jade-deep:    #2d6e57;
+  --crimson:      #c54a5a;     /* huyết sa · debt / danger */
+  --crimson-deep: #7a1a26;
+  --vermillion:   #e8693c;     /* châu sa · soon warning */
+  --violet:       #9b6dd0;     /* tử vân · realm / achievement */
+  --azure:        #6ba8d6;     /* linh lam · mana / cash flow */
+
+  /* Text · 3 bậc */
+  --text:    #f3ead6;
+  --text-2:  #d8cfb8;
+  --muted:   #897f6a;
+
+  /* Type · 4 họ chữ */
+  --serif:    'Cormorant Garamond', 'Noto Serif', Georgia, serif;
+  --serif-vn: 'Be Vietnam Pro', system-ui, sans-serif;
+  --sans:     'Be Vietnam Pro', system-ui, sans-serif;
+  --mono:     'JetBrains Mono', monospace;
+
+  /* Radius · 4 bậc */
+  --r-sm: 3px;
+  --r-md: 5px;
+  --r-lg: 8px;
+  --r-xl: 14px;
+
+  /* Shadow / glow */
+  --shadow-card:  0 4px 14px rgba(0,0,0,.4);
+  --glow-gold:    0 0 14px rgba(196,164,108,.4);
+  --glow-crimson: 0 0 14px rgba(197,74,90,.4);
+  --glow-jade:    0 0 14px rgba(109,191,156,.4);
+  --glow-violet:  0 0 14px rgba(155,109,208,.4);
+
+  /* RGB channels — dùng cho rgba(var(--xxx-rgb), alpha) */
+  --gold-rgb:       196,164,108;
+  --crimson-rgb:    197,74,90;
+  --jade-rgb:       109,191,156;
+  --violet-rgb:     155,109,208;
+  --azure-rgb:      107,168,214;
+  --vermillion-rgb: 232,105,60;
+  --text-rgb:       243,234,214;
+
+  /* ═══ LEGACY ALIASES — sẽ được migrate dần qua các phase sau ════════════ */
+  --bg:         var(--ink-1);
+  --surface:    var(--paper);
+  --surface2:   var(--paper-2);
+  --border:     rgba(196,164,108,.22);
+  --accent:     var(--gold);
+  --accent2:    var(--crimson);
+  --accent3:    var(--jade);
+  --accent4:    var(--violet);
+  --accent5:    var(--azure);
+  --accent6:    var(--vermillion);
+  --danger:     var(--crimson);
+  --accent-rgb:  var(--gold-rgb);
+  --accent2-rgb: var(--crimson-rgb);
+  --accent3-rgb: var(--jade-rgb);
+  --danger-rgb:  var(--crimson-rgb);
+}
+
+/* ═══ LIGHT MODE — kích hoạt qua body.light hoặc .app.light ══════════════ */
+body.light, .app.light {
+  --ink:     #1a1408;
+  --ink-1:   #faf6e9;
+  --ink-2:   #2a200f;
+  --paper:   #fff8e8;
+  --paper-2: #f5edd2;
+  --paper-3: #ebe1bf;
+
+  --text:    #2a200f;
+  --text-2:  #5a4a28;
+  --muted:   #8a7858;
+
+  --line:    rgba(122,90,40,.18);
+  --line-2:  rgba(122,90,40,.32);
+  --line-3:  rgba(122,90,40,.5);
+
+  /* Aliases tự cascade qua var() nên không cần override lại */
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; user-select: none; }
 input, textarea, select, [contenteditable] { -webkit-user-select: text; user-select: text; }
 html { touch-action: manipulation; }
-body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; overflow-x: hidden; margin: 0; padding: 0; }
+body {
+  background: var(--ink-1);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh; overflow-x: hidden;
+  margin: 0; padding: 0;
+}
 * { -ms-overflow-style: none; scrollbar-width: none; }
 *::-webkit-scrollbar { display: none; }
+::selection { background: var(--gold); color: var(--ink); }
 
+/* Ambient glow gradients · linh khí motes phía sau */
 body::before {
-  content: '';
-  position: fixed; top: -50%; left: -50%; width: 200%; height: 200%;
-  background: radial-gradient(ellipse at 20% 20%, rgba(var(--accent-rgb),.04) 0%, transparent 50%),
-              radial-gradient(ellipse at 80% 80%, rgba(var(--accent3-rgb),.03) 0%, transparent 50%);
-  pointer-events: none; z-index: 0;
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(circle at 15% 5%,  rgba(var(--gold-rgb),.06) 0%, transparent 45%),
+    radial-gradient(circle at 85% 35%, rgba(var(--violet-rgb),.05) 0%, transparent 45%),
+    radial-gradient(circle at 30% 80%, rgba(var(--jade-rgb),.03) 0%, transparent 50%);
 }
 
-/* Layout */
-.wrap { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 16px 16px 80px; }
+/* Particle drift · linh khí motes trôi nhẹ (always-on) */
+body::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    radial-gradient(1px 1px at 10% 20%, rgba(var(--gold-rgb),.5), transparent 50%),
+    radial-gradient(1px 1px at 70% 60%, rgba(var(--jade-rgb),.4), transparent 50%),
+    radial-gradient(1px 1px at 90% 25%, rgba(var(--violet-rgb),.4), transparent 50%),
+    radial-gradient(1px 1px at 30% 85%, rgba(232,201,135,.4), transparent 50%),
+    radial-gradient(1px 1px at 80% 75%, rgba(var(--gold-rgb),.4), transparent 50%);
+  background-size: 320px 320px;
+  animation: drift 40s linear infinite;
+  opacity: .5;
+}
+@keyframes drift { from { background-position: 0 0; } to { background-position: 0 -320px; } }
+
+/* Reduce motion · tôn trọng người dùng */
+@media (prefers-reduced-motion: reduce) {
+  body::after { animation: none; opacity: .25; }
+}
+
+/* Layout · scrollable container, max-width responsive.
+   padding-bottom đủ chỗ cho BottomTabBar fixed (60px FAB lift -22px + 50px bar + safe-area). */
+.wrap {
+  position: relative; z-index: 1;
+  max-width: 480px; margin: 0 auto;
+  padding: 16px 16px calc(110px + env(safe-area-inset-bottom, 0px));
+}
 
 /* Shared form elements (ErrorPopup + SetupScreen) */
 .inp-s { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 9px; padding: 10px 12px; color: var(--text); font-family: var(--mono); font-size: 11px; outline: none; transition: border-color .2s; margin-bottom: 9px; }
@@ -63,7 +171,18 @@ textarea.inp-s { height: 130px; resize: none; font-size: 10px; line-height: 1.5;
 @keyframes progload { from { width: 0 !important; } to {} }
 
 /* Shared utilities */
-.masked { font-family: var(--mono); letter-spacing: 2px; color: var(--muted); }
+.masked {
+  font-family: var(--mono); letter-spacing: 2px;
+  color: var(--muted);
+  animation: mask-fade-in 0.3s ease-out;
+}
+@keyframes mask-fade-in {
+  from { opacity: 0; filter: blur(4px); }
+  to { opacity: 1; filter: blur(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .masked { animation: none; }
+}
 .hide-info { display: flex; align-items: center; color: var(--muted); font-family: var(--mono); font-size: 11px; pointer-events: none; }
 
 /* Alert */
@@ -83,7 +202,7 @@ textarea.inp-s { height: 130px; resize: none; font-size: 10px; line-height: 1.5;
 
 
 
-/* Tabs */
+/* Tabs · used by SettingsPanel currency popup + DetailPopup edit form (pay level / cat type) */
 .tab-nav { display: flex; gap: 3px; margin-bottom: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 11px; padding: 3px; }
 .tab-btn { flex: 1; background: none; border: none; color: var(--muted); font-family: var(--sans); font-size: 10px; font-weight: 600; padding: 7px 2px; border-radius: 8px; cursor: pointer; transition: all .2s; }
 .tab-btn.active { background: var(--surface2); color: var(--text); }
@@ -118,11 +237,137 @@ textarea.inp-s { height: 130px; resize: none; font-size: 10px; line-height: 1.5;
 .popup-handle-bar { width: 36px; height: 4px; border-radius: 99px; background: var(--border); transition: background .2s; }
 .popup-sheet:active .popup-handle-bar { background: var(--muted); }
 .popup-hdr { display: flex; align-items: center; justify-content: space-between; }
-.popup-title { font-family: var(--sans); font-size: 14px; font-weight: 700; color: var(--text); }
+.popup-title {
+  font-family: var(--serif); font-style: italic; font-weight: 700;
+  font-size: 16px; color: var(--gold);
+  letter-spacing: 0.05em;
+  display: inline-flex; align-items: center; gap: 8px;
+}
 .popup-close { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 12px; transition: all .2s; }
 .popup-close:active { border-color: var(--text); opacity: .7; }
 .popup-body { display: flex; flex-direction: column; gap: 12px; }
-.popup-hero { display: flex; }
+/* ─── Ornate hero · Tu Tiên popup style ──────────────────────────────────
+   Repurposed: portrait + name + real_name + amount with conic glow + spin ring.
+   Backward-compat: existing badge usage inside .popup-hero won't apply these styles
+   (template now uses .portrait/.nm/.amt children; badge moved to stats/header).        */
+.popup-hero {
+  margin-top: 16px;
+  padding: 22px 14px;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(var(--crimson-rgb), 0.18) 0%, transparent 60%),
+    var(--ink);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.popup-hero::before {
+  content: ''; position: absolute;
+  top: -50%; left: -50%; width: 200%; height: 200%;
+  background: conic-gradient(from 0deg at 50% 50%,
+    transparent 0deg,
+    rgba(var(--crimson-rgb), 0.04) 60deg,
+    transparent 120deg,
+    rgba(var(--gold-rgb), 0.04) 180deg,
+    transparent 240deg,
+    rgba(var(--violet-rgb), 0.04) 300deg,
+    transparent 360deg);
+  animation: spin 14s linear infinite;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) { .popup-hero::before { animation: none; } }
+
+.popup-hero .portrait {
+  width: 70px; height: 70px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #6a2540, #1a0814);
+  border: 2px solid var(--crimson);
+  margin: 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--crimson);
+  position: relative;
+  box-shadow: 0 0 20px rgba(var(--crimson-rgb), 0.5);
+  z-index: 2;
+}
+.popup-hero .portrait::before {
+  content: ''; position: absolute; inset: -8px;
+  border-radius: 50%;
+  border: 1px dashed var(--crimson);
+  opacity: 0.6;
+  animation: spin 18s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) { .popup-hero .portrait::before { animation: none; } }
+
+/* Variant: jade (income) */
+.popup-hero.inc {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(var(--jade-rgb), 0.18) 0%, transparent 60%),
+    var(--ink);
+}
+.popup-hero.inc .portrait {
+  background: radial-gradient(circle at 30% 30%, #2d6e57, #0e2a1a);
+  border-color: var(--jade);
+  color: var(--jade);
+  box-shadow: 0 0 20px rgba(var(--jade-rgb), 0.5);
+}
+.popup-hero.inc .portrait::before { border-color: var(--jade); }
+.popup-hero.inc .nm { color: var(--jade); }
+
+.popup-hero .nm {
+  font-family: var(--serif); font-style: italic; font-weight: 700;
+  font-size: 16px; color: var(--crimson);
+  margin-top: 12px;
+  letter-spacing: 0.04em;
+  position: relative; z-index: 2;
+}
+.popup-hero .real {
+  font-family: var(--mono); font-size: 10px;
+  color: var(--muted);
+  margin-top: 4px;
+  letter-spacing: 0.02em;
+  position: relative; z-index: 2;
+}
+.popup-hero .amt {
+  font-family: var(--mono); font-weight: 700;
+  font-size: 32px;
+  color: var(--text);
+  margin-top: 14px;
+  letter-spacing: -0.04em;
+  position: relative; z-index: 2;
+}
+.popup-hero .amt .cu {
+  font-size: 16px;
+  color: var(--muted);
+}
+
+/* ─── 4-stat grid · port từ design ─────────────────────────────────────── */
+.popup-stats {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+  margin-top: 14px;
+}
+.popup-stat {
+  padding: 11px 12px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.popup-stat .l {
+  font-family: var(--serif); font-style: italic; font-weight: 600;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+.popup-stat .v {
+  font-family: var(--mono); font-weight: 700; font-size: 14px;
+  margin-top: 4px;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.popup-stat .v.hp { color: var(--crimson); }
+.popup-stat .v.gn { color: var(--jade); }
+.popup-stat .v.gd { color: var(--gold-2); }
+
 .popup-badge { display: inline-flex; align-items: center; gap: 4px; font-family: var(--sans); font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 6px; }
 .popup-badge.urgent { background: rgba(var(--danger-rgb),.15); color: var(--accent2); }
 .popup-badge.soon { background: rgba(var(--accent-rgb),.12); color: var(--accent); }
@@ -145,6 +390,52 @@ textarea.inp-s { height: 130px; resize: none; font-size: 10px; line-height: 1.5;
 .popup-btn.primary.done { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
 .popup-btn.secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
 .popup-btn.danger { background: rgba(var(--danger-rgb),.1); color: var(--danger); }
+/* ─── Tu Tiên popup buttons · attack/heal/flee · port từ design ─────────── */
+.popup-btn.attack {
+  background: linear-gradient(180deg, var(--gold-2), var(--gold) 50%, var(--gold-3));
+  color: var(--ink);
+  box-shadow: 0 4px 14px rgba(var(--gold-rgb), 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  font-family: var(--serif); font-style: italic; font-weight: 700;
+  letter-spacing: 0.1em;
+  border-radius: 5px;
+  padding: 14px;
+  position: relative;
+  overflow: hidden;
+}
+.popup-btn.attack:active { transform: translateY(1px); }
+.popup-btn.heal {
+  background: linear-gradient(180deg, #88dcb8, var(--jade) 50%, var(--jade-deep));
+  color: var(--ink);
+  box-shadow: 0 4px 14px rgba(var(--jade-rgb), 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  font-family: var(--serif); font-style: italic; font-weight: 700;
+  letter-spacing: 0.1em;
+  border-radius: 5px;
+  padding: 14px;
+}
+.popup-btn.heal:active { transform: translateY(1px); }
+.popup-btn.flee {
+  background: var(--paper);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  font-family: var(--serif); font-style: italic; font-weight: 700;
+  letter-spacing: 0.1em;
+  border-radius: 5px;
+  padding: 14px;
+}
+.popup-btn.flee:active { transform: translateY(1px); opacity: 0.85; }
+
+/* Close X button (alternative to .popup-close) — circular icon button */
+.popup-x {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--paper-3);
+  border: 1px solid var(--line);
+  color: var(--text-2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.popup-x:active { opacity: 0.7; }
 .popup-field { display: flex; flex-direction: column; gap: 4px; }
 .popup-input { background: var(--bg); border: 1px solid var(--border); border-radius: 9px; padding: 11px 12px; color: var(--text); font-family: var(--mono); font-size: 12px; outline: none; transition: border-color .2s; box-sizing: border-box; }
 .popup-input--sm { padding: 8px 10px; font-size: 11px; border-radius: 8px; font-family: var(--sans); height: 38px; box-sizing: border-box; }
@@ -180,6 +471,157 @@ input.popup-input, select.popup-input { height: 38px; }
   /* Popup sheet wider on tablet */
   .popup-sheet { max-width: 560px; }
 
-  /* Tab content có thêm padding */
-  .tab-nav { border-radius: 12px; }
+  /* Tablet: tăng padding-bottom cho safe scroll */
+  .wrap { max-width: 768px; padding: 20px 24px calc(120px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* ═══ XP BAR · Tu vi · port từ design Debt Tracker.html ═══════════════════ */
+.xp-bar {
+  display: flex; align-items: center; gap: 10px;
+  margin: 10px 0 4px;
+  padding: 6px 10px;
+  background: rgba(20, 17, 31, 0.6);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.xp-bar .lab {
+  font-family: var(--serif); font-style: italic; font-weight: 600;
+  font-size: 11px; color: var(--gold);
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+.xp-bar .track {
+  flex: 1; height: 6px;
+  background: var(--ink); border-radius: 3px;
+  overflow: hidden; position: relative;
+  border: 1px solid rgba(196, 164, 108, 0.15);
+}
+.xp-bar .fill {
+  height: 100%; border-radius: 2px;
+  background: linear-gradient(90deg, var(--gold-3), var(--gold) 50%, var(--gold-2));
+  position: relative;
+  box-shadow: 0 0 10px rgba(196, 164, 108, 0.6);
+  animation: xpload 1200ms cubic-bezier(0.5, 0.8, 0.3, 1);
+}
+.xp-bar .fill::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+  background-size: 80px 100%;
+  animation: shimmer 2s linear infinite;
+}
+@keyframes shimmer {
+  from { background-position: -80px 0; }
+  to { background-position: 100% 0; }
+}
+@keyframes xpload { from { width: 0 !important; } }
+.xp-bar .next {
+  font-family: var(--mono); font-size: 9px; color: var(--text-2);
+  flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xp-bar .fill::after { animation: none; opacity: 0; }
+  .xp-bar .fill { animation: none; }
+}
+
+/* ═══ SET-GROUP · settings/stat list rows · port từ design ════════════════ */
+.set-group {
+  margin-top: 12px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.set-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  transition: background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.set-row:last-child { border-bottom: none; }
+.set-row:active { background: rgba(var(--gold-rgb), 0.05); }
+.set-ic {
+  width: 32px; height: 32px; flex-shrink: 0;
+  background: var(--paper-3);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--gold);
+}
+.set-body { flex: 1; min-width: 0; }
+.set-name {
+  font-family: var(--serif-vn); font-size: 13px; font-weight: 600;
+  color: var(--text);
+}
+.set-sub {
+  font-family: var(--serif-vn); font-size: 10.5px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+.set-val {
+  font-family: var(--serif); font-style: italic; font-weight: 600;
+  font-size: 11px; color: var(--gold);
+  letter-spacing: 0.04em;
+}
+
+/* ═══ LEVEL-UP TOAST · port từ design ═════════════════════════════════════ */
+.lvlup {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 80px);
+  left: 50%;
+  transform: translate(-50%, -40px);
+  background: linear-gradient(180deg, var(--gold-2), var(--gold) 60%, var(--gold-3));
+  color: var(--ink);
+  padding: 10px 22px;
+  border-radius: 24px;
+  font-family: var(--serif); font-style: italic; font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  box-shadow:
+    0 8px 28px rgba(var(--gold-rgb), 0.5),
+    0 0 30px rgba(var(--gold-rgb), 0.3);
+  z-index: 9500;
+  pointer-events: none;
+  animation: lvlup 2.6s ease-out forwards;
+  white-space: nowrap;
+}
+@keyframes lvlup {
+  0% { transform: translate(-50%, -40px); opacity: 0; }
+  18% { transform: translate(-50%, 0); opacity: 1; }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -10px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lvlup { animation: none; transform: translate(-50%, 0); opacity: 1; }
+}
+
+/* ═══ SWITCH · iOS-style toggle · port từ design ══════════════════════════ */
+.switch {
+  width: 40px; height: 22px;
+  background: var(--ink);
+  border: 1px solid var(--line-2);
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.switch::after {
+  content: '';
+  position: absolute; top: 2px; left: 2px;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--muted);
+  transition: all 0.2s;
+}
+.switch.on {
+  background: rgba(var(--jade-rgb), 0.2);
+  border-color: var(--jade);
+}
+.switch.on::after {
+  left: 20px;
+  background: var(--jade);
+  box-shadow: 0 0 8px rgba(var(--jade-rgb), 0.5);
 }

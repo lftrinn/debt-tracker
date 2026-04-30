@@ -14,77 +14,55 @@
 
         <!-- Header -->
         <div class="popup-hdr">
-          <span class="popup-title">{{ editing ? $t('detail.edit') : reviewStep ? $t('detail.review.title') : $t('detail.view') }}</span>
+          <span class="popup-title">
+            <component v-if="!editing && !reviewStep && hdrIcon" :is="hdrIcon" :size="16" />
+            {{ hdrTitle }}
+          </span>
           <button class="popup-close" @click="$emit('close')"><Icon name="x" :size="18" /></button>
         </div>
 
-        <!-- VIEW MODE -->
+        <!-- VIEW MODE · Khai Chiến (upcoming) / Chi tiết (tx) -->
         <template v-if="!editing && !reviewStep">
-          <div class="popup-body">
-            <!-- Icon / urgency indicator -->
-            <div class="popup-hero">
-              <span v-if="item._variant === 'upcoming'" class="popup-badge" :class="item.paid ? 'ok' : item.urg">
-                <template v-if="item.paid"><Icon name="check" :size="12" /> {{ $t('detail.paid') }}</template>
-                <template v-else>{{ item.urg === 'urgent' ? $t('detail.urgent') : item.urg === 'soon' ? $t('detail.soon') : $t('detail.normal') }}</template>
-              </span>
-              <span v-else class="popup-badge" :class="item.type === 'inc' ? 'income' : 'expense'">
-                <Icon :name="resolveCat(item.cat).icon" :size="13" /> · {{ resolveCat(item.cat).label }} · {{ item.type === 'inc' ? $t('detail.income') : $t('detail.expense') }}
-              </span>
+          <!-- Hero · portrait + name + amt -->
+          <div class="popup-hero" :class="heroVariant">
+            <div class="portrait">
+              <component :is="heroSprite" :size="36" />
             </div>
-
-            <!-- Name -->
-            <div class="popup-name">{{ item._variant === 'upcoming' ? getLocalized(item, 'name') : getLocalized(item, 'desc', locale) }}</div>
-
-            <!-- Amount -->
-            <div class="popup-amt" :class="item._variant === 'tx' ? (item.type === 'inc' ? 'inc' : 'exp') : 'exp'"
-              :style="hide ? {} : { color: amountColor(item.amount || item.amt, item._variant === 'tx' ? (item.type === 'inc' ? 'income' : 'expense') : 'expense') }">
-              <template v-if="hide">•••••</template>
-              <template v-else>
-                <template v-if="item._variant === 'tx'">{{ item.type === 'inc' ? '+' : '-' }}{{ fCurrFull(item.amount || item.amt) }}</template>
-                <template v-else>{{ fCurrFull(item.amt || item.amount) }}</template>
-              </template>
-            </div>
-
-            <!-- Details rows -->
-            <div class="popup-details">
-              <div class="popup-row">
-                <span class="popup-label">{{ $t('detail.dateLabel') }}</span>
-                <span class="popup-val">{{ fDate(item._date || item.date) }}</span>
-              </div>
-              <div v-if="item._variant === 'tx' && item.time" class="popup-row">
-                <span class="popup-label">{{ $t('detail.timeLabel') }}</span>
-                <span class="popup-val">{{ item.time }}</span>
-              </div>
-              <div v-if="item.sub" class="popup-row">
-                <span class="popup-label">{{ $t('detail.typeLabel') }}</span>
-                <span class="popup-val">{{ item.sub }}</span>
-              </div>
-              <div v-if="item._variant === 'tx' && item.note" class="popup-row">
-                <span class="popup-label">{{ $t('detail.noteLabel') }}</span>
-                <span class="popup-val popup-val--note">{{ item.note }}</span>
-              </div>
-              <div v-if="item._variant === 'upcoming'" class="popup-row">
-                <span class="popup-label">{{ $t('detail.availCash') }}</span>
-                <span class="popup-val" :style="!hide && availCash < (item.amt || 0) ? { color: 'var(--accent2)' } : {}">{{ hide ? '•••••' : fCurrFull(availCash) }}</span>
-              </div>
-              <div v-if="item._variant === 'upcoming' && !item.paid && availCash < (item.amt || 0)" class="popup-row">
-                <span class="popup-label">{{ $t('detail.shortfall') }}</span>
-                <span class="popup-val" style="color:var(--accent2)">{{ hide ? '•••••' : fCurrFull((item.amt || 0) - availCash) }}</span>
-              </div>
+            <div class="nm">{{ heroName }}</div>
+            <div v-if="heroSubName" class="real">{{ heroSubName }}</div>
+            <div class="amt">
+              <span class="cu">{{ heroCurrencySym }}</span>
+              <template v-if="hide">●●●●●●</template>
+              <template v-else>{{ fN(heroAmt) }}</template>
             </div>
           </div>
 
-          <!-- Actions -->
-          <div class="popup-actions">
-            <button v-if="item._variant === 'upcoming'" class="popup-btn primary" :class="{ done: item.paid }" :disabled="!item.paid && availCash < (item.amt || 0)" @click="$emit('toggle-paid', item._key, item.amt, item.name)">
-              <template v-if="item.paid"><Icon name="undo-2" :size="14" /> {{ $t('detail.undoPay') }}</template>
-              <template v-else><Icon name="check" :size="14" /> {{ $t('detail.pay') }}</template>
-            </button>
-            <div style="display:flex;gap:8px">
-              <button v-if="canCopy" class="popup-btn secondary" style="flex:1" @click="handleCopy"><Icon name="copy" :size="14" /> {{ $t('detail.copy') }}</button>
-              <button class="popup-btn secondary" style="flex:1" @click="startEdit"><Icon name="pencil" :size="14" /> {{ $t('detail.editBtn') }}</button>
+          <!-- 4-stat grid -->
+          <div class="popup-stats">
+            <div v-for="s in heroStats" :key="s.label" class="popup-stat">
+              <div class="l">{{ s.label }}</div>
+              <div :class="['v', s.cls]">{{ s.value }}</div>
             </div>
-            <button v-if="canDelete" class="popup-btn danger" @click="$emit('delete', item)"><Icon name="trash-2" :size="14" /> {{ $t('detail.delete') }}</button>
+          </div>
+
+          <!-- Action buttons · attack/heal/flee -->
+          <div class="popup-actions">
+            <button
+              v-if="primaryAction"
+              class="popup-btn attack"
+              :disabled="primaryAction.disabled"
+              @click="onPrimary"
+            >{{ primaryAction.label }}</button>
+            <button
+              v-if="secondaryAction"
+              class="popup-btn heal"
+              @click="onSecondary"
+            >{{ secondaryAction.label }}</button>
+            <button
+              v-if="canDelete"
+              class="popup-btn flee"
+              @click="$emit('delete', item)"
+            >{{ $t('detail.delete') }}</button>
           </div>
         </template>
 
@@ -199,18 +177,31 @@
 import { ref, computed, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Icon from './Icon.vue'
+import {
+  IconSword,
+  IconScroll,
+  IconBill,
+  IconLotus,
+  IconIngot,
+  SPRITE,
+} from './quest-icons'
 import { useFormatters } from '../../composables/ui/useFormatters'
 import { useCategories } from '../../composables/data/useCategories'
 import { useCurrency } from '../../composables/api/useCurrency'
 import { useAmountColor } from '../../composables/ui/useAmountColor'
+import { useDisplayMode } from '../../composables/ui/useDisplayMode'
+import { categoryFor } from '../../composables/data/useTutienNames'
 import { getLocalized } from '../../composables/data/useI18nData'
 import { translateText, ALL_LANGS } from '../../composables/api/useTranslation'
 
-const { locale } = useI18n()
-const { fDate, tStr } = useFormatters()
+const { locale, t } = useI18n()
+const { fN, fDate, tStr } = useFormatters()
 const { resolveCat, expenseCategories, incomeCategories } = useCategories()
 const { fCurr, fCurrFull, displayCurrency, baseCurrency, convertBetween, ratesLoading } = useCurrency()
 const { amountColor } = useAmountColor()
+const { mode: displayMode } = useDisplayMode()
+const useTutien = computed(() => displayMode.value === 'tutien')
+void useTutien
 
 const props = defineProps({
   item: [Object, null],
@@ -324,6 +315,232 @@ const canCopy = computed(() => {
   if (props.item._isLastPeriod) return false
   return true
 })
+
+// ─── Phase 8 · Hero + stats computed (Khai Chiến / Chi tiết popup) ────────
+/** Header icon · Sword cho upcoming, Scroll cho tx. */
+const hdrIcon = computed(() => {
+  const i = props.item
+  if (!i) return null
+  return i._variant === 'upcoming' ? IconSword : IconScroll
+})
+
+/** Header title · "Khai Chiến" cho upcoming, "Chiến Ký" cho tx. */
+const hdrTitle = computed(() => {
+  if (editing.value) return t('detail.edit')
+  if (reviewStep.value) return t('detail.review.title')
+  if (!props.item) return ''
+  return props.item._variant === 'upcoming'
+    ? t('detail.titleUpcoming')
+    : t('detail.titleTx')
+})
+
+/** Hero variant class · 'inc' cho income tx, default crimson otherwise. */
+const heroVariant = computed(() => {
+  const i = props.item
+  if (!i) return ''
+  if (i._variant === 'tx' && i.type === 'inc') return 'inc'
+  return ''
+})
+
+/** Sprite component · từ category cho tx, từ _category cho upcoming. */
+const heroSprite = computed(() => {
+  const i = props.item
+  if (!i) return IconLotus
+  if (i._variant === 'tx') {
+    const cat = categoryFor(i.cat)
+    return SPRITE[cat.sp] || IconBill
+  }
+  // upcoming
+  const c = i._category
+  if (c === 'debt_minimum' || c === 'installment') return IconIngot
+  return IconBill
+})
+
+/** Hero name · localized name/desc. */
+const heroName = computed(() => {
+  const i = props.item
+  if (!i) return ''
+  return i._variant === 'upcoming'
+    ? getLocalized(i, 'name')
+    : getLocalized(i, 'desc', locale.value)
+})
+
+/** Sub name · note for tx, null for upcoming. */
+const heroSubName = computed(() => {
+  const i = props.item
+  if (!i) return null
+  if (i._variant === 'tx' && i.note) return i.note
+  return null
+})
+
+/** Currency symbol · 'đ' / '$' / '¥' theo tx.currency hoặc display. */
+const heroCurrencySym = computed(() => {
+  const i = props.item
+  const cur = i?._variant === 'tx'
+    ? (i.currency || baseCurrency.value)
+    : displayCurrency.value
+  if (cur === 'USD') return '$'
+  if (cur === 'JPY') return '¥'
+  return 'đ'
+})
+
+/** Hero amount raw (in tx currency or VND). */
+const heroAmt = computed(() => {
+  const i = props.item
+  if (!i) return 0
+  return i._variant === 'tx' ? (i.amount || 0) : (i.amt || i.amount || 0)
+})
+
+/** 4-stat grid · variant tx vs upcoming. */
+const heroStats = computed(() => {
+  const i = props.item
+  if (!i) return []
+  if (i._variant === 'upcoming') {
+    const days = i.overdueDays != null && i.overdueDays > 0
+      ? -i.overdueDays
+      : daysUntil(i._date || i.date)
+    return [
+      {
+        label: t('detail.statDamage'),
+        value: props.hide ? '●●●' : '−' + fmtShort(i.amt || 0),
+        cls: 'hp',
+      },
+      {
+        label: t('detail.statDue'),
+        value: i._date ? fmtDueShort(i._date) : '—',
+        cls: 'gd',
+      },
+      {
+        label: t('detail.statShortfall'),
+        value: props.hide
+          ? '●●●'
+          : (props.availCash >= (i.amt || 0)
+              ? t('detail.statSufficient')
+              : '−' + fmtShort((i.amt || 0) - props.availCash)),
+        cls: props.availCash >= (i.amt || 0) ? 'gn' : 'hp',
+      },
+      {
+        label: t('detail.statStatus'),
+        value: i.paid
+          ? t('detail.statDone')
+          : days < 0
+            ? t('detail.statOverdue', { d: Math.abs(days) })
+            : days === 0
+              ? t('detail.statToday')
+              : t('detail.statDays', { d: days }),
+        cls: i.paid ? 'gn' : (days <= 3 ? 'hp' : 'gd'),
+      },
+    ]
+  }
+  // tx variant
+  const cat = categoryFor(i.cat)
+  const catLabel = useTutien.value ? cat.display : (resolveCat(i.cat)?.label ?? cat.real)
+  return [
+    {
+      label: t('detail.dateLabel'),
+      value: fDate(i.date),
+      cls: 'gd',
+    },
+    {
+      label: t('detail.timeLabel'),
+      value: i.time || '—',
+      cls: '',
+    },
+    {
+      label: t('detail.categoryLabel'),
+      value: catLabel,
+      cls: 'gd',
+    },
+    {
+      label: t('detail.typeLabel'),
+      value: i.type === 'inc' ? t('detail.income') : t('detail.expense'),
+      cls: i.type === 'inc' ? 'gn' : 'hp',
+    },
+  ]
+})
+
+/** Format số gọn cho stat values · "1.2M" / "500K". */
+function fmtShort(n) {
+  const a = Math.abs(n)
+  if (a >= 1e9) return (a / 1e9).toFixed(1).replace(/\.0$/, '') + 'B'
+  if (a >= 1e6) return (a / 1e6).toFixed(1).replace(/\.0$/, '') + 'M'
+  if (a >= 1e3) return (a / 1e3).toFixed(0) + 'K'
+  return String(Math.round(a))
+}
+
+/** "2026-04-15" → "15.04" */
+function fmtDueShort(dateStr) {
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return dateStr
+  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`
+}
+
+function daysUntil(dateStr) {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return 0
+  d.setHours(0, 0, 0, 0)
+  return Math.round((d.getTime() - today.getTime()) / 86400000)
+}
+
+/** Primary action button · Pay/Undo cho upcoming, Edit cho tx. */
+const primaryAction = computed(() => {
+  const i = props.item
+  if (!i) return null
+  if (i._variant === 'upcoming') {
+    if (i.paid) {
+      return {
+        label: t('detail.undoPay'),
+        disabled: false,
+        kind: 'undo',
+      }
+    }
+    return {
+      label: t('detail.attackBtn'),
+      disabled: props.availCash < (i.amt || 0),
+      kind: 'pay',
+    }
+  }
+  return {
+    label: t('detail.editBtn'),
+    disabled: false,
+    kind: 'edit',
+  }
+})
+
+function onPrimary() {
+  const i = props.item
+  if (!i) return
+  if (i._variant === 'upcoming') {
+    emit('toggle-paid', i._key, i.amt, i.name)
+  } else {
+    startEdit()
+  }
+}
+
+/** Secondary action button · Edit cho upcoming, Copy cho tx. */
+const secondaryAction = computed(() => {
+  const i = props.item
+  if (!i) return null
+  if (i._variant === 'upcoming') {
+    return { label: t('detail.editBtn'), kind: 'edit' }
+  }
+  if (canCopy.value) {
+    return { label: t('detail.copy'), kind: 'copy' }
+  }
+  return null
+})
+
+function onSecondary() {
+  const i = props.item
+  if (!i) return
+  if (i._variant === 'upcoming') {
+    startEdit()
+  } else {
+    handleCopy()
+  }
+}
 
 watch(() => props.item, (v) => {
   editing.value = false

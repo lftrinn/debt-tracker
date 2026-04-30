@@ -1,49 +1,150 @@
 <template>
   <div>
-    <div class="settings__list">
-      <div class="settings__item" @click="open = 'lim'">
-        <span class="settings__item-ico"><Icon name="chart-no-axes-column" :size="16" /></span>
-        <span class="settings__item-label">{{ $t('settings.menu.limit') }}</span>
-        <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
+    <!-- ─── Section 1 · Cấu hình đạo hữu ────────────────────────── -->
+    <SectionHeader :icon="IconSettings" :title="$t('dao.config')" />
+    <div class="set-group">
+      <!-- Profile (display only) -->
+      <div class="set-row">
+        <div class="set-ic"><IconUser :size="15" /></div>
+        <div class="set-body">
+          <div class="set-name">{{ playerName }}</div>
+          <div class="set-sub">{{ playerRealm }} · LV {{ playerLvl }}</div>
+        </div>
+        <div class="set-val"><IconChevronRight :size="14" /></div>
       </div>
-      <!-- Tiền tệ hiển thị — ngay dưới Hạn mức chi hàng ngày -->
-      <div class="settings__item" @click="openCurrency">
-        <span class="settings__item-ico"><Icon name="dollar-sign" :size="16" /></span>
-        <span class="settings__item-label">{{ $t('settings.menu.currency') }}</span>
-        <span class="settings__cur-val">{{ displayCurrency }}</span>
-        <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
+      <!-- Daily limit -->
+      <div class="set-row" @click="open = 'lim'">
+        <div class="set-ic"><IconTarget :size="15" /></div>
+        <div class="set-body">
+          <div class="set-name">{{ $t('dao.dailyLimit') }}</div>
+          <div class="set-sub">{{ $t('dao.dailyLimitSub') }}</div>
+        </div>
+        <div class="set-val">{{ fmtLimitShort }}</div>
       </div>
-      <div class="settings__item" @click="open = 'hz'">
-        <span class="settings__item-ico"><Icon name="lock" :size="16" /></span>
-        <span class="settings__item-label">{{ $t('settings.menu.hideZones') }}</span>
-        <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
-      </div>
-      <div class="settings__item" @click="open = 'rules'">
-        <span class="settings__item-ico"><Icon name="list" :size="16" /></span>
-        <span class="settings__item-label">{{ $t('settings.menu.rules') }}</span>
-        <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
-      </div>
-      <div class="settings__item" @click="open = 'json'">
-        <span class="settings__item-ico"><Icon name="refresh-ccw" :size="16" /></span>
-        <span class="settings__item-label">{{ $t('settings.menu.json') }}</span>
-        <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
-      </div>
-      <div class="settings__item" @click="open = 'push'">
-        <span class="settings__item-ico"><Icon name="bell" :size="16" /></span>
-        <span class="settings__item-label">{{ $t('settings.menu.push') }}</span>
-        <span class="settings__push-badge" :class="'settings__push-badge--' + (pushStatus || 'unknown')">{{ $t('settings.push.status.' + (pushStatus || 'unknown')) }}</span>
-        <span class="settings__item-arrow"><Icon name="chevron-right" :size="14" color="var(--muted)" /></span>
-      </div>
-      <div class="settings__sep"></div>
-      <div class="settings__item settings__item--danger" @click="open = 'logout'">
-        <span class="settings__item-ico settings__item-ico--danger"><Icon name="log-out" :size="16" /></span>
-        <span class="settings__item-label settings__item-label--danger">{{ $t('settings.menu.logout') }}</span>
+      <!-- Currency -->
+      <div class="set-row" @click="openCurrency">
+        <div class="set-ic"><IconCoins :size="15" /></div>
+        <div class="set-body">
+          <div class="set-name">{{ $t('dao.currency') }}</div>
+          <div class="set-sub">{{ displayCurrency }}</div>
+        </div>
+        <div class="set-val"><IconChevronRight :size="14" /></div>
       </div>
     </div>
 
-    <!-- Sync info -->
-    <div style="text-align:center;padding:6px 0">
-      <span class="settings__sync-note">{{ syncMsg }} · {{ syncTime || '--:--' }}</span>
+    <!-- ─── Section 2 · Giao diện ───────────────────────────────── -->
+    <SectionHeader :title="$t('dao.interface')" />
+    <div class="set-group">
+      <!-- Theme toggle -->
+      <div class="set-row" @click="toggleTheme">
+        <div class="set-ic">
+          <component :is="theme === 'light' ? IconSun : IconMoon" :size="15" />
+        </div>
+        <div class="set-body">
+          <div class="set-name">{{ $t('dao.theme') }}</div>
+          <div class="set-sub">{{ theme === 'light' ? $t('dao.themeLight') : $t('dao.themeDark') }}</div>
+        </div>
+        <div :class="['switch', { on: theme === 'light' }]"></div>
+      </div>
+      <!-- Display mode toggle -->
+      <div class="set-row" @click="toggleMode">
+        <div class="set-ic"><IconScroll :size="15" /></div>
+        <div class="set-body">
+          <div class="set-name">{{ $t('dao.displayName') }}</div>
+          <div class="set-sub">
+            {{ displayMode === 'tutien' ? $t('dao.displayNameTutien') : $t('dao.displayNameReal') }}
+          </div>
+        </div>
+        <div :class="['switch', { on: displayMode === 'tutien' }]"></div>
+      </div>
+      <!-- Hide amounts toggle -->
+      <div class="set-row" @click="$emit('toggle-hide')">
+        <div class="set-ic">
+          <component :is="hideFlag ? IconEyeOff : IconEye" :size="15" />
+        </div>
+        <div class="set-body">
+          <div class="set-name">{{ $t('dao.hideAmounts') }}</div>
+          <div class="set-sub">{{ $t('dao.hideAmountsSub') }}</div>
+        </div>
+        <div :class="['switch', { on: hideFlag }]"></div>
+      </div>
+      <!-- Language picker -->
+      <div class="set-row" @click="open = 'lang'">
+        <div class="set-ic"><Icon name="globe" :size="15" /></div>
+        <div class="set-body">
+          <div class="set-name">{{ $t('dao.language') }}</div>
+          <div class="set-sub">{{ $t('settings.language.' + currentLocale) }}</div>
+        </div>
+        <div class="set-val"><IconChevronRight :size="14" /></div>
+      </div>
+    </div>
+
+    <!-- ─── Section 3 · Kết nối ─────────────────────────────────── -->
+    <SectionHeader :title="$t('dao.connect')" />
+    <div class="set-group">
+      <!-- Sync · tap = reload -->
+      <div class="set-row" @click="$emit('reload')">
+        <div class="set-ic"><IconCloud :size="15" /></div>
+        <div class="set-body">
+          <div class="set-name">{{ $t('dao.sync') }}</div>
+          <div class="set-sub">{{ syncMsg }} · {{ syncTime || '--:--' }}</div>
+        </div>
+        <div class="set-val"><Icon name="refresh-cw" :size="14" /></div>
+      </div>
+      <!-- Push notifications -->
+      <div class="set-row" @click="open = 'push'">
+        <div class="set-ic"><IconBell :size="15" /></div>
+        <div class="set-body">
+          <div class="set-name">{{ $t('dao.push') }}</div>
+          <div class="set-sub">{{ $t('settings.push.status.' + (pushStatus || 'unknown')) }}</div>
+        </div>
+        <div class="set-val"><IconChevronRight :size="14" /></div>
+      </div>
+      <!-- JSON import/export -->
+      <div class="set-row" @click="open = 'json'">
+        <div class="set-ic"><IconExport :size="15" /></div>
+        <div class="set-body">
+          <div class="set-name">{{ $t('dao.import') }}</div>
+          <div class="set-sub">{{ $t('dao.importSub') }}</div>
+        </div>
+        <div class="set-val"><IconChevronRight :size="14" /></div>
+      </div>
+      <!-- Hide zones (advanced) -->
+      <div class="set-row" @click="open = 'hz'">
+        <div class="set-ic"><Icon name="lock" :size="15" /></div>
+        <div class="set-body">
+          <div class="set-name">{{ $t('dao.hideZones') }}</div>
+          <div class="set-sub">{{ $t('dao.hideZonesSub') }}</div>
+        </div>
+        <div class="set-val"><IconChevronRight :size="14" /></div>
+      </div>
+      <!-- Rules -->
+      <div class="set-row" @click="open = 'rules'">
+        <div class="set-ic"><Icon name="list" :size="15" /></div>
+        <div class="set-body">
+          <div class="set-name">{{ $t('dao.rules') }}</div>
+          <div class="set-sub">{{ rules.length }} {{ $t('dao.rulesUnit') }}</div>
+        </div>
+        <div class="set-val"><IconChevronRight :size="14" /></div>
+      </div>
+    </div>
+
+    <!-- ─── Logout (danger) ─────────────────────────────────────── -->
+    <div class="set-group settings__danger">
+      <div class="set-row" @click="open = 'logout'">
+        <div class="set-ic settings__danger-ic">
+          <Icon name="log-out" :size="15" />
+        </div>
+        <div class="set-body">
+          <div class="set-name settings__danger-name">{{ $t('settings.menu.logout') }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── Footer · version + tagline ──────────────────────────── -->
+    <div class="settings__foot">
+      {{ $t('dao.footer') }}<br />
+      <span class="settings__foot-tag">{{ $t('dao.tagline') }}</span>
     </div>
 
     <!-- POPUP -->
@@ -214,6 +315,24 @@
             </div>
           </template>
 
+          <!-- LANGUAGE PICKER -->
+          <template v-if="open === 'lang'">
+            <div class="popup-body">
+              <div class="settings__lang-list">
+                <button
+                  v-for="loc in LOCALES"
+                  :key="loc"
+                  class="settings__lang-item"
+                  :class="{ 'settings__lang-item--active': currentLocale === loc }"
+                  @click="selectLocale(loc)"
+                >
+                  <span class="settings__lang-name">{{ $t('settings.language.' + loc) }}</span>
+                  <Icon v-if="currentLocale === loc" name="check" :size="14" class="settings__lang-check" />
+                </button>
+              </div>
+            </div>
+          </template>
+
           <!-- PUSH NOTIFICATIONS -->
           <template v-if="open === 'push'">
             <div class="popup-body">
@@ -268,12 +387,50 @@
 import { ref, reactive, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Icon from '../ui/Icon.vue'
+import SectionHeader from '../cards/SectionHeader.vue'
+import {
+  IconSettings,
+  IconUser,
+  IconTarget,
+  IconCoins,
+  IconSun,
+  IconMoon,
+  IconScroll,
+  IconEye,
+  IconEyeOff,
+  IconCloud,
+  IconBell,
+  IconExport,
+  IconChevronRight,
+} from '../ui/quest-icons'
 import { useFormatters } from '../../composables/ui/useFormatters'
 import { useCurrency, CURRENCIES } from '../../composables/api/useCurrency'
+import { useTheme } from '../../composables/ui/useTheme'
+import { useDisplayMode } from '../../composables/ui/useDisplayMode'
+import { LOCALES, setLocale } from '../../i18n'
 
 const { fN } = useFormatters()
-const { t } = useI18n()
+const { t, locale: i18nLocale } = useI18n()
 const { displayCurrency, baseCurrency, jpyNotation, ratesLoading, ratesError, fetchRates, setDisplayCurrency, setBaseCurrency, setJpyNotation, fCurrFull, convertBetween } = useCurrency()
+const { theme, toggleTheme } = useTheme()
+const { mode: displayMode, toggleMode } = useDisplayMode()
+
+/** Locale hiện tại từ vue-i18n */
+const currentLocale = computed(() => i18nLocale.value)
+
+/** Set locale + đóng popup */
+function selectLocale(loc) {
+  setLocale(loc)
+  closePopup()
+}
+
+/** Format dayLimit ngắn cho set-row value (vd. "70K") */
+const fmtLimitShort = computed(() => {
+  const v = props.dayLimit || 0
+  if (v >= 1e6) return (v / 1e6).toFixed(1).replace(/\.0$/, '') + 'M'
+  if (v >= 1e3) return (v / 1e3).toFixed(0) + 'K'
+  return fN(v)
+})
 
 /** Mã tiền tệ hiển thị trong input suffix (VND / USD / JPY) */
 const currSymbol = computed(() => displayCurrency.value)
@@ -318,7 +475,7 @@ const props = defineProps({
   todaySpent: Number,
   limPct: Number,
   limSt: String,
-  rules: Array,
+  rules: { type: Array, default: () => [] },
   syncMsg: String,
   syncTime: String,
   syncing: Boolean,
@@ -326,6 +483,11 @@ const props = defineProps({
   hide: Object,
   hideZones: Object,
   pushStatus: String,
+  // Phase 7: tu-tien profile + global hide flag
+  playerName: { type: String, default: '' },
+  playerRealm: { type: String, default: '' },
+  playerLvl: { type: Number, default: 1 },
+  hideFlag: { type: Boolean, default: false },
 })
 
 const emit = defineEmits([
@@ -335,6 +497,9 @@ const emit = defineEmits([
   'enable-push',
   'save-push-worker',
   'logout',
+  // Phase 7
+  'reload',
+  'toggle-hide',
 ])
 
 const titles = computed(() => ({
@@ -346,6 +511,7 @@ const titles = computed(() => ({
   progressMode: t('settings.progressMode.title'),
   push: t('settings.menu.push'),
   logout: t('settings.menu.logout'),
+  lang: t('dao.language'),
 }))
 
 const zoneTree = computed(() => [
@@ -656,4 +822,22 @@ defineExpose({})
 
 /* Body có thể scroll — dùng cho danh sách dài (hz, rules) */
 .settings__scrollbody { max-height: calc(85vh - 160px); overflow-y: auto; }
+
+/* Phase 7 · danger row (logout) + footer */
+.settings__danger { margin-top: 18px; }
+.settings__danger :deep(.set-ic) {
+  color: var(--crimson);
+  border-color: rgba(var(--crimson-rgb), 0.4);
+}
+.settings__danger :deep(.set-name) { color: var(--crimson); }
+.settings__danger :deep(.set-row:active) { background: rgba(var(--crimson-rgb), 0.06); }
+
+.settings__foot {
+  text-align: center;
+  margin-top: 24px;
+  font-family: var(--serif); font-style: italic;
+  font-size: 12px; color: var(--muted);
+  letter-spacing: 0.04em;
+}
+.settings__foot-tag { color: var(--violet); }
 </style>

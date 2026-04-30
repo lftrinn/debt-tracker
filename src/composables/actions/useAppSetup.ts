@@ -38,14 +38,29 @@ export function useAppSetup(
   }
 
   /**
-   * Tải data từ JSONBin. Nếu thất bại: giữ nguyên data cũ, chuyển sang trạng thái error/setup.
+   * Tải data từ JSONBin.
+   *
+   * Phase 11 reset: nếu pull về legacy v1 schema, giữ nguyên d.value (= seed
+   * trong App.vue, là JSON v2 user gửi) + push ngay để JSONBin được upgrade
+   * sang v2. Logs cũ trên JSONBin bị reset (per user request).
+   *
+   * Nếu pull thất bại lý do khác: giữ data cũ, chuyển error/setup.
    */
   async function pullData(): Promise<void> {
     try {
       d.value = await api.pull()
       appState.value = 'ready'
       onAfterPull()
-    } catch {
+    } catch (e) {
+      if ((e as Error).message === 'LEGACY_SCHEMA_RESET') {
+        // Schema v1 detected → discard JSONBin data, keep seed (= JSON v2)
+        // Push ngay để JSONBin nhận data v2 + reset logs cũ
+        appState.value = 'ready'
+        toast('toast.schemaReset', 'ok')
+        await pushData()
+        onAfterPull()
+        return
+      }
       api.syncSt.value = 'error'
       api.syncMsg.value = 'sync.error'
       api.syncTime.value = ''

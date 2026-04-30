@@ -1,405 +1,602 @@
 <template>
-  <div class="card">
-    <!-- Chart type tabs -->
-    <div class="charts__tabs">
+  <div class="tu-vi">
+    <!-- Chart tabs: Lưu Lượng / Loại / Ma Chướng -->
+    <div class="cht-tabs">
       <button
-        v-for="t in tabs"
-        :key="t.key"
-        :class="['charts__tab', { 'charts__tab--active': activeTab === t.key }]"
-        @click="activeTab = t.key"
+        v-for="ct in chartTabs"
+        :key="ct.id"
+        :class="['cht-tab', { active: activeTab === ct.id }]"
+        @click="activeTab = ct.id"
       >
-        <Icon :name="t.icon" :size="12" />
-        {{ t.label }}
+        <component :is="ct.icon" :size="13" />
+        {{ ct.label }}
       </button>
     </div>
 
-    <!-- Thu/Chi -->
-    <div v-show="activeTab === 'spend'">
-      <div class="charts__ranges">
-        <button
-          v-for="r in ranges"
-          :key="r.key"
-          :class="['charts__range', { 'charts__range--active': spendRange === r.key }]"
-          @click="spendRange = r.key"
-        >{{ r.label }}</button>
-      </div>
-      <div class="charts__canvas"><canvas ref="chartRef"></canvas></div>
-    </div>
-
-    <!-- Lộ trình giảm nợ -->
-    <div v-show="activeTab === 'debt'">
-      <div class="charts__canvas"><canvas ref="debtChartRef"></canvas></div>
-    </div>
-
-    <!-- Cơ cấu nợ -->
-    <div v-show="activeTab === 'pie'">
-      <div class="charts__pie"><canvas ref="pieChartRef"></canvas></div>
-      <div class="charts__legend">
-        <div class="charts__legend-item" v-for="s in debtBreakdown" :key="s.name">
-          <div class="charts__legend-dot" :style="{ background: s.color }"></div>
-          <span class="charts__legend-name">{{ s.name }}</span>
-          <span class="charts__legend-val">
-            <template v-if="hide.pie">{{ pct(s.val) }}%</template>
-            <template v-else>{{ fCurr(s.val) }}</template>
-          </span>
+    <!-- ─── Card 1 · Lưu Lượng (bar chart) ─────────────────────────── -->
+    <div v-show="activeTab === 'flow'" class="cht-card">
+      <div class="cht-h">
+        <div class="ti">
+          <IconChart :size="14" />
+          {{ $t('tuVi.flowTitle', { n: rangeDayCount }) }}
         </div>
+        <div class="cht-range">
+          <button
+            v-for="r in ranges"
+            :key="r"
+            :class="{ active: rangeKey === r }"
+            @click="rangeKey = r"
+          >{{ r }}</button>
+        </div>
+      </div>
+      <div class="bars">
+        <div
+          v-for="(b, i) in barBuckets"
+          :key="i"
+          class="bar-col"
+        >
+          <div class="bar-stack">
+            <div
+              v-if="b.inc > 0"
+              class="bar-bg inc"
+              :style="{ height: barHeight(b.inc, barMax) + '%' }"
+            ></div>
+            <div
+              v-if="b.exp > 0"
+              class="bar-bg exp"
+              :style="{ height: barHeight(b.exp, barMax) + '%' }"
+            ></div>
+          </div>
+          <div class="bar-day">{{ b.label }}</div>
+        </div>
+        <div v-if="!barBuckets.length" class="cht-empty">
+          {{ $t('tuVi.empty') }}
+        </div>
+      </div>
+      <div class="cht-meta">
+        <span>
+          {{ $t('tuVi.avgPerDay', { amt: hide.spend ? '●●●' : fCurr(avgExp) }) }}
+        </span>
+        <span class="cht-meta__peak" v-if="peakLabel">
+          {{ $t('tuVi.peak', { label: peakLabel }) }}
+        </span>
+      </div>
+    </div>
+
+    <!-- ─── Card 2 · Ma Chướng (debt projection line chart) ──────── -->
+    <div v-show="activeTab === 'debt'" class="cht-card">
+      <div class="cht-h">
+        <div class="ti">
+          <IconSword :size="14" />
+          {{ $t('tuVi.debtTitle') }}
+        </div>
+      </div>
+      <svg
+        v-if="debtPath"
+        :viewBox="`0 0 ${SVG_W} ${SVG_H}`"
+        class="debt-svg"
+        preserveAspectRatio="none"
+      >
+        <defs>
+          <linearGradient id="hpg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#c54a5a" stop-opacity="0.5" />
+            <stop offset="100%" stop-color="#c54a5a" stop-opacity="0" />
+          </linearGradient>
+        </defs>
+        <!-- Filled area -->
+        <path :d="debtArea" fill="url(#hpg)" />
+        <!-- Stroke line -->
+        <path
+          :d="debtPath"
+          stroke="#c54a5a"
+          stroke-width="2.5"
+          fill="none"
+        />
+        <!-- Dots -->
+        <circle
+          v-for="(p, i) in debtPoints"
+          :key="i"
+          :cx="p.x"
+          :cy="p.y"
+          r="3"
+          fill="#c4a46c"
+          stroke="#06050d"
+          stroke-width="1.2"
+        />
+        <!-- Axis labels (every other point) -->
+        <text
+          v-for="(p, i) in debtPoints"
+          :key="'l' + i"
+          v-show="i % Math.max(1, Math.ceil(debtPoints.length / 5)) === 0"
+          :x="p.x"
+          y="98"
+          fill="#897f6a"
+          font-family="JetBrains Mono"
+          font-size="7"
+        >{{ p.label }}</text>
+      </svg>
+      <div v-else class="cht-empty">{{ $t('tuVi.empty') }}</div>
+      <div class="cht-meta">
+        <span>
+          {{ $t('tuVi.currentHp', { amt: hide.debtLine ? '●●●' : fmtShort(currentDebt) }) }}
+        </span>
+        <span class="cht-meta__goal">{{ $t('tuVi.targetGoal', { date: goalLabel }) }}</span>
+      </div>
+    </div>
+
+    <!-- ─── Card 3 · Loại (category allocation bar list) ─────────── -->
+    <div v-show="activeTab === 'cat'" class="cht-card">
+      <div class="cht-h">
+        <div class="ti">
+          <IconTarget :size="14" />
+          {{ $t('tuVi.catTitle') }}
+        </div>
+      </div>
+      <div v-if="catBars.length === 0" class="cht-empty">
+        {{ $t('tuVi.empty') }}
+      </div>
+      <div
+        v-for="(c, i) in catBars"
+        :key="i"
+        class="cat-bar"
+      >
+        <div class="cat-bar__lb">{{ c.label }}</div>
+        <div class="cat-bar__track">
+          <div
+            class="cat-bar__fill"
+            :style="{ width: c.pct + '%', background: c.color }"
+          ></div>
+        </div>
+        <div class="cat-bar__pct">{{ c.pct }}%</div>
       </div>
     </div>
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+<script setup lang="ts">
+import { ref, computed, type FunctionalComponent } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Chart, registerables } from 'chart.js'
-import Icon from '../ui/Icon.vue'
-import { useColors } from '../../composables/ui/useColors'
-import { useCurrency } from '../../composables/api/useCurrency'
+import {
+  IconChart,
+  IconSword,
+  IconTarget,
+  type IconProps,
+} from '@/components/ui/quest-icons'
+import { useCurrency } from '@/composables/api/useCurrency'
+import { useDisplayMode } from '@/composables/ui/useDisplayMode'
+import { categoryFor } from '@/composables/data/useTutienNames'
+import { useCategories } from '@/composables/data/useCategories'
+import type { Expense, Income } from '@/types/data'
 
-Chart.register(...registerables)
+const { t } = useI18n()
+const { fCurr } = useCurrency()
+const { mode: displayMode } = useDisplayMode()
+const { resolveCat } = useCategories()
 
-const { fCurr, fCurrFull } = useCurrency()
-const { colors, rgba, chartGrid, chartTick, chartFont } = useColors()
-const { t, locale } = useI18n()
+interface ProjectedPoint {
+  month: string
+  total_debt: number
+}
 
-const props = defineProps({
-  expenses: Array,
-  incomes: Array,
-  debtBreakdown: Array,
-  projectedDebt: Array,
-  hide: Object,
+interface DebtBreakdown {
+  name: string
+  val: number
+  color: string
+}
+
+const props = defineProps<{
+  expenses: Expense[]
+  incomes: Income[]
+  debtBreakdown: DebtBreakdown[]
+  projectedDebt: ProjectedPoint[]
+  hide: { spend: boolean; debtLine: boolean; pie: boolean }
+}>()
+
+// ─── Tabs ─────────────────────────────────────────────────────────────────
+type ChartTab = 'flow' | 'cat' | 'debt'
+const activeTab = ref<ChartTab>('flow')
+
+interface ChartTabDef {
+  id: ChartTab
+  icon: FunctionalComponent<IconProps>
+  label: string
+}
+
+const chartTabs = computed<ChartTabDef[]>(() => [
+  { id: 'flow', icon: IconChart, label: t('tuVi.tabFlow') },
+  { id: 'cat', icon: IconTarget, label: t('tuVi.tabCat') },
+  { id: 'debt', icon: IconSword, label: t('tuVi.tabDebt') },
+])
+
+// ─── Range selector ──────────────────────────────────────────────────────
+const ranges = ['7d', '30d', '90d'] as const
+type RangeKey = (typeof ranges)[number]
+const rangeKey = ref<RangeKey>('7d')
+
+const rangeDayCount = computed(() => {
+  if (rangeKey.value === '7d') return 7
+  if (rangeKey.value === '30d') return 30
+  return 90
 })
 
-const tabs = computed(() => [
-  { key: 'spend', label: t('charts.tabs.spend'), icon: 'bar-chart-2' },
-  { key: 'debt', label: t('charts.tabs.debt'), icon: 'trending-down' },
-  { key: 'pie', label: t('charts.tabs.pie'), icon: 'pie-chart' },
-])
-
-const activeTab = ref('spend')
-const spendRange = ref('week')
-
-const ranges = computed(() => [
-  { key: 'week', label: t('charts.ranges.week') },
-  { key: 'month', label: t('charts.ranges.month') },
-  { key: 'year', label: t('charts.ranges.year') },
-])
-
-const chartRef = ref(null)
-const debtChartRef = ref(null)
-const pieChartRef = ref(null)
-let chartInst = null
-let debtChartInst = null
-let pieChartInst = null
-
-const totalDebtVal = computed(() => (props.debtBreakdown || []).reduce((s, b) => s + b.val, 0))
-
-function pct(val) {
-  const t = totalDebtVal.value
-  return t > 0 ? Math.round(val / t * 100) : 0
+// ─── Bar buckets (exp + inc by period) ───────────────────────────────────
+interface Bucket {
+  label: string
+  exp: number
+  inc: number
 }
 
-/** Format giá trị trục Y theo display currency (tự convert từ VND) */
-function fmtTick(v) {
-  return fCurr(v)
+function dateStr(d: Date): string {
+  return (
+    d.getFullYear() +
+    '-' + String(d.getMonth() + 1).padStart(2, '0') +
+    '-' + String(d.getDate()).padStart(2, '0')
+  )
 }
 
-function getSpendBuckets() {
-  const range = spendRange.value
-  if (range === 'week') {
-    // 7 ngày gần đây
-    const keys = Array.from({ length: 7 }, (_, i) => {
-      const x = new Date(); x.setDate(x.getDate() - (6 - i))
-      return x.toISOString().slice(0, 10)
-    })
-    const labels = keys.map((x) =>
-      new Date(x).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
-    )
-    return { keys, labels, matchExp: (e, k) => e.date === k, matchInc: (e, k) => e.date === k }
-  }
-  if (range === 'month') {
-    // 30 ngày gần đây, nhóm theo tuần (mỗi tuần = 1 cột)
-    const now = new Date()
-    const keys = [] // array of { start, end, label }
+function dayOfWeekLabel(d: Date): string {
+  // Monday=2, Sunday=CN
+  const dow = d.getDay() // 0=Sun, 1=Mon, ..., 6=Sat
+  if (dow === 0) return 'CN'
+  return 'T' + (dow + 1)
+}
+
+const barBuckets = computed<Bucket[]>(() => {
+  const buckets: Bucket[] = []
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  if (rangeKey.value === '7d') {
+    // 7 daily buckets
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today)
+      d.setDate(d.getDate() - i)
+      const k = dateStr(d)
+      const exp = props.expenses
+        .filter((e) => e.date === k)
+        .reduce((s, e) => s + e.amount, 0)
+      const inc = props.incomes
+        .filter((e) => e.date === k)
+        .reduce((s, e) => s + e.amount, 0)
+      buckets.push({ label: dayOfWeekLabel(d), exp, inc })
+    }
+  } else if (rangeKey.value === '30d') {
+    // 4 weekly buckets
     for (let w = 3; w >= 0; w--) {
-      const end = new Date(now)
+      const end = new Date(today)
       end.setDate(end.getDate() - w * 7)
       const start = new Date(end)
       start.setDate(start.getDate() - 6)
-      keys.push({
-        s: start.toISOString().slice(0, 10),
-        e: end.toISOString().slice(0, 10),
-      })
+      const ks = dateStr(start)
+      const ke = dateStr(end)
+      const exp = props.expenses
+        .filter((e) => e.date >= ks && e.date <= ke)
+        .reduce((s, e) => s + e.amount, 0)
+      const inc = props.incomes
+        .filter((e) => e.date >= ks && e.date <= ke)
+        .reduce((s, e) => s + e.amount, 0)
+      const startDD = String(start.getDate()).padStart(2, '0')
+      const startMM = String(start.getMonth() + 1).padStart(2, '0')
+      buckets.push({ label: `${startDD}.${startMM}`, exp, inc })
     }
-    const labels = keys.map((k) => {
-      const s = new Date(k.s).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
-      const e = new Date(k.e).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' })
-      return s + '–' + e
-    })
-    return {
-      keys,
-      labels,
-      matchExp: (e, k) => e.date >= k.s && e.date <= k.e,
-      matchInc: (e, k) => e.date >= k.s && e.date <= k.e,
+  } else {
+    // 3 monthly buckets
+    for (let m = 2; m >= 0; m--) {
+      const dt = new Date(today.getFullYear(), today.getMonth() - m, 1)
+      const ym = dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0')
+      const exp = props.expenses
+        .filter((e) => e.date && e.date.startsWith(ym))
+        .reduce((s, e) => s + e.amount, 0)
+      const inc = props.incomes
+        .filter((e) => e.date && e.date.startsWith(ym))
+        .reduce((s, e) => s + e.amount, 0)
+      buckets.push({ label: 'T' + (dt.getMonth() + 1), exp, inc })
     }
   }
-  // year: 12 tháng gần đây, nhóm theo tháng
-  const now = new Date()
-  const keys = []
-  for (let i = 11; i >= 0; i--) {
-    const dt = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    keys.push(dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0'))
-  }
-  const labels = keys.map((k) => {
-    const [y, m] = k.split('-')
-    return 'T' + parseInt(m) + '/' + y.slice(2)
-  })
-  return {
-    keys,
-    labels,
-    matchExp: (e, k) => e.date && e.date.slice(0, 7) === k,
-    matchInc: (e, k) => e.date && e.date.slice(0, 7) === k,
-  }
-}
-
-function buildSpendChart() {
-  if (!chartRef.value) return
-  const h = props.hide?.spend
-  const { keys, labels, matchExp, matchInc } = getSpendBuckets()
-
-  const expRaw = keys.map((k) =>
-    (props.expenses || []).filter((e) => matchExp(e, k)).reduce((s, e) => s + e.amount, 0)
-  )
-  const incRaw = keys.map((k) =>
-    (props.incomes || []).filter((e) => matchInc(e, k)).reduce((s, e) => s + e.amount, 0)
-  )
-
-  const maxVal = Math.max(...expRaw, ...incRaw, 1)
-  const expData = h ? expRaw.map((v) => Math.round(v / maxVal * 100)) : expRaw
-  const incData = h ? incRaw.map((v) => Math.round(v / maxVal * 100)) : incRaw
-
-  const yTickCb = h
-    ? (v) => v + '%'
-    : (v) => fmtTick(v)
-
-  if (chartInst) chartInst.destroy()
-  chartInst = new Chart(chartRef.value, {
-    type: 'bar',
-    data: {
-      labels,
-      datasets: [
-        {
-          label: t('charts.datasets.expense'),
-          data: expData,
-          backgroundColor: rgba('accent2', .65),
-          borderColor: rgba('accent2', .9),
-          borderWidth: 1,
-          borderRadius: 4,
-        },
-        {
-          label: t('charts.datasets.income'),
-          data: incData,
-          backgroundColor: rgba('accent3', .55),
-          borderColor: rgba('accent3', .9),
-          borderWidth: 1,
-          borderRadius: 4,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: true,
-          position: 'top',
-          labels: {
-            color: chartTick,
-            font: chartFont,
-            boxWidth: 10,
-            padding: 10,
-          },
-        },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => h
-              ? ctx.dataset.label + ': ' + ctx.parsed.y + '%'
-              : ctx.dataset.label + ': ' + fCurrFull(ctx.parsed.y),
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid: { color: chartGrid },
-          ticks: {
-            color: chartTick,
-            font: { ...chartFont, size: spendRange.value === 'month' ? 8 : chartFont.size },
-            maxRotation: spendRange.value === 'year' ? 45 : 0,
-          },
-        },
-        y: {
-          grid: { color: chartGrid },
-          ticks: {
-            color: chartTick,
-            font: chartFont,
-            callback: yTickCb,
-          },
-          ...(h ? { max: 100, min: 0 } : {}),
-        },
-      },
-    },
-  })
-}
-
-function buildDebtChart() {
-  if (!debtChartRef.value) return
-  const h = props.hide?.debtLine
-  const pts = props.projectedDebt || []
-  if (!pts.length) return
-  const labels = pts.map((p) => p.month.slice(5) + '/' + p.month.slice(2, 4))
-  const rawData = pts.map((p) => p.total_debt)
-
-  const baseVal = Math.max(...rawData, 1)
-  const data = h ? rawData.map((v) => Math.round(v / baseVal * 100)) : rawData
-
-  if (debtChartInst) debtChartInst.destroy()
-  debtChartInst = new Chart(debtChartRef.value, {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        {
-          data,
-          borderColor: colors.accent2,
-          backgroundColor: rgba('accent2', .1),
-          borderWidth: 2,
-          pointBackgroundColor: colors.accent2,
-          pointRadius: 3,
-          fill: true,
-          tension: 0.3,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => h
-              ? ctx.parsed.y + '%'
-              : fCurrFull(ctx.parsed.y),
-          },
-        },
-      },
-      scales: {
-        x: {
-          grid: { color: chartGrid },
-          ticks: { color: chartTick, font: chartFont },
-        },
-        y: {
-          grid: { color: chartGrid },
-          ticks: {
-            color: chartTick,
-            font: chartFont,
-            callback: h ? (v) => v + '%' : (v) => fmtTick(v),
-          },
-          ...(h ? { max: 100, min: 0 } : {}),
-        },
-      },
-    },
-  })
-}
-
-function buildPieChart() {
-  if (!pieChartRef.value) return
-  const h = props.hide?.pie
-  const bd = props.debtBreakdown || []
-  if (!bd.length) return
-  if (pieChartInst) pieChartInst.destroy()
-  pieChartInst = new Chart(pieChartRef.value, {
-    type: 'doughnut',
-    data: {
-      labels: bd.map((b) => b.name),
-      datasets: [
-        {
-          data: bd.map((b) => b.val),
-          backgroundColor: bd.map((b) => b.color),
-          borderWidth: 0,
-          hoverOffset: 4,
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => {
-              const total = (props.debtBreakdown || []).reduce((s, b) => s + b.val, 0)
-              const p = total > 0 ? Math.round(ctx.parsed / total * 100) : 0
-              return h
-                ? ctx.label + ': ' + p + '%'
-                : ctx.label + ': ' + fCurrFull(ctx.parsed) + ' (' + p + '%)'
-            },
-          },
-        },
-      },
-      cutout: '62%',
-    },
-  })
-}
-
-function buildAll() {
-  buildSpendChart()
-  buildDebtChart()
-  buildPieChart()
-}
-
-// Build current tab chart when tab changes
-watch(activeTab, (tab) => {
-  setTimeout(() => {
-    if (tab === 'spend') buildSpendChart()
-    else if (tab === 'debt') buildDebtChart()
-    else if (tab === 'pie') buildPieChart()
-  }, 50)
+  return buckets
 })
 
-// Rebuild spend chart when range changes
-watch(spendRange, () => {
-  if (activeTab.value === 'spend') {
-    setTimeout(buildSpendChart, 50)
-  }
-})
-
-onMounted(buildAll)
-
-watch(
-  () => [props.expenses, props.incomes, props.debtBreakdown, props.projectedDebt, props.hide],
-  buildAll,
-  { deep: true }
+const barMax = computed(() =>
+  Math.max(1, ...barBuckets.value.flatMap((b) => [b.exp, b.inc])),
 )
 
-watch(locale, () => setTimeout(buildAll, 50))
+function barHeight(value: number, max: number): number {
+  return Math.round((value / max) * 100)
+}
 
-defineExpose({ buildAll })
+const avgExp = computed(() => {
+  const totalExp = barBuckets.value.reduce((s, b) => s + b.exp, 0)
+  const days = rangeDayCount.value
+  return days > 0 ? Math.round(totalExp / days) : 0
+})
+
+const peakLabel = computed(() => {
+  if (!barBuckets.value.length) return ''
+  let peak = barBuckets.value[0]
+  for (const b of barBuckets.value) {
+    if (b.exp > peak.exp) peak = b
+  }
+  return peak.exp > 0 ? peak.label : ''
+})
+
+// ─── SVG line chart for projected debt ───────────────────────────────────
+const SVG_W = 280
+const SVG_H = 100
+
+interface DebtPoint {
+  x: number
+  y: number
+  label: string
+  val: number
+}
+
+/**
+ * Map projected debt sang điểm SVG.
+ * y cao (gần đáy) = nợ ÍT. Map maxVal → y=10 (đỉnh), minVal → y=90 (đáy).
+ */
+const debtPoints = computed<DebtPoint[]>(() => {
+  const pts = props.projectedDebt || []
+  if (pts.length === 0) return []
+  const vals = pts.map((p) => p.total_debt)
+  const maxVal = Math.max(...vals, 1)
+  const minVal = Math.min(...vals, 0)
+  const range = maxVal - minVal || 1
+  const stride = pts.length === 1 ? 0 : SVG_W / (pts.length - 1)
+  return pts.map((p, i) => ({
+    x: i * stride,
+    y: 10 + ((maxVal - p.total_debt) / range) * 80,
+    label: p.month.slice(5) + '.' + p.month.slice(2, 4),
+    val: p.total_debt,
+  }))
+})
+
+const debtPath = computed(() => {
+  const pts = debtPoints.value
+  if (pts.length === 0) return ''
+  return pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y.toFixed(1)}`).join(' ')
+})
+
+const debtArea = computed(() => {
+  const pts = debtPoints.value
+  if (pts.length === 0) return ''
+  const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x},${p.y.toFixed(1)}`).join(' ')
+  return `${line} L${pts[pts.length - 1].x},100 L${pts[0].x},100 Z`
+})
+
+const currentDebt = computed(() => {
+  const pts = props.projectedDebt || []
+  return pts.length > 0 ? pts[0].total_debt : 0
+})
+
+const goalLabel = computed(() => {
+  const pts = props.projectedDebt || []
+  if (pts.length === 0) return '—'
+  const target = pts.find((p) => p.total_debt < pts[0].total_debt * 0.05)
+  if (target) return target.month.slice(5) + '/' + target.month.slice(2, 4)
+  const last = pts[pts.length - 1]
+  return last.month.slice(5) + '/' + last.month.slice(2, 4)
+})
+
+// ─── Category allocation (last 7 days expenses) ──────────────────────────
+interface CatBar {
+  key: string
+  label: string
+  amount: number
+  pct: number
+  color: string
+}
+
+/** Color cycle for cat bars · 5 distinct semantic colors. */
+const CAT_COLORS: Record<string, string> = {
+  food: 'var(--crimson)',
+  shop: 'var(--gold)',
+  fuel: 'var(--violet)',
+  bill: 'var(--azure)',
+  ent: 'var(--vermillion)',
+  med: 'var(--jade)',
+  pay: 'var(--gold-2)',
+  cash: 'var(--muted)',
+}
+
+const catBars = computed<CatBar[]>(() => {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const start = new Date(today)
+  start.setDate(start.getDate() - 6)
+  const startStr = dateStr(start)
+
+  // Aggregate by tu-tien sprite key (food/shop/fuel/...)
+  const totals = new Map<string, number>()
+  for (const e of props.expenses) {
+    if (e.date < startStr) continue
+    const cat = categoryFor(e.cat)
+    totals.set(cat.id, (totals.get(cat.id) ?? 0) + e.amount)
+  }
+  const grand = [...totals.values()].reduce((s, v) => s + v, 0)
+  if (grand === 0) return []
+
+  const bars: CatBar[] = []
+  for (const [key, amount] of totals) {
+    const cat = categoryFor(key)
+    const label = displayMode.value === 'tutien' ? cat.display : (resolveCat(key)?.label ?? cat.real)
+    bars.push({
+      key,
+      label,
+      amount,
+      pct: Math.round((amount / grand) * 100),
+      color: CAT_COLORS[key] ?? 'var(--muted)',
+    })
+  }
+  bars.sort((a, b) => b.amount - a.amount)
+  return bars.slice(0, 6) // max 6 rows
+})
+
+// ─── Format helpers ──────────────────────────────────────────────────────
+function fmtShort(n: number): string {
+  const a = Math.abs(n)
+  if (a >= 1e9) return (a / 1e9).toFixed(1).replace(/\.0$/, '') + 'B'
+  if (a >= 1e6) return (a / 1e6).toFixed(1).replace(/\.0$/, '') + 'M'
+  if (a >= 1e3) return (a / 1e3).toFixed(0) + 'K'
+  return String(Math.round(a))
+}
 </script>
 
 <style scoped>
-.charts__tabs { display: flex; gap: 4px; background: var(--surface2); border-radius: 9px; padding: 3px; margin-bottom: 14px; }
-.charts__tab { flex: 1; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 8px; border: none; border-radius: 7px; background: transparent; color: var(--muted); font-family: var(--sans); font-size: 10px; font-weight: 600; cursor: pointer; transition: all .2s; -webkit-tap-highlight-color: transparent; }
-.charts__tab--active { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.3); }
-.charts__ranges { display: flex; gap: 4px; justify-content: center; margin-top: 6px; }
-.charts__range { padding: 3px 12px; border: 1px solid var(--border); border-radius: 12px; background: transparent; color: var(--muted); font-family: var(--sans); font-size: 9px; font-weight: 600; cursor: pointer; transition: all .2s; -webkit-tap-highlight-color: transparent; }
-.charts__range--active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
-.charts__canvas { margin-top: 12px; height: 160px; position: relative; }
-.charts__pie { margin: 12px auto 0; height: 180px; max-width: 200px; position: relative; }
-.charts__legend { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
-.charts__legend-item { display: flex; align-items: center; gap: 8px; }
-.charts__legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
-.charts__legend-name { font-size: 11px; flex: 1; }
-.charts__legend-val { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.tu-vi { display: flex; flex-direction: column; }
+
+/* ─── CHT TABS · port từ design ─────────────────────────────────────────── */
+.cht-tabs {
+  display: flex; gap: 4px; padding: 4px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  margin-top: 14px;
+}
+.cht-tab {
+  flex: 1; padding: 9px;
+  border: none; background: transparent;
+  border-radius: 3px;
+  font-family: var(--serif); font-style: italic; font-weight: 700;
+  font-size: 11px; color: var(--muted);
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.cht-tab.active {
+  background: rgba(var(--gold-rgb), 0.15);
+  color: var(--gold);
+}
+
+/* ─── CHT CARD · 3 generic chart cards ──────────────────────────────────── */
+.cht-card {
+  margin-top: 12px; padding: 14px;
+  background: linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
+  border: 1px solid var(--line-2);
+  border-radius: 6px;
+  position: relative;
+}
+.cht-card::before {
+  content: ''; position: absolute;
+  top: 0; left: 14px; right: 14px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+}
+
+.cht-h {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 12px;
+}
+.cht-h .ti {
+  font-family: var(--serif); font-style: italic; font-weight: 700;
+  font-size: 13px; color: var(--gold);
+  letter-spacing: 0.04em;
+  display: flex; align-items: center; gap: 6px;
+}
+
+.cht-range { display: flex; gap: 3px; }
+.cht-range button {
+  padding: 4px 9px;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-family: var(--mono); font-size: 9.5px;
+  color: var(--muted);
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.15s;
+}
+.cht-range button.active {
+  background: var(--violet);
+  color: var(--ink);
+  border-color: var(--violet);
+}
+
+.cht-meta {
+  display: flex; justify-content: space-between;
+  margin-top: 12px;
+  font-family: var(--mono); font-size: 10px;
+  color: var(--muted);
+}
+.cht-meta__peak { color: var(--crimson); }
+.cht-meta__goal { color: var(--jade); }
+
+.cht-empty {
+  text-align: center;
+  padding: 40px 12px;
+  font-family: var(--serif); font-style: italic;
+  font-size: 12px; color: var(--muted);
+}
+
+/* ─── BARS · stacked exp/inc per bucket ─────────────────────────────────── */
+.bars {
+  display: flex; align-items: flex-end; gap: 6px;
+  height: 130px; margin-top: 6px;
+  position: relative;
+}
+.bar-col {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  gap: 6px; height: 100%;
+}
+.bar-stack {
+  width: 100%; flex: 1;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  gap: 2px;
+}
+.bar-bg {
+  width: 100%;
+  border-radius: 2px 2px 0 0;
+  transition: height 0.6s cubic-bezier(0.5, 0.8, 0.3, 1);
+}
+.bar-bg.exp {
+  background: linear-gradient(180deg, #d96a7a, var(--crimson) 60%, var(--crimson-deep));
+  box-shadow: 0 0 6px rgba(var(--crimson-rgb), 0.4);
+}
+.bar-bg.inc {
+  background: linear-gradient(180deg, #88dcb8, var(--jade) 60%, var(--jade-deep));
+  box-shadow: 0 0 6px rgba(var(--jade-rgb), 0.4);
+}
+.bar-day {
+  font-family: var(--mono); font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+/* ─── DEBT SVG · projection line chart ──────────────────────────────────── */
+.debt-svg {
+  width: 100%; height: 120px;
+}
+
+/* ─── CAT BAR · bar list category allocation ────────────────────────────── */
+.cat-bar {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 8px;
+  font-family: var(--mono); font-size: 10px;
+}
+.cat-bar__lb {
+  width: 80px;
+  font-family: var(--serif); font-style: italic; font-weight: 600;
+  font-size: 11px; color: var(--text-2);
+}
+.cat-bar__track {
+  flex: 1; height: 8px;
+  background: var(--ink);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.cat-bar__fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.6s cubic-bezier(0.5, 0.8, 0.3, 1);
+}
+.cat-bar__pct {
+  width: 32px;
+  color: var(--text);
+  text-align: right;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar-bg, .cat-bar__fill { transition: none; }
+}
 </style>

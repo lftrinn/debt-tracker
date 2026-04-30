@@ -1,6 +1,12 @@
 import { ref } from 'vue'
 import type { AppData, SyncStatus } from '@/types/data'
 import { i18n } from '../../i18n'
+import {
+  isV2Schema,
+  applyV2ToLegacy,
+  syncItemsFromLegacy,
+  toV2Output,
+} from '../data/useV2Adapter'
 
 const BASE = 'https://api.jsonbin.io/v3'
 
@@ -32,34 +38,54 @@ export function useApi() {
 
   /**
    * Đọc bản ghi mới nhất từ JSONBin.
-   * @returns Dữ liệu ứng dụng đã parse
+   *
+   * Phase 11 reset behavior: nếu data trên JSONBin là legacy v1 schema
+   * (chưa migrate sang v2), throw special error 'LEGACY_SCHEMA_RESET' để
+   * caller (useAppSetup) discard + dùng seed (data trong JSON user gửi) +
+   * push lên JSONBin với format v2. Logs cũ bị reset hoàn toàn.
+   *
+   * Nếu đã v2 → derive legacy views và dùng bình thường.
+   *
+   * @returns Dữ liệu ứng dụng đã parse + processed
+   * @throws Error('LEGACY_SCHEMA_RESET') khi cần reset
    */
   async function readBin(): Promise<AppData> {
     const r = await fetch(`${BASE}/b/${binId.value}/latest`, { headers: H() })
     if (!r.ok) throw new Error('Lỗi đọc dữ liệu')
-    return (await r.json()).record as AppData
+    const raw = (await r.json()).record as AppData
+    if (isV2Schema(raw)) {
+      // Already v2 → derive legacy views
+      return applyV2ToLegacy(raw)
+    }
+    // Legacy v1 detected → caller xử lý reset
+    throw new Error('LEGACY_SCHEMA_RESET')
   }
 
   /**
-   * Ghi đè toàn bộ dữ liệu lên JSONBin bằng PUT request.
+   * Ghi đè toàn bộ dữ liệu lên JSONBin · sync items[] từ legacy fields trước
+   * khi serialize (Phase 11). Output JSON chỉ chứa { meta, items }.
    * @param data - Dữ liệu ứng dụng cần lưu
    */
   async function writeBin(data: AppData): Promise<void> {
+    syncItemsFromLegacy(data)
+    const payload = toV2Output(data)
     const r = await fetch(`${BASE}/b/${binId.value}`, {
       method: 'PUT',
       headers: H(),
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     })
     if (!r.ok) throw new Error('Lỗi ghi dữ liệu')
   }
 
   /**
-   * Tạo bin JSONBin mới với dữ liệu khởi tạo, trả về bin ID vừa tạo.
+   * Tạo bin JSONBin mới với dữ liệu khởi tạo (v2 format), trả về bin ID vừa tạo.
    * @param data - Dữ liệu ban đầu cần lưu vào bin
    * @param key - JSONBin Master Key của người dùng
    * @returns ID của bin vừa tạo
    */
   async function createBin(data: AppData, key: string): Promise<string> {
+    syncItemsFromLegacy(data)
+    const payload = toV2Output(data)
     const r = await fetch(`${BASE}/b`, {
       method: 'POST',
       headers: {
@@ -68,7 +94,7 @@ export function useApi() {
         'X-Bin-Name': 'debt-tracker-quang',
         'X-Bin-Private': 'true',
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     })
     if (!r.ok) {
       const e = await r.json()

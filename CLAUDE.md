@@ -33,46 +33,63 @@ npm run test:coverage # Vitest + coverage report
 npm run test:e2e      # Playwright e2e tests
 ```
 
+## Tu Tiên Design System
+
+UI theme port từ `/home/trin/Personal/debt-tracker-design/Pages/`. Dark fantasy "tu tiên / kiếm hiệp" lăng kính: nợ là Tâm Ma, payment là kiếm chiêu, ngân sách là linh khí, lộ trình thoát nợ là phi thăng đại đạo.
+
+**Tokens** (defined in `assets/styles.css`):
+- Ink/paper: 6 bậc nền tối (`--ink` → `--paper-3`)
+- Semantic accents: `--gold` (linh kim · brand), `--crimson` (huyết sa · debt/danger), `--jade` (bích ngọc · positive), `--violet` (tử vân · realm), `--azure` (linh lam · mana), `--vermillion` (châu sa · soon)
+- Type families: `--serif` (Cormorant Garamond italic, đạo hiệu), `--serif-vn` (Be Vietnam Pro), `--mono` (JetBrains Mono, số liệu)
+- Light mode: `body.light` selector overrides ink/paper/text/line tokens (alpha — chỉ background đổi, cards giữ dark fantasy gradient)
+
+**Display mode dual layer**: mỗi entity có 2 lớp tên — `display_name` (tu-tien thi vị, vd "Hắc Sát Tà Vương") + `real_name` (kế toán, vd "VISA·8821"). Toggle qua `useDisplayMode` (persist localStorage). Hiện tại lookup từ `useTutienNames.ts`.
+
 ## Project Structure
 
 ```
 src/
   main.ts                        # Entry point — đăng ký Vue app + i18n plugin
-  App.vue                        # Root component — toàn bộ state & logic chính
+  App.vue                        # Root component — state, tab routing, toast triggers
   i18n/
     index.ts                     # Cấu hình vue-i18n, hàm setLocale()
     locales/
-      vi.ts                      # Tiếng Việt
+      vi.ts                      # Tiếng Việt (chính, đầy đủ tu-tien terms)
       en.ts                      # English
       ja.ts                      # 日本語
   types/
     data.ts                      # TypeScript interfaces: AppData, CreditCard, Expense...
   assets/
-    styles.css                   # Global styles: CSS vars, reset, shared utilities, popup system
+    styles.css                   # Tokens, reset, popup system, set-group, switch, masked, levelup, particle drift
   components/
     layout/
-      AppHeader.vue              # Header: sync status, daily limit indicator, hide-all button
+      TutienHeader.vue           # Header: avatar (gold ring xoay) + name + cls·LV + coins pill + eye btn
+      BottomTabBar.vue           # 5-tab nav (home/inv/[FAB add]/cht/map) · sticky bottom với center FAB
       SyncBar.vue                # Thanh trạng thái đồng bộ JSONBin
     cards/
-      CashHero.vue               # Hiển thị tiền mặt khả dụng, chi tiêu hôm nay/tháng
-      DebtOverview.vue           # Tổng quan nợ: thẻ tín dụng + vay nhỏ
-      ProgressSection.vue        # Thanh tiến độ trả nợ
+      SectionHeader.vue          # .section-h reusable: icon + title + vn subtitle + act
+      BossCard.vue               # Tâm Ma final boss · HP bar + portrait + corners + aura · damage shake
+      ManaCards.vue              # Linh Khí Ngày + Kim Nguyên Bảo · 2-col linhkhi-row
+      EnemyRow.vue               # Mini-bosses (credit cards) · enemy grid + edit popup (Hồ Sơ Ma Chướng)
+      AchievementList.vue        # Tâm Pháp · 3 derived achievements
     forms/
-      AddTransaction.vue         # Form thêm chi tiêu / thu nhập
-      SettingsPanel.vue          # Cài đặt: hạn mức, hide zones, ngôn ngữ, tiền tệ, rules
+      AddTransaction.vue         # Xuất Kiếm · toggle exp/inc + amt-display + qa-row + cat-grid + attack-btn
+      SettingsPanel.vue          # Đạo Tâm · 3 set-group sections (Cấu hình/Giao diện/Kết nối) + popups
       SetupScreen.vue            # Màn hình setup ban đầu (tạo mới / import / kết nối)
     charts/
-      ChartsPanel.vue            # Biểu đồ chi tiêu (bar), nợ (line), cơ cấu nợ (doughnut)
-      TimelinePanel.vue          # Timeline mốc trả nợ theo tháng
+      ChartsPanel.vue            # Tu Vi Ký · 3 chart tabs (HTML bars + SVG line + cat allocation, không Chart.js)
+      TimelinePanel.vue          # Lộ Đồ Phi Thăng · trail vertical với checkpoints + Tâm Pháp + Tu Vi Ký Lục
     ui/
-      Icon.vue                   # Lucide icon wrapper
-      LoadingScreen.vue          # Màn hình loading với progress bar
+      Icon.vue                   # Lucide icon wrapper (legacy, dùng cho settings popups)
+      quest-icons.ts             # 33 SVG icon + 4 boss glyph (GlyphHac/Huyet/TuMau/TamMa) + SPRITE map
+      LoadingScreen.vue          # Màn hình loading
       ErrorPopup.vue             # Popup lỗi kết nối JSONBin
       ToastMessage.vue           # Toast thông báo (ok/err)
-      DetailPopup.vue            # Popup chi tiết + sửa giao dịch
+      LevelUpToast.vue           # Đột Phá toast · gold pill khi player lvl tăng
+      DetailPopup.vue            # Khai Chiến (upcoming) / Chiến Ký entry (tx) · hero + stats + attack/heal/flee
     payments/
-      UpcomingPayments.vue       # Các khoản thanh toán sắp tới (thẻ + one-time)
-      TransactionList.vue        # Danh sách giao dịch gần đây
+      QuestList.vue              # Kiếp Số · kiep-card list từ upcoming items
+      TransactionList.vue        # Chiến Ký · 3-stat row + chip filter + day-grouped tx items
   composables/
     data/
       useCashData.ts             # Tính toán tiền mặt khả dụng, chi tiêu ngày/tháng
@@ -82,11 +99,14 @@ src/
       useDailyLimit.ts           # Hạn mức chi tiêu ngày, logic trước/sau lương
       useDebtData.ts             # Aggregator: gọi tất cả data composables
       useCategories.ts           # Danh mục chi tiêu/thu nhập + icon/label
+      useTutienNames.ts          # REALMS, realmOf, CATEGORIES_TUTIEN, LEGACY_CAT_MAP, bossFor, finalBossFor
     ui/
       useToast.ts                # Toast notification state và trigger
       useHideZones.ts            # Quản lý hide zones (ẩn số tiền theo vùng)
-      useColors.ts               # Màu sắc theme + helper rgba() cho Chart.js
+      useColors.ts               # Màu sắc theme (legacy, không còn dùng cho Chart.js)
       useFormatters.ts           # Format số, tiền VND, ngày tháng (vi-VN)
+      useTheme.ts                # Singleton dark/light · toggle body.light, persist dt_theme
+      useDisplayMode.ts          # Singleton tu-tien/real · helper dn(), persist dt_display_mode
     api/
       useApi.ts                  # JSONBin v3 API wrapper: push/pull/create
       useCurrency.ts             # Hiển thị đa tiền tệ (VND/USD/JPY), tỷ giá realtime
