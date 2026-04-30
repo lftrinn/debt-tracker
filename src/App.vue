@@ -108,14 +108,14 @@
           @open-detail="openDetail($event, 'upcoming')"
         />
 
-        <!-- Ma Chướng · Enemies = credit cards mini-bosses -->
+        <!-- Ma Chướng · Enemies = credit cards + small loans mini-bosses -->
         <SectionHeader
           :icon="IconDemon"
           :title="$t('section.maChuong')"
-          :vn="String((d.debts?.credit_cards || []).length)"
+          :vn="String(allEnemyDebts.length)"
         />
         <EnemyRow
-          :cards="d.debts?.credit_cards || []"
+          :cards="allEnemyDebts"
           :hide="{ hp: hz('debt.cardBal'), amounts: hideAmounts }"
           :useDisplay="useTutien"
           @update-card="updateCardDirect"
@@ -586,6 +586,27 @@ const boss = computed(() => {
     nextDate: next ? fmtDueShort(next._date) : '—',
     nextAmt: next ? next.amt : 0,
   }
+})
+
+// ─── EnemyRow data · gộp credit_cards + small_loans (Phase 11.6 fix) ────
+// Small loans (HD Saison, Shopee, etc.) mapped sang CreditCard shape với
+// credit_limit = balance để bar HP hiển thị đầy đủ. Nếu cần hpMax thực sự,
+// dùng minimum_payment * periods_remaining (đại diện total còn lại).
+const allEnemyDebts = computed(() => {
+  const cards = d.value.debts?.credit_cards || []
+  const loans = (d.value.debts?.small_loans || [])
+    .filter((l) => (l.remaining_balance || 0) > 0)
+    .map((l) => ({
+      id: l.id,
+      name: l.name,
+      credit_limit: l.remaining_balance, // fallback: bar 100% (no limit info)
+      balance: l.remaining_balance,
+      interest_rate_annual: 0,
+      minimum_payment: 0,
+      ...(l.nameLang ? { nameLang: l.nameLang } : {}),
+      ...(l.nameI18n ? { nameI18n: l.nameI18n } : {}),
+    }))
+  return [...cards, ...loans]
 })
 
 // ─── ManaCards · Linh khí ngày + Kim nguyên bảo ──────────────────────────

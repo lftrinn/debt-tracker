@@ -348,6 +348,25 @@ export function applyV2ToLegacy(data: AppData): AppData {
     if (!plans[mo]) plans[mo] = { obligations: [] }
     plans[mo].obligations.push(itemToObligation(i))
   }
+  // Phase 11.6 fix: thêm debt items' minimum_payment vào monthly_plans để
+  // useUpcoming có thể hiển thị (cả credit_cards lẫn small_loans như shopee/hd).
+  // Synthesized obligations dùng category='debt_minimum' → syncItemsFromLegacy
+  // sẽ skip để tránh duplicate khi push.
+  for (const i of items.filter((it) => it.type === 'debt')) {
+    if (!i.due_date || !i.minimum_payment) continue
+    const mo = i.due_date.slice(0, 7)
+    if (!plans[mo]) plans[mo] = { obligations: [] }
+    const ob: Obligation = {
+      name: i.name + ' minimum',
+      amount: i.minimum_payment,
+      category: 'debt_minimum',
+      monthly: false,
+      date: i.due_date,
+    }
+    if (i.nameLang) ob.nameLang = i.nameLang
+    if (i.nameI18n) ob.nameI18n = i.nameI18n
+    plans[mo].obligations.push(ob)
+  }
   data.monthly_plans = plans
 
   // paid_obligations ← from meta (B2 partial: future deriving from expense_log items)
@@ -480,9 +499,12 @@ export function syncItemsFromLegacy(data: AppData): AppData {
   }
 
   // Monthly plans → fixed_expense
+  // Skip synthesized debt_minimum obligations (derived from debt items in
+  // applyV2ToLegacy) để tránh duplicate khi sync ngược.
   let planCounter = 0
   for (const [month, plan] of Object.entries(data.monthly_plans || {})) {
     for (const ob of plan.obligations) {
+      if (ob.category === 'debt_minimum') continue
       const id = `plan_${month}_${planCounter++}`
       const item = blankItem(id, 'fixed_expense', ob.name)
       item.amount = ob.amount
@@ -653,7 +675,9 @@ function itemToObligation(i: Item): Obligation {
     amount: i.amount ?? 0,
   }
   if (i.cat) ob.category = i.cat
-  if (i.frequency === 'monthly') ob.monthly = true
+  // Fix: only mark `monthly` template (recurring without specific date) khi
+  // KHÔNG có due_date. Nếu có due_date → đó là kỳ cụ thể, hiển thị trong upcoming.
+  if (i.frequency === 'monthly' && !i.due_date) ob.monthly = true
   if (i.due_date) ob.date = i.due_date
   if (i.nameLang) ob.nameLang = i.nameLang
   if (i.nameI18n) ob.nameI18n = i.nameI18n
