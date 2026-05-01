@@ -1,32 +1,28 @@
 <template>
   <div class="add-tx">
     <!-- Section header · Xuất Kiếm -->
-    <SectionHeader :icon="IconSword" :title="$t('add.title')" vn="new entry" />
+    <SectionHeader :icon="IconSword" title="Xuất Kiếm" vn="new entry" />
 
     <!-- Toggle Tổn Linh Khí / Hồi Tu Vi -->
     <div class="add-toggle">
       <button
         :class="['add-toggle__btn', { active: txType === 'exp', exp: txType === 'exp' }]"
         @click="txType = 'exp'"
-      >
-        {{ $t('add.expToggle') }}
-      </button>
+      >Tổn Linh Khí</button>
       <button
         :class="['add-toggle__btn', { active: txType === 'inc', inc: txType === 'inc' }]"
         @click="txType = 'inc'"
-      >
-        {{ $t('add.incToggle') }}
-      </button>
+      >Hồi Tu Vi</button>
     </div>
 
-    <!-- Amount display · big number with crit tag ≥500K VND or ≥20 USD -->
+    <!-- Amount display · big number with crit tag ≥500K VND -->
     <div class="amt-display">
-      <div v-if="isCrit" class="crit-tag">⚡ {{ $t('add.crit') }}</div>
+      <div v-if="isCrit" class="crit-tag">⚡ Bạo Kích!</div>
       <div class="amt-display__lab">
-        {{ txType === 'exp' ? $t('add.expLabel') : $t('add.incLabel') }}
+        {{ txType === 'exp' ? 'KHÍ HAO TỔN' : 'KHÍ HỒI PHỤC' }}
       </div>
       <div :class="['amt-display__num', txType]">
-        <span class="cu">{{ currencySymbol }}</span>
+        <span class="cu">đ</span>
         <input
           class="amt-display__input"
           type="number"
@@ -38,31 +34,29 @@
       </div>
     </div>
 
-    <!-- Quick amount row · 4 preset buttons -->
+    <!-- Quick amount row · 4 fixed VND presets -->
     <div class="qa-row">
       <button
-        v-for="v in presets"
+        v-for="v in PRESETS"
         :key="v"
         class="qa-btn"
         @click="currentAmt = v"
-      >
-        +{{ fmtPreset(v) }}
-      </button>
+      >+{{ fmtPreset(v) }}</button>
     </div>
 
     <!-- Section header · Loại Linh Khí -->
-    <div class="cat-section-h">{{ $t('add.catSection') }}</div>
+    <div class="cat-section-h">Loại Linh Khí</div>
 
-    <!-- Category grid · 4 cols × N rows -->
+    <!-- Category grid · 8 unified CATS regardless of kind -->
     <div class="cat-grid">
       <div
-        v-for="c in activeCats"
-        :key="c.key"
-        :class="['cat', { active: currentCat === c.key }]"
-        @click="currentCat = c.key"
+        v-for="c in CATS"
+        :key="c.id"
+        :class="['cat', { active: currentCat === c.id }]"
+        @click="currentCat = c.id"
       >
-        <component :is="c.sprite" :size="18" />
-        <span class="cat__lb">{{ useTutien ? c.tutien : c.real }}</span>
+        <component :is="SPRITE[c.sp]" :size="18" />
+        <span class="cat__lb">{{ useTutien ? c.display : c.real }}</span>
       </div>
     </div>
 
@@ -70,15 +64,12 @@
     <input
       class="field field--note"
       v-model="currentDesc"
-      :placeholder="$t('add.notePlaceholder')"
+      placeholder="Ghi chú đạo tâm..."
     />
 
-    <!-- Field row · date + currency + (payMethod for exp) -->
-    <div :class="['field-row', txType === 'exp' ? 'field-row--3' : 'field-row--2']">
+    <!-- Field row · date + (payMethod for exp) -->
+    <div :class="['field-row', txType === 'exp' ? 'field-row--2' : 'field-row--1']">
       <input class="field" type="date" v-model="currentDate" :max="todayStr" />
-      <select class="field field--cur" v-model="currentCurrency">
-        <option v-for="c in CURRENCIES" :key="c" :value="c">{{ c }}</option>
-      </select>
       <select v-if="txType === 'exp'" class="field" v-model="nPayMethod">
         <option v-for="m in payMethodOpts" :key="m.key" :value="m.key">{{ m.label }}</option>
       </select>
@@ -92,41 +83,24 @@
     >
       {{
         syncing
-          ? $t('add.saving')
+          ? 'Đang lưu...'
           : txType === 'exp'
-            ? $t('add.expBtn')
-            : $t('add.incBtn')
+            ? 'Hạ Kiếm Xác Nhận'
+            : 'Thu Liễm Tu Vi'
       }}
     </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, type FunctionalComponent } from 'vue'
-import { useI18n } from 'vue-i18n'
-import {
-  IconSword,
-  IconRice,
-  IconBag,
-  IconHorse,
-  IconBill,
-  IconLute,
-  IconHerb,
-  IconIngot,
-  IconLotus,
-  IconCoins,
-  IconChart,
-  IconTrophy,
-  type IconProps,
-} from '@/components/ui/quest-icons'
+import { ref, computed, watch } from 'vue'
+import { IconSword, SPRITE } from '@/components/ui/quest-icons'
 import SectionHeader from '@/components/cards/SectionHeader.vue'
-import { useCurrency, CURRENCIES, type Currency } from '@/composables/api/useCurrency'
 import { useDisplayMode } from '@/composables/ui/useDisplayMode'
+import { CATEGORIES_TUTIEN, type CategoryEntry } from '@/composables/data/useTutienNames'
 import { bossForAmount } from '@/composables/data/useBossTiers'
 import type { DebtItem } from '@/types/data'
 
-const { t } = useI18n()
-const { displayCurrency } = useCurrency()
 const { mode: displayMode } = useDisplayMode()
 const useTutien = computed(() => displayMode.value === 'tutien')
 
@@ -137,26 +111,21 @@ interface ExpPayload {
   payMethod: string
   currency: string
   date: string
-  note?: string
   time?: string
 }
-
 interface IncPayload {
   desc: string
   amount: number
   cat: string
   currency: string
   date: string
-  note?: string
   time?: string
 }
-
 interface PrefillData {
   type?: 'exp' | 'inc'
   desc?: string
   amount?: number
   cat?: string
-  currency?: string
   note?: string
   time?: string
   date?: string
@@ -175,21 +144,27 @@ const emit = defineEmits<{
   'prefill-consumed': []
 }>()
 
-// ─── State per kind (separate to preserve unsaved values) ─────────────
+/** 8 unified CATS — same for exp & inc theo design. */
+const CATS: ReadonlyArray<CategoryEntry> = CATEGORIES_TUTIEN
+
+/** Fixed VND presets theo design — không variable theo currency. */
+const PRESETS = [20_000, 50_000, 100_000, 200_000] as const
+
+/** Crit threshold ≥ 500K VND. */
+const CRIT_THRESHOLD = 500_000
+
 const txType = ref<'exp' | 'inc'>('exp')
 
 // Expense state
 const nAmt = ref<number | null>(null)
-const nCat = ref('an')
+const nCat = ref<string>('food')
 const nPayMethod = ref('cash')
-const nCurrency = ref<Currency>(displayCurrency.value)
 const nDesc = ref('')
 const nDate = ref(getCurrentDate())
 
 // Income state
 const iAmt = ref<number | null>(null)
-const iCat = ref('luong')
-const iCurrency = ref<Currency>(displayCurrency.value)
+const iCat = ref<string>('pay')
 const iDesc = ref('')
 const iDate = ref(getCurrentDate())
 
@@ -203,7 +178,7 @@ function getCurrentDate(): string {
 }
 const todayStr = getCurrentDate()
 
-// ─── Computed bridges to current kind ─────────────────────────────────
+// ─── Bridges to current kind ────────────────────────────────
 const currentAmt = computed<number | null>({
   get: () => (txType.value === 'exp' ? nAmt.value : iAmt.value),
   set: (v) => {
@@ -216,13 +191,6 @@ const currentCat = computed<string>({
   set: (v) => {
     if (txType.value === 'exp') nCat.value = v
     else iCat.value = v
-  },
-})
-const currentCurrency = computed<Currency>({
-  get: () => (txType.value === 'exp' ? nCurrency.value : iCurrency.value),
-  set: (v) => {
-    if (txType.value === 'exp') nCurrency.value = v
-    else iCurrency.value = v
   },
 })
 const currentDesc = computed<string>({
@@ -240,32 +208,7 @@ const currentDate = computed<string>({
   },
 })
 
-// ─── Currency display ─────────────────────────────────────────────────
-const currencySymbol = computed(() => {
-  if (currentCurrency.value === 'USD') return '$'
-  if (currentCurrency.value === 'JPY') return '¥'
-  return 'đ'
-})
-
-// ─── Crit tag · ≥ critical threshold theo currency ────────────────────
-const CRIT_THRESHOLD: Record<string, number> = {
-  VND: 500_000,
-  USD: 20,
-  JPY: 5000,
-}
-const isCrit = computed(() => {
-  if (!currentAmt.value) return false
-  const t = CRIT_THRESHOLD[currentCurrency.value] ?? 500_000
-  return currentAmt.value >= t
-})
-
-// ─── Quick-amount presets per currency ────────────────────────────────
-const PRESETS_BY_CURRENCY: Record<string, number[]> = {
-  VND: [20_000, 50_000, 100_000, 200_000],
-  USD: [1, 5, 10, 20],
-  JPY: [100, 500, 1000, 2000],
-}
-const presets = computed(() => PRESETS_BY_CURRENCY[currentCurrency.value] ?? PRESETS_BY_CURRENCY.VND)
+const isCrit = computed(() => (currentAmt.value ?? 0) >= CRIT_THRESHOLD)
 
 function fmtPreset(v: number): string {
   if (v >= 1e6) return (v / 1e6).toFixed(1).replace(/\.0$/, '') + 'M'
@@ -273,44 +216,10 @@ function fmtPreset(v: number): string {
   return String(v)
 }
 
-// ─── Categories per mode · sprite + tutien + real label ────────────────
-interface CatItem {
-  key: string
-  sprite: FunctionalComponent<IconProps>
-  tutien: string
-  real: string
-}
-
-/** Mỗi expense legacy key → tu-tien sprite + display name. */
-const EXP_CATS = computed<CatItem[]>(() => [
-  { key: 'an', sprite: IconRice, tutien: 'Tịch Cốc', real: t('categories.expense.an') },
-  { key: 'mua', sprite: IconBag, tutien: 'Tích Bảo', real: t('categories.expense.mua') },
-  { key: 'dilai', sprite: IconHorse, tutien: 'Phi Vân', real: t('categories.expense.dilai') },
-  { key: 'hd', sprite: IconBill, tutien: 'Hộ Phù', real: t('categories.expense.hd') },
-  { key: 'giaitri', sprite: IconLute, tutien: 'Quan Ảnh', real: t('categories.expense.giaitri') },
-  { key: 'yte', sprite: IconHerb, tutien: 'Đan Dược', real: t('categories.expense.yte') },
-  { key: 'thanhToan', sprite: IconIngot, tutien: 'Trảm Ma', real: t('categories.expense.thanhToan') },
-  { key: 'khac', sprite: IconLotus, tutien: 'Linh Khí', real: t('categories.expense.khac') },
-])
-
-/** Income cats · custom mapping. */
-const INC_CATS = computed<CatItem[]>(() => [
-  { key: 'luong', sprite: IconCoins, tutien: 'Cấm Tu Tu Vi', real: t('categories.income.luong') },
-  { key: 'freelance', sprite: IconChart, tutien: 'Linh Khí Tự Do', real: t('categories.income.freelance') },
-  { key: 'thuong', sprite: IconTrophy, tutien: 'Thưởng Đặc', real: t('categories.income.thuong') },
-  { key: 'hoantien', sprite: IconLotus, tutien: 'Khí Hồi', real: t('categories.income.hoantien') },
-  { key: 'dautu', sprite: IconChart, tutien: 'Tiên Thuật Sinh Kim', real: t('categories.income.dautu') },
-  { key: 'khac_thu', sprite: IconLotus, tutien: 'Linh Khí Khác', real: t('categories.income.khac_thu') },
-])
-
-const activeCats = computed<CatItem[]>(() =>
-  txType.value === 'exp' ? EXP_CATS.value : INC_CATS.value,
-)
-
-// ─── Pay method options (exp only) · với tu-tien display name ─────────
+// ─── Pay method options · cash + danh sách thẻ ─────────────────
 const payMethodOpts = computed(() => {
   const list: Array<{ key: string; label: string }> = [
-    { key: 'cash', label: t('add.payMethod.cash') },
+    { key: 'cash', label: 'Linh Thạch · tiền mặt' },
   ]
   ;(props.creditCards || []).forEach((c) => {
     const boss = bossForAmount(c.amount, c.id || c.name)
@@ -320,13 +229,7 @@ const payMethodOpts = computed(() => {
   return list
 })
 
-// ─── Sync currency dropdown khi display currency thay đổi ─────────────
-watch(displayCurrency, (cur) => {
-  nCurrency.value = cur
-  iCurrency.value = cur
-})
-
-// ─── Reset payMethod khi credit card list thay đổi (sai khi xoá card) ─
+// Reset payMethod khi credit card list thay đổi
 watch(
   () => props.creditCards,
   (cards) => {
@@ -337,7 +240,7 @@ watch(
   { deep: true },
 )
 
-// ─── Prefill ──────────────────────────────────────────────────────────
+// ─── Prefill ──────────────────────────────────────────────────
 watch(
   () => props.prefill,
   (data) => {
@@ -347,7 +250,6 @@ watch(
       iDesc.value = data.desc || ''
       iAmt.value = data.amount || null
       if (data.cat) iCat.value = data.cat
-      iCurrency.value = (data.currency as Currency) || displayCurrency.value
       iDate.value = data.date || getCurrentDate()
     } else {
       txType.value = 'exp'
@@ -355,7 +257,6 @@ watch(
       nAmt.value = data.amount || null
       if (data.cat) nCat.value = data.cat
       if (data.payMethod) nPayMethod.value = data.payMethod
-      nCurrency.value = (data.currency as Currency) || displayCurrency.value
       nDate.value = data.date || getCurrentDate()
     }
     emit('prefill-consumed')
@@ -363,7 +264,7 @@ watch(
   { immediate: true },
 )
 
-// ─── Submit ────────────────────────────────────────────────────────────
+// ─── Submit ────────────────────────────────────────────────────
 function onSubmit(): void {
   if (txType.value === 'exp') addExp()
   else addInc()
@@ -376,15 +277,13 @@ function addExp(): void {
     amount: nAmt.value,
     cat: nCat.value,
     payMethod: nPayMethod.value,
-    currency: nCurrency.value,
+    currency: 'VND',
     date: nDate.value,
     time: getCurrentTime(),
   })
-  // Reset
   nAmt.value = null
   nDesc.value = ''
   nDate.value = getCurrentDate()
-  nCurrency.value = displayCurrency.value
 }
 
 function addInc(): void {
@@ -393,14 +292,13 @@ function addInc(): void {
     desc: iDesc.value.trim(),
     amount: iAmt.value,
     cat: iCat.value,
-    currency: iCurrency.value,
+    currency: 'VND',
     date: iDate.value,
     time: getCurrentTime(),
   })
   iAmt.value = null
   iDesc.value = ''
   iDate.value = getCurrentDate()
-  iCurrency.value = displayCurrency.value
 }
 </script>
 
@@ -410,7 +308,7 @@ function addInc(): void {
   display: flex; flex-direction: column;
 }
 
-/* ─── ADD TOGGLE · port từ design ───────────────────────────────────────── */
+/* ─── ADD TOGGLE ──────────────────────────────────────────────────────── */
 .add-toggle {
   display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px;
   background: var(--paper);
@@ -438,7 +336,7 @@ function addInc(): void {
   color: var(--jade);
 }
 
-/* ─── AMT DISPLAY · big number + crit tag ───────────────────────────────── */
+/* ─── AMT DISPLAY ─────────────────────────────────────────────────────── */
 .amt-display {
   margin-top: 14px;
   padding: 26px 14px 22px;
@@ -488,7 +386,6 @@ function addInc(): void {
   text-align: center;
   width: 100%; max-width: 260px;
   padding: 0;
-  /* hide native number arrows */
   -moz-appearance: textfield;
 }
 .amt-display__input::-webkit-outer-spin-button,
@@ -539,7 +436,7 @@ function addInc(): void {
   border-color: var(--gold);
 }
 
-/* ─── CAT GRID · 4 cols, sprite icons + label ──────────────────────────── */
+/* ─── CAT GRID ──────────────────────────────────────────────────────── */
 .cat-section-h {
   margin: 18px 2px 8px;
   font-family: var(--serif); font-style: italic; font-weight: 700;
@@ -574,7 +471,7 @@ function addInc(): void {
   text-align: center;
 }
 
-/* ─── FIELD · note + date + currency + payMethod ────────────────────────── */
+/* ─── FIELD · note + date + payMethod ────────────────────────────────── */
 .field {
   width: 100%; padding: 11px 13px;
   background: var(--paper);
@@ -597,19 +494,14 @@ select.field {
   background-repeat: no-repeat;
   padding-right: 28px;
 }
-.field--cur {
-  font-family: var(--mono); font-size: 11px; font-weight: 700;
-  color: var(--gold);
-  text-align: center;
-}
 
 .field-row {
   display: grid; gap: 8px; margin-top: 10px;
 }
-.field-row--2 { grid-template-columns: 1fr 80px; }
-.field-row--3 { grid-template-columns: 1fr 80px 1fr; }
+.field-row--1 { grid-template-columns: 1fr; }
+.field-row--2 { grid-template-columns: 1fr 1fr; }
 
-/* ─── ATTACK BTN · gradient gold + shimmer ──────────────────────────────── */
+/* ─── ATTACK BTN ──────────────────────────────────────────────────── */
 .attack-btn {
   width: 100%; margin-top: 16px;
   padding: 17px;
@@ -630,9 +522,6 @@ select.field {
 }
 .attack-btn:active {
   transform: translateY(1px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 2px 8px rgba(var(--gold-rgb), 0.3);
 }
 .attack-btn:disabled {
   opacity: 0.4; cursor: not-allowed;

@@ -67,7 +67,6 @@
         v-for="tx in day.items"
         :key="tx.id"
         class="tx"
-        @click="$emit('open-detail', tx)"
       >
         <div class="tx-ic">
           <component :is="spriteForTx(tx)" :size="16" />
@@ -122,11 +121,12 @@ const props = defineProps<{
 }>()
 
 defineEmits<{
-  'open-detail': [tx: TransactionItem]
+  'delete-tx': [tx: TransactionItem]
+  'quick-add': [tx: TransactionItem]
 }>()
 
-// ─── Filter state ──────────────────────────────────────────────────────────
-type ChipId = 'all' | 'exp' | 'inc'
+// ─── Filter state · 5 chips theo design (all/exp/inc + 2 top cats) ────────
+type ChipId = 'all' | 'exp' | 'inc' | string  // string = cat key
 const filterType = ref<ChipId>('all')
 const searchRaw = ref('')
 const searchQuery = ref('')
@@ -136,12 +136,29 @@ watch(searchRaw, (v) => {
   searchTimer = setTimeout(() => { searchQuery.value = v }, 200)
 })
 
-// ─── Chips ────────────────────────────────────────────────────────────────
-const chips = computed<Array<{ id: ChipId; label: string }>>(() => [
-  { id: 'all', label: t('chienKy.chipAll') },
-  { id: 'exp', label: t('chienKy.chipExp') },
-  { id: 'inc', label: t('chienKy.chipInc') },
-])
+/** Top 2 categories by spending — dùng cho 2 chip extra theo design. */
+const topCats = computed<Array<{ id: string; label: string }>>(() => {
+  const totals = new Map<string, number>()
+  for (const tx of props.transactions) {
+    if (tx.type !== 'exp') continue
+    const cat = (tx.cat || 'khac').toLowerCase()
+    totals.set(cat, (totals.get(cat) ?? 0) + tx.amount)
+  }
+  const sorted = [...totals.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2)
+  return sorted.map(([id]) => ({
+    id,
+    label: catLabel(id),
+  }))
+})
+
+const chips = computed<Array<{ id: ChipId; label: string }>>(() => {
+  const base: Array<{ id: ChipId; label: string }> = [
+    { id: 'all', label: t('chienKy.chipAll') },
+    { id: 'exp', label: t('chienKy.chipExp') },
+    { id: 'inc', label: t('chienKy.chipInc') },
+  ]
+  return [...base, ...topCats.value]
+})
 
 // ─── Tx → VND amount cho display ──────────────────────────────────────────
 function txVndAmt(tx: TransactionItem): number {
@@ -151,9 +168,14 @@ function txVndAmt(tx: TransactionItem): number {
 
 // ─── Filter pipeline ──────────────────────────────────────────────────────
 const filteredItems = computed(() => {
-  let items = filterType.value === 'all'
-    ? props.transactions
-    : props.transactions.filter((tx) => tx.type === filterType.value)
+  let items: TransactionItem[]
+  if (filterType.value === 'all') items = props.transactions
+  else if (filterType.value === 'exp' || filterType.value === 'inc') {
+    items = props.transactions.filter((tx) => tx.type === filterType.value)
+  } else {
+    // cat filter (e.g. 'an', 'mua', 'food', 'shop')
+    items = props.transactions.filter((tx) => tx.cat === filterType.value)
+  }
   if (searchQuery.value.trim()) {
     const q = searchQuery.value.trim().toLowerCase()
     items = items.filter((tx) => {

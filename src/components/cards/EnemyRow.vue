@@ -92,53 +92,27 @@
         </div>
 
         <div class="popup-body">
-          <!-- Balance field -->
+          <!-- Balance field · VND-only theo design -->
           <div class="popup-field">
-            <label class="popup-label">
-              {{ (hide.amounts) ? $t('debt.balanceHiddenLabel') : $t('debt.balanceLabel') }}
-            </label>
+            <label class="popup-label">{{ hide.amounts ? 'Số dư (đã ẩn)' : 'Số dư hiện tại' }}</label>
             <div v-if="hide.amounts" class="popup-input" style="display:flex;align-items:center;color:var(--muted);font-size:12px">
-              {{ balPct(editCard) }}{{ $t('debt.balanceHiddenValue') }}
-            </div>
-            <div v-else-if="useDisplayCur && !ratesLoading" class="enemy__dual-inputs">
-              <div class="enemy__input-wrap">
-                <input class="popup-input" v-model.number="editBal" type="number" inputmode="numeric" :placeholder="String(editCard.amount)" @input="onEditBalInput" />
-                <span class="enemy__input-suffix">VND</span>
-              </div>
-              <span class="enemy__dual-sep">≈</span>
-              <div class="enemy__input-wrap">
-                <input class="popup-input" v-model.number="editBalDisplay" type="number" inputmode="numeric" :placeholder="String(displayVal(editCard.amount) ?? '')" @input="onEditBalDisplayInput" />
-                <span class="enemy__input-suffix">{{ currSymbol }}</span>
-              </div>
+              {{ balPct(editCard) }}% tổng nợ
             </div>
             <div v-else class="enemy__input-wrap">
               <input class="popup-input" v-model.number="editBal" type="number" inputmode="numeric" :placeholder="String(editCard.amount)" />
-              <span class="enemy__input-suffix">{{ currSymbol }}</span>
+              <span class="enemy__input-suffix">VND</span>
             </div>
           </div>
 
-          <!-- Minimum payment field -->
+          <!-- Minimum payment field · VND-only -->
           <div class="popup-field">
-            <label class="popup-label">
-              {{ (hide.amounts) ? $t('debt.minHiddenLabel') : $t('debt.minLabel2') }}
-            </label>
+            <label class="popup-label">{{ hide.amounts ? 'Tối thiểu (đã ẩn)' : 'Thanh toán tối thiểu' }}</label>
             <div v-if="hide.amounts" class="popup-input" style="display:flex;align-items:center;color:var(--muted);font-size:12px">
-              {{ minPct(editCard) }}{{ $t('debt.minHiddenValue') }}
-            </div>
-            <div v-else-if="useDisplayCur && !ratesLoading" class="enemy__dual-inputs">
-              <div class="enemy__input-wrap">
-                <input class="popup-input" v-model.number="editMin" type="number" inputmode="numeric" :placeholder="String(editCard.minimum_payment)" @input="onEditMinInput" />
-                <span class="enemy__input-suffix">VND</span>
-              </div>
-              <span class="enemy__dual-sep">≈</span>
-              <div class="enemy__input-wrap">
-                <input class="popup-input" v-model.number="editMinDisplay" type="number" inputmode="numeric" :placeholder="String(displayVal(editCard.minimum_payment) ?? '')" @input="onEditMinDisplayInput" />
-                <span class="enemy__input-suffix">{{ currSymbol }}</span>
-              </div>
+              {{ minPct(editCard) }}% số dư
             </div>
             <div v-else class="enemy__input-wrap">
               <input class="popup-input" v-model.number="editMin" type="number" inputmode="numeric" :placeholder="String(editCard.minimum_payment)" />
-              <span class="enemy__input-suffix">{{ currSymbol }}</span>
+              <span class="enemy__input-suffix">VND</span>
             </div>
           </div>
 
@@ -150,7 +124,7 @@
               v-model="editDueDate"
               type="date"
               :disabled="hide.amounts"
-              :placeholder="editCard.due_date || $t('debt.dueDatePlaceholder')"
+              :placeholder="editCard.due_date || 'YYYY-MM-DD'"
             />
           </div>
         </div>
@@ -165,10 +139,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, type FunctionalComponent } from 'vue'
+import { ref, computed, watch, type FunctionalComponent } from 'vue'
 import Icon from '@/components/ui/Icon.vue'
 import { IconDemon } from '@/components/ui/quest-icons'
 import { useCurrency } from '@/composables/api/useCurrency'
+void useCurrency
 import { useFormatters } from '@/composables/ui/useFormatters'
 import { MASK_GLYPHS, MASK_SHORT } from '@/composables/ui/usePrivacy'
 import { tierForAmount, nameForBoss, type BossTier } from '@/composables/data/useBossTiers'
@@ -190,7 +165,7 @@ const emit = defineEmits<{
   ]
 }>()
 
-const { fCurr, displayCurrency, convertBetween, toVnd, ratesLoading } = useCurrency()
+const { fCurr } = useCurrency()
 const { fN } = useFormatters()
 
 interface EnrichedEnemy extends EnemyDebt {
@@ -269,38 +244,6 @@ const editEnriched = computed(() => {
 const editBal = ref<number | null>(null)
 const editMin = ref<number | null>(null)
 const editDueDate = ref('')
-const editBalDisplay = ref<number | null>(null)
-const editMinDisplay = ref<number | null>(null)
-let editBalFromDisplay = false
-let editMinFromDisplay = false
-
-const currSymbol = computed(() => displayCurrency.value)
-const useDisplayCur = computed(() => displayCurrency.value !== 'VND')
-
-function displayVal(vnd: number): number | null {
-  if (!useDisplayCur.value || ratesLoading.value) return null
-  const v = convertBetween(vnd, 'VND', displayCurrency.value)
-  return displayCurrency.value === 'USD' ? Math.round(v * 100) / 100 : Math.round(v)
-}
-
-function onEditBalInput(): void {
-  if (editBalFromDisplay) return
-  editBalDisplay.value = editBal.value != null ? displayVal(editBal.value) : null
-}
-function onEditBalDisplayInput(): void {
-  editBalFromDisplay = true
-  if (editBalDisplay.value != null) editBal.value = Math.round(toVnd(editBalDisplay.value, displayCurrency.value))
-  nextTick(() => { editBalFromDisplay = false })
-}
-function onEditMinInput(): void {
-  if (editMinFromDisplay) return
-  editMinDisplay.value = editMin.value != null ? displayVal(editMin.value) : null
-}
-function onEditMinDisplayInput(): void {
-  editMinFromDisplay = true
-  if (editMinDisplay.value != null) editMin.value = Math.round(toVnd(editMinDisplay.value, displayCurrency.value))
-  nextTick(() => { editMinFromDisplay = false })
-}
 
 function openEdit(e: EnrichedEnemy): void {
   const raw = props.cards.find((c) => c.id === e.id)
@@ -308,8 +251,6 @@ function openEdit(e: EnrichedEnemy): void {
   editCard.value = raw
   editBal.value = null
   editMin.value = null
-  editBalDisplay.value = null
-  editMinDisplay.value = null
   editDueDate.value = raw.due_date || ''
 }
 

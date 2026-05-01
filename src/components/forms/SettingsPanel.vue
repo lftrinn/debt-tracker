@@ -1,7 +1,7 @@
 <template>
   <div>
     <!-- ─── Section 1 · Cấu hình đạo hữu ────────────────────────── -->
-    <SectionHeader :icon="IconSettings" :title="$t('dao.config')" />
+    <SectionHeader :icon="IconSettings" title="Cấu hình đạo hữu" />
     <div class="set-group">
       <!-- Profile (display only) -->
       <div class="set-row">
@@ -16,24 +16,24 @@
       <div class="set-row" @click="open = 'lim'">
         <div class="set-ic"><IconTarget :size="15" /></div>
         <div class="set-body">
-          <div class="set-name">{{ $t('dao.dailyLimit') }}</div>
-          <div class="set-sub">{{ $t('dao.dailyLimitSub') }}</div>
+          <div class="set-name">Mức linh khí ngày</div>
+          <div class="set-sub">giới hạn chi tiêu hằng ngày</div>
         </div>
         <div class="set-val">{{ fmtLimitShort }}</div>
       </div>
-      <!-- Currency -->
-      <div class="set-row" @click="openCurrency">
-        <div class="set-ic"><IconCoins :size="15" /></div>
+      <!-- Strategy (display only — tap to long-press for logout) -->
+      <div class="set-row" @click="onStrategyTap" @contextmenu.prevent="open = 'logout'">
+        <div class="set-ic"><IconSword :size="15" /></div>
         <div class="set-body">
-          <div class="set-name">{{ $t('dao.currency') }}</div>
-          <div class="set-sub">{{ displayCurrency }}</div>
+          <div class="set-name">Chiến lược trảm ma</div>
+          <div class="set-sub">avalanche · hạ lãi cao trước</div>
         </div>
         <div class="set-val"><IconChevronRight :size="14" /></div>
       </div>
     </div>
 
     <!-- ─── Section 2 · Giao diện ───────────────────────────────── -->
-    <SectionHeader :title="$t('dao.interface')" />
+    <SectionHeader title="Giao diện" />
     <div class="set-group">
       <!-- Theme toggle -->
       <div class="set-row" @click="toggleTheme">
@@ -41,8 +41,8 @@
           <component :is="theme === 'light' ? IconSun : IconMoon" :size="15" />
         </div>
         <div class="set-body">
-          <div class="set-name">{{ $t('dao.theme') }}</div>
-          <div class="set-sub">{{ theme === 'light' ? $t('dao.themeLight') : $t('dao.themeDark') }}</div>
+          <div class="set-name">Chế độ sáng</div>
+          <div class="set-sub">đổi giao diện sáng/tối</div>
         </div>
         <div :class="['switch', { on: theme === 'light' }]"></div>
       </div>
@@ -50,10 +50,8 @@
       <div class="set-row" @click="toggleMode">
         <div class="set-ic"><IconScroll :size="15" /></div>
         <div class="set-body">
-          <div class="set-name">{{ $t('dao.displayName') }}</div>
-          <div class="set-sub">
-            {{ displayMode === 'tutien' ? $t('dao.displayNameTutien') : $t('dao.displayNameReal') }}
-          </div>
+          <div class="set-name">Tên hiển thị tu tiên</div>
+          <div class="set-sub">{{ displayMode === 'tutien' ? 'hiển thị tên ác nhân' : 'tên gốc' }}</div>
         </div>
         <div :class="['switch', { on: displayMode === 'tutien' }]"></div>
       </div>
@@ -63,88 +61,49 @@
           <component :is="hideFlag ? IconEyeOff : IconEye" :size="15" />
         </div>
         <div class="set-body">
-          <div class="set-name">{{ $t('dao.hideAmounts') }}</div>
-          <div class="set-sub">{{ $t('dao.hideAmountsSub') }}</div>
+          <div class="set-name">Ẩn số tiền</div>
+          <div class="set-sub">privacy mode</div>
         </div>
         <div :class="['switch', { on: hideFlag }]"></div>
-      </div>
-      <!-- Language picker -->
-      <div class="set-row" @click="open = 'lang'">
-        <div class="set-ic"><Icon name="globe" :size="15" /></div>
-        <div class="set-body">
-          <div class="set-name">{{ $t('dao.language') }}</div>
-          <div class="set-sub">{{ $t('settings.language.' + currentLocale) }}</div>
-        </div>
-        <div class="set-val"><IconChevronRight :size="14" /></div>
       </div>
     </div>
 
     <!-- ─── Section 3 · Kết nối ─────────────────────────────────── -->
-    <SectionHeader :title="$t('dao.connect')" />
+    <SectionHeader title="Kết nối" />
     <div class="set-group">
       <!-- Sync · tap = reload -->
       <div class="set-row" @click="$emit('reload')">
         <div class="set-ic"><IconCloud :size="15" /></div>
         <div class="set-body">
-          <div class="set-name">{{ $t('dao.sync') }}</div>
+          <div class="set-name">Đồng bộ</div>
           <div class="set-sub">{{ syncMsg }} · {{ syncTime || '--:--' }}</div>
         </div>
-        <div class="set-val"><Icon name="refresh-cw" :size="14" /></div>
+        <div :class="['switch', 'on']"></div>
       </div>
-      <!-- Push notifications -->
-      <div class="set-row" @click="open = 'push'">
+      <!-- Push notifications · tap = enable/disable -->
+      <div class="set-row" @click="onPushTap">
         <div class="set-ic"><IconBell :size="15" /></div>
         <div class="set-body">
-          <div class="set-name">{{ $t('dao.push') }}</div>
-          <div class="set-sub">{{ $t('settings.push.status.' + (pushStatus || 'unknown')) }}</div>
+          <div class="set-name">Thông báo kiếp số</div>
+          <div class="set-sub">nhắc trước hạn 2 ngày</div>
         </div>
-        <div class="set-val"><IconChevronRight :size="14" /></div>
+        <div :class="['switch', { on: pushStatus === 'granted' }]"></div>
       </div>
-      <!-- JSON import/export -->
-      <div class="set-row" @click="open = 'json'">
+      <!-- Export -->
+      <div class="set-row" @click="open = 'export'">
         <div class="set-ic"><IconExport :size="15" /></div>
         <div class="set-body">
-          <div class="set-name">{{ $t('dao.import') }}</div>
-          <div class="set-sub">{{ $t('dao.importSub') }}</div>
-        </div>
-        <div class="set-val"><IconChevronRight :size="14" /></div>
-      </div>
-      <!-- Hide zones (advanced) -->
-      <div class="set-row" @click="open = 'hz'">
-        <div class="set-ic"><Icon name="lock" :size="15" /></div>
-        <div class="set-body">
-          <div class="set-name">{{ $t('dao.hideZones') }}</div>
-          <div class="set-sub">{{ $t('dao.hideZonesSub') }}</div>
-        </div>
-        <div class="set-val"><IconChevronRight :size="14" /></div>
-      </div>
-      <!-- Rules -->
-      <div class="set-row" @click="open = 'rules'">
-        <div class="set-ic"><Icon name="list" :size="15" /></div>
-        <div class="set-body">
-          <div class="set-name">{{ $t('dao.rules') }}</div>
-          <div class="set-sub">{{ rules.length }} {{ $t('dao.rulesUnit') }}</div>
+          <div class="set-name">Xuất chiến ký</div>
+          <div class="set-sub">CSV / JSON</div>
         </div>
         <div class="set-val"><IconChevronRight :size="14" /></div>
       </div>
     </div>
 
-    <!-- ─── Logout (danger) ─────────────────────────────────────── -->
-    <div class="set-group settings__danger">
-      <div class="set-row" @click="open = 'logout'">
-        <div class="set-ic settings__danger-ic">
-          <Icon name="log-out" :size="15" />
-        </div>
-        <div class="set-body">
-          <div class="set-name settings__danger-name">{{ $t('settings.menu.logout') }}</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ─── Footer · version + tagline ──────────────────────────── -->
+    <!-- Footer · version + tagline -->
     <div class="settings__foot">
-      {{ $t('dao.footer') }}<br />
-      <span class="settings__foot-tag">{{ $t('dao.tagline') }}</span>
+      Tru Ma Lục · v.Tu Tiên 2.0<br />
+      <span class="settings__foot-tag">~ Đạo tâm bất diệt ~</span>
     </div>
 
     <!-- POPUP -->
@@ -158,11 +117,10 @@
           @touchmove="onTouchMove"
           @touchend="onTouchEnd"
         >
-          <!-- Drag handle -->
           <div class="popup-handle"><div class="popup-handle-bar"></div></div>
 
           <div class="popup-hdr">
-            <span class="popup-title">{{ titles[open] }}</span>
+            <span class="popup-title">{{ popupTitle }}</span>
             <button class="popup-close" @click="closePopup"><Icon name="x" :size="18" /></button>
           </div>
 
@@ -176,207 +134,44 @@
                 <span class="settings__sync-note">{{ limPct }}%</span>
               </div>
               <div class="settings__sync-note" style="margin-bottom:4px">
-                <template v-if="hide.dailyLim">••••• / •••••</template>
-                <template v-else>{{ fCurrFull(todaySpent) }} / {{ fCurrFull(dayLimit) }}</template>
+                {{ fCurrFull(todaySpent) }} / {{ fCurrFull(dayLimit) }}
               </div>
-              <div v-if="!hide.dailyLim" class="popup-field">
-                <label class="popup-label">{{ $t('settings.limit.inputLabel') }}</label>
+              <div class="popup-field">
+                <label class="popup-label">Mức linh khí ngày mới</label>
                 <div class="settings__input-wrap">
-                  <input class="popup-input" v-model.number="nLimit" type="number" inputmode="numeric" :placeholder="limitPlaceholder" />
-                  <span class="settings__input-suffix">{{ currSymbol }}</span>
+                  <input class="popup-input" v-model.number="nLimit" type="number" inputmode="numeric" :placeholder="String(dayLimit)" />
+                  <span class="settings__input-suffix">VND</span>
                 </div>
-                <!-- Hiển thị tương đương VND khi đang nhập theo display currency -->
-                <span v-if="useDisplayCur && nLimit" class="settings__limit-hint">
-                  ≈ {{ fCurrFull(convertBetween(nLimit, displayCurrency, 'VND')) }}
-                </span>
-              </div>
-            </div>
-            <div v-if="!hide.dailyLim" class="popup-actions">
-              <button class="popup-btn primary" @click="saveLimit" :disabled="!nLimit">{{ $t('settings.limit.saveButton') }}</button>
-            </div>
-          </template>
-
-          <!-- HIDE ZONES -->
-          <template v-if="open === 'hz'">
-            <div class="popup-body settings__scrollbody">
-              <div class="hint" style="margin-bottom:8px">{{ $t('settings.hideZones.hint') }}</div>
-              <div class="settings__hz-tree">
-                <div v-for="g in zoneTree" :key="g.label" class="settings__hz-group" :class="{ 'settings__hz-group--expanded': expandedGroups[g.label] }">
-                  <div class="settings__hz-parent" :class="{ 'settings__hz-parent--checked': parentState(g) === 'all', 'settings__hz-parent--partial': parentState(g) === 'some' }">
-                    <label class="settings__hz-parent-check" @click.stop>
-                      <input type="checkbox"
-                        :checked="parentState(g) === 'all'"
-                        :indeterminate.prop="parentState(g) === 'some'"
-                        @change="toggleParent(g, $event.target.checked)" />
-                    </label>
-                    <span class="settings__hz-icon"><Icon :name="g.icon" :size="14" /></span>
-                    <span class="settings__hz-name" style="flex:1">{{ g.label }}</span>
-                    <button v-if="g.children.length > 1" class="settings__hz-toggle" @click="expandedGroups[g.label] = !expandedGroups[g.label]">
-                      <span class="settings__hz-arrow" :class="{ 'settings__hz-arrow--open': expandedGroups[g.label] }"><Icon name="chevron-right" :size="12" /></span>
-                    </button>
-                  </div>
-                  <div v-if="g.children.length <= 1 || expandedGroups[g.label]" class="settings__hz-children">
-                    <label v-for="c in g.children" :key="c.key" class="settings__hz-child" :class="{ 'settings__hz-child--checked': hideZones[c.key] }">
-                      <input type="checkbox"
-                        :checked="hideZones[c.key]"
-                        @change="$emit('set-hide-zone', { key: c.key, val: $event.target.checked })" />
-                      <span class="settings__hz-child-name">{{ c.name }}</span>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <!-- RULES -->
-          <template v-if="open === 'rules'">
-            <div class="popup-body settings__scrollbody">
-              <div v-if="!rules.length" class="empty">{{ $t('settings.rules.empty') }}</div>
-              <!-- Bọc danh sách quy tắc trong container có thể scroll khi nội dung dài -->
-              <div v-else class="settings__rules-list">
-                <div v-for="r in rules" :key="r" class="settings__rule">
-                  <div class="settings__rule-dot"></div><span>{{ r }}</span>
-                </div>
-              </div>
-            </div>
-          </template>
-
-          <!-- IMPORT JSON -->
-          <template v-if="open === 'json'">
-            <div class="popup-body">
-              <div class="hint" style="margin-bottom:6px">{{ $t('settings.json.hint') }}</div>
-              <textarea class="popup-input" v-model="importJson" :placeholder="$t('settings.json.placeholder')" style="height:120px;resize:none;font-size:10px;line-height:1.5"></textarea>
-              <div v-if="importErr" class="err" style="margin-top:4px">{{ importErr }}</div>
-            </div>
-            <div class="popup-actions">
-              <button class="popup-btn primary" style="background:var(--accent)" @click="$emit('import-json', importJson)" :disabled="!importJson || syncing">
-                {{ syncing ? $t('settings.json.updating') : $t('settings.json.button') }}
-              </button>
-            </div>
-          </template>
-
-          <!-- CURRENCY SELECTOR — dạng tab -->
-          <template v-if="open === 'currency'">
-            <div class="popup-body">
-              <!-- Tab navigation -->
-              <div class="tab-nav">
-                <button class="tab-btn" :class="{ active: currTab === 'display' }" @click="currTab = 'display'">{{ $t('settings.currency.tabDisplay') }}</button>
-                <button class="tab-btn" :class="{ active: currTab === 'base' }" @click="currTab = 'base'">{{ $t('settings.currency.tabBase') }}</button>
-                <button v-if="currentCurrency === 'JPY'" class="tab-btn" :class="{ active: currTab === 'jpy' }" @click="currTab = 'jpy'">{{ $t('settings.currency.tabJpy') }}</button>
-              </div>
-
-              <!-- Tab: Tiền tệ hiển thị (mặc định) -->
-              <template v-if="currTab === 'display'">
-                <div class="hint" style="margin-bottom:8px">{{ $t('settings.currency.displayHint') }}</div>
-                <div class="settings__lang-list">
-                  <button
-                    v-for="cur in CURRENCIES"
-                    :key="cur"
-                    class="settings__lang-item"
-                    :class="{ 'settings__lang-item--active': currentCurrency === cur }"
-                    @click="selectCurrency(cur)"
-                  >
-                    <span class="settings__lang-name">{{ $t('settings.currency.' + cur) }}</span>
-                    <Icon v-if="currentCurrency === cur" name="check" :size="14" class="settings__lang-check" />
-                  </button>
-                </div>
-                <div v-if="currentCurrency !== 'VND'" style="margin-top:10px;text-align:center" class="settings__sync-note">
-                  <template v-if="ratesLoading">{{ $t('settings.currency.rateLoading') }}</template>
-                  <template v-else-if="ratesError">{{ $t('settings.currency.rateError') }}</template>
-                  <template v-else>{{ $t('settings.currency.rateInfo') }}</template>
-                </div>
-              </template>
-
-              <!-- Tab: Tiền tệ gốc -->
-              <template v-if="currTab === 'base'">
-                <div class="hint" style="margin-bottom:8px">{{ $t('settings.currency.baseHint') }}</div>
-                <div class="settings__lang-list">
-                  <button
-                    v-for="cur in CURRENCIES"
-                    :key="'base-' + cur"
-                    class="settings__lang-item"
-                    :class="{ 'settings__lang-item--active': currentBaseCurrency === cur }"
-                    @click="selectBaseCurrency(cur)"
-                  >
-                    <span class="settings__lang-name">{{ $t('settings.currency.' + cur) }}</span>
-                    <Icon v-if="currentBaseCurrency === cur" name="check" :size="14" class="settings__lang-check" />
-                  </button>
-                </div>
-              </template>
-
-              <!-- Tab: Ký hiệu JPY — chỉ hiện khi tiền tệ hiển thị là JPY -->
-              <template v-if="currTab === 'jpy' && currentCurrency === 'JPY'">
-                <div class="hint" style="margin-bottom:6px">{{ $t('settings.currency.jpyNotation') }}</div>
-                <div style="display:flex;gap:4px">
-                  <button :class="['tab-btn', currentJpyNotation === 'standard' ? 'active' : '']" style="flex:1" @click="selectJpyNotation('standard')">{{ $t('settings.currency.jpyStandard') }}</button>
-                  <button :class="['tab-btn', currentJpyNotation === 'kanji' ? 'active' : '']" style="flex:1" @click="selectJpyNotation('kanji')">{{ $t('settings.currency.jpyKanji') }}</button>
-                </div>
-              </template>
-            </div>
-          </template>
-
-          <!-- LANGUAGE PICKER -->
-          <template v-if="open === 'lang'">
-            <div class="popup-body">
-              <div class="settings__lang-list">
-                <button
-                  v-for="loc in LOCALES"
-                  :key="loc"
-                  class="settings__lang-item"
-                  :class="{ 'settings__lang-item--active': currentLocale === loc }"
-                  @click="selectLocale(loc)"
-                >
-                  <span class="settings__lang-name">{{ $t('settings.language.' + loc) }}</span>
-                  <Icon v-if="currentLocale === loc" name="check" :size="14" class="settings__lang-check" />
-                </button>
-              </div>
-            </div>
-          </template>
-
-          <!-- PUSH NOTIFICATIONS -->
-          <template v-if="open === 'push'">
-            <div class="popup-body">
-              <div class="hint" style="margin-bottom:10px">{{ $t('settings.push.hint') }}</div>
-              <div v-if="isIOS" class="settings__push-ios-hint">{{ $t('settings.push.iOSHint') }}</div>
-              <div class="settings__push-status-row">
-                <span class="settings__sync-note">{{ $t('settings.push.status.' + (pushStatus || 'unknown')) }}</span>
-                <span class="settings__push-dot" :class="'settings__push-dot--' + (pushStatus || 'unknown')"></span>
-              </div>
-              <button
-                v-if="pushStatus !== 'granted' && pushStatus !== 'denied' && pushStatus !== 'unsupported'"
-                class="popup-btn primary settings__push-enable-btn"
-                @click="$emit('enable-push')"
-              >{{ $t('settings.push.enableBtn') }}</button>
-              <div class="popup-field" style="margin-top:14px">
-                <label class="popup-label">{{ $t('settings.push.workerUrl') }}</label>
-                <input
-                  class="popup-input"
-                  v-model="pushWorkerUrl"
-                  type="url"
-                  :placeholder="$t('settings.push.workerUrlPlaceholder')"
-                />
               </div>
             </div>
             <div class="popup-actions">
-              <button class="popup-btn primary" @click="savePushWorkerUrl">{{ $t('settings.push.saveWorker') }}</button>
+              <button class="popup-btn attack" @click="saveLimit" :disabled="!nLimit">Đặt giới linh khí</button>
             </div>
           </template>
 
-          <!-- LOGOUT CONFIRM -->
+          <!-- EXPORT -->
+          <template v-if="open === 'export'">
+            <div class="popup-body">
+              <div class="hint" style="margin-bottom:10px">Sao chép chiến ký để sao lưu / mang qua thiết bị khác.</div>
+              <div class="popup-actions" style="margin-top:0">
+                <button class="popup-btn attack" @click="exportJson">Sao chép JSON</button>
+                <button class="popup-btn heal" @click="exportCsv">Tải CSV</button>
+              </div>
+              <div v-if="exportMsg" class="hint" style="margin-top:10px;color:var(--jade)">{{ exportMsg }}</div>
+            </div>
+          </template>
+
+          <!-- LOGOUT confirm (chỉ truy cập qua long-press Strategy row) -->
           <template v-if="open === 'logout'">
             <div class="popup-body">
-              <div class="settings__logout-icon">
-                <Icon name="log-out" :size="32" color="var(--danger)" />
-              </div>
-              <p class="settings__logout-msg">{{ $t('settings.logout.confirm') }}</p>
-              <p class="settings__logout-hint">{{ $t('settings.logout.hint') }}</p>
+              <p style="text-align:center;font-family:var(--serif-vn);font-size:14px;font-weight:600;margin:12px 0 6px">Đăng xuất khỏi Bin?</p>
+              <p style="text-align:center;font-family:var(--serif-vn);font-size:12px;color:var(--muted);margin:0;line-height:1.5">Đạo tâm vẫn còn — chiến ký vẫn lưu trên JSONBin.</p>
             </div>
-            <div class="popup-actions settings__popup-actions--gap">
-              <button class="popup-btn" @click="closePopup">{{ $t('settings.logout.cancel') }}</button>
-              <button class="popup-btn settings__popup-btn--danger" @click="$emit('logout')">{{ $t('settings.logout.button') }}</button>
+            <div class="popup-actions" style="flex-direction:row;gap:10px">
+              <button class="popup-btn flee" style="flex:1" @click="closePopup">Hủy</button>
+              <button class="popup-btn attack" style="flex:1" @click="$emit('logout')">Đăng xuất</button>
             </div>
           </template>
-
         </div>
       </div>
     </Transition>
@@ -384,15 +179,14 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { ref, computed, watch } from 'vue'
 import Icon from '../ui/Icon.vue'
 import SectionHeader from '../cards/SectionHeader.vue'
 import {
   IconSettings,
   IconUser,
   IconTarget,
-  IconCoins,
+  IconSword,
   IconSun,
   IconMoon,
   IconScroll,
@@ -404,86 +198,23 @@ import {
   IconChevronRight,
 } from '../ui/quest-icons'
 import { useFormatters } from '../../composables/ui/useFormatters'
-import { useCurrency, CURRENCIES } from '../../composables/api/useCurrency'
+import { useCurrency } from '../../composables/api/useCurrency'
 import { useTheme } from '../../composables/ui/useTheme'
 import { useDisplayMode } from '../../composables/ui/useDisplayMode'
-import { LOCALES, setLocale } from '../../i18n'
 
 const { fN } = useFormatters()
-const { t, locale: i18nLocale } = useI18n()
-const { displayCurrency, baseCurrency, jpyNotation, ratesLoading, ratesError, fetchRates, setDisplayCurrency, setBaseCurrency, setJpyNotation, fCurrFull, convertBetween } = useCurrency()
+const { fCurrFull } = useCurrency()
 const { theme, toggleTheme } = useTheme()
 const { mode: displayMode, toggleMode } = useDisplayMode()
-
-/** Locale hiện tại từ vue-i18n */
-const currentLocale = computed(() => i18nLocale.value)
-
-/** Set locale + đóng popup */
-function selectLocale(loc) {
-  setLocale(loc)
-  closePopup()
-}
-
-/** Format dayLimit ngắn cho set-row value (vd. "70K") */
-const fmtLimitShort = computed(() => {
-  const v = props.dayLimit || 0
-  if (v >= 1e6) return (v / 1e6).toFixed(1).replace(/\.0$/, '') + 'M'
-  if (v >= 1e3) return (v / 1e3).toFixed(0) + 'K'
-  return fN(v)
-})
-
-/** Mã tiền tệ hiển thị trong input suffix (VND / USD / JPY) */
-const currSymbol = computed(() => displayCurrency.value)
-
-/** True khi display currency khác VND và tỷ giá đã load */
-const useDisplayCur = computed(() => displayCurrency.value !== 'VND' && !ratesLoading.value)
-
-/** Placeholder hạn mức theo display currency */
-const limitPlaceholder = computed(() => {
-  const dl = props.dayLimit || 0
-  if (!useDisplayCur.value) return String(dl)
-  const converted = convertBetween(dl, 'VND', displayCurrency.value)
-  return displayCurrency.value === 'USD' ? converted.toFixed(2) : String(Math.round(converted))
-})
-
-const currentCurrency = computed(() => displayCurrency.value)
-const currentBaseCurrency = computed(() => baseCurrency.value)
-const currentJpyNotation = computed(() => jpyNotation.value)
-
-function selectCurrency(cur) {
-  setDisplayCurrency(cur)
-  if (cur !== 'VND') fetchRates()
-}
-
-function selectBaseCurrency(cur) {
-  setBaseCurrency(cur)
-}
-
-function selectJpyNotation(n) {
-  setJpyNotation(n)
-}
-
-function openCurrency() {
-  open.value = 'currency'
-  currTab.value = 'display'
-  if (displayCurrency.value !== 'VND') fetchRates()
-}
-
 
 const props = defineProps({
   dayLimit: Number,
   todaySpent: Number,
   limPct: Number,
   limSt: String,
-  rules: { type: Array, default: () => [] },
   syncMsg: String,
   syncTime: String,
-  syncing: Boolean,
-  importErr: String,
-  hide: Object,
-  hideZones: Object,
   pushStatus: String,
-  // Phase 7: tu-tien profile + global hide flag
   playerName: { type: String, default: '' },
   playerRealm: { type: String, default: '' },
   playerLvl: { type: Number, default: 1 },
@@ -492,88 +223,37 @@ const props = defineProps({
 
 const emit = defineEmits([
   'update-limit',
-  'import-json',
-  'set-hide-zone',
   'enable-push',
-  'save-push-worker',
   'logout',
-  // Phase 7
   'reload',
   'toggle-hide',
+  'export-json',
 ])
 
-const titles = computed(() => ({
-  lim: t('settings.menu.limit'),
-  hz: t('settings.menu.hideZones'),
-  rules: t('settings.menu.rules'),
-  json: t('settings.menu.json'),
-  currency: t('settings.menu.currency'),
-  progressMode: t('settings.progressMode.title'),
-  push: t('settings.menu.push'),
-  logout: t('settings.menu.logout'),
-  lang: t('dao.language'),
-}))
+const fmtLimitShort = computed(() => {
+  const v = props.dayLimit || 0
+  if (v >= 1e6) return (v / 1e6).toFixed(1).replace(/\.0$/, '') + 'M'
+  if (v >= 1e3) return (v / 1e3).toFixed(0) + 'K'
+  return fN(v)
+})
 
-const zoneTree = computed(() => [
-  { icon: 'alert-triangle', label: t('settings.hideZones.zones.alert'), children: [{ key: 'alert', name: t('settings.hideZones.zones.alertChild') }] },
-  { icon: 'banknote', label: t('settings.hideZones.zones.cash'), children: [
-    { key: 'cash.balance', name: t('settings.hideZones.zones.cashBalance') },
-    { key: 'cash.todaySpent', name: t('settings.hideZones.zones.cashToday') },
-    { key: 'cash.monthSpent', name: t('settings.hideZones.zones.cashMonth') },
-  ]},
-  { icon: 'credit-card', label: t('settings.hideZones.zones.debtGroup'), children: [
-    { key: 'debt.total', name: t('settings.hideZones.zones.debtTotal') },
-    { key: 'debt.cardBal', name: t('settings.hideZones.zones.debtCard') },
-    { key: 'debt.minPay', name: t('settings.hideZones.zones.debtMin') },
-  ]},
-  { icon: 'trending-down', label: t('settings.hideZones.zones.progress'), children: [
-    { key: 'progress.origDebt', name: t('settings.hideZones.zones.progressOrig') },
-    { key: 'progress.remaining', name: t('settings.hideZones.zones.progressRem') },
-  ]},
-  { icon: 'calendar', label: t('settings.hideZones.zones.upcoming'), children: [
-    { key: 'upcoming.amount', name: t('settings.hideZones.zones.upcomingAmt') },
-    { key: 'upcoming.shortage', name: t('settings.hideZones.zones.upcomingShortage') },
-  ]},
-  { icon: 'receipt', label: t('settings.hideZones.zones.txGroup'), children: [{ key: 'transactions', name: t('settings.hideZones.zones.txAmt') }] },
-  { icon: 'bar-chart-3', label: t('settings.hideZones.zones.chartsGroup'), children: [
-    { key: 'charts.spend', name: t('settings.hideZones.zones.chartsSpend') },
-    { key: 'charts.debtLine', name: t('settings.hideZones.zones.chartsDebt') },
-    { key: 'charts.pie', name: t('settings.hideZones.zones.chartsPie') },
-  ]},
-  { icon: 'clock', label: t('settings.hideZones.zones.timelineGroup'), children: [
-    { key: 'timeline.debt', name: t('settings.hideZones.zones.timelineDebt') },
-    { key: 'timeline.eventAmt', name: t('settings.hideZones.zones.timelineEvent') },
-  ]},
-  { icon: 'settings', label: t('settings.hideZones.zones.settingsGroup'), children: [
-    { key: 'settings.cardInfo', name: t('settings.hideZones.zones.settingsCard') },
-    { key: 'settings.dailyLim', name: t('settings.hideZones.zones.settingsLimit') },
-    { key: 'settings.dropdown', name: t('settings.hideZones.zones.settingsDropdown') },
-    { key: 'settings.cashInfo', name: t('settings.hideZones.zones.settingsCash') },
-  ]},
-])
-
-function parentState(g) {
-  const vals = g.children.map((c) => !!props.hideZones?.[c.key])
-  if (vals.every(Boolean)) return 'all'
-  if (vals.some(Boolean)) return 'some'
-  return 'none'
+const popupTitles = {
+  lim: 'Mức linh khí ngày',
+  export: 'Xuất chiến ký',
+  logout: 'Đăng xuất',
 }
-function toggleParent(g, checked) {
-  g.children.forEach((c) => emit('set-hide-zone', { key: c.key, val: checked }))
-}
+const popupTitle = computed(() => popupTitles[open.value] || '')
 
-// --- State ---
+// ─── State ────────────────────────────────────────────────────
 const open = ref(null)
-const expandedGroups = reactive({})
 const nLimit = ref(null)
-/** Tab hiện tại trong popup tiền tệ: 'display' | 'base' | 'jpy' */
-const currTab = ref('display')
-const importJson = ref('')
+const exportMsg = ref('')
 
 function closePopup() {
   dismissing.value = false
   dragY.value = 0
   open.value = null
+  exportMsg.value = ''
 }
 
 watch(open, (v) => {
@@ -587,29 +267,34 @@ watch(open, (v) => {
 
 function saveLimit() {
   if (nLimit.value > 0) {
-    // Nếu đang dùng display currency thì convert về VND trước khi lưu
-    const vndValue = useDisplayCur.value
-      ? Math.round(convertBetween(nLimit.value, displayCurrency.value, 'VND'))
-      : nLimit.value
-    emit('update-limit', vndValue)
+    emit('update-limit', nLimit.value)
     nLimit.value = null
     closePopup()
   }
 }
 
-// --- Push notification ---
-const pushWorkerUrl = ref(localStorage.getItem('dt_push_worker_url') || '')
-const isIOS = computed(() =>
-  /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-  (navigator.userAgent.includes('Mac') && 'ontouchend' in document)
-)
-
-function savePushWorkerUrl() {
-  emit('save-push-worker', pushWorkerUrl.value)
-  closePopup()
+function onPushTap() {
+  if (props.pushStatus !== 'granted' && props.pushStatus !== 'denied') {
+    emit('enable-push')
+  }
 }
 
-// --- Swipe to dismiss ---
+function onStrategyTap() {
+  // Tap = không làm gì (chỉ display). Long-press để mở logout.
+  // Mobile: contextmenu event = long-press.
+}
+
+// ─── Export ───────────────────────────────────────────────────
+function exportJson() {
+  emit('export-json', 'json')
+  exportMsg.value = 'Đã sao chép vào clipboard'
+}
+function exportCsv() {
+  emit('export-json', 'csv')
+  exportMsg.value = 'Đã tải file CSV'
+}
+
+// ─── Swipe to dismiss ──────────────────────────────────────────
 const sheetRef = ref(null)
 const dragY = ref(0)
 const dragging = ref(false)
@@ -716,122 +401,30 @@ defineExpose({})
 </script>
 
 <style scoped>
-/* Menu list */
-.settings__list { display: flex; flex-direction: column; gap: 6px; }
-.settings__item { display: flex; align-items: center; gap: 12px; padding: 13px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: background .12s; -webkit-tap-highlight-color: transparent; }
-.settings__item:active { background: var(--surface2); }
-.settings__item-ico { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
-.settings__item-label { flex: 1; font-family: var(--sans); font-size: 13px; font-weight: 600; color: var(--text); }
-.settings__item-arrow { font-size: 13px; color: var(--muted); flex-shrink: 0; }
-.settings__cur-val { font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: rgba(var(--accent-rgb),.12); color: var(--accent); flex-shrink: 0; }
-.settings__sep { height: 1px; background: var(--border); margin: 4px 0; }
-.settings__item--danger { border-color: rgba(var(--danger-rgb),.2); }
-.settings__item--danger:active { background: rgba(var(--danger-rgb),.08); }
-.settings__item-ico--danger { color: var(--danger); }
-.settings__item-label--danger { color: var(--danger); }
-
 /* Sync note */
 .settings__sync-note { font-family: var(--mono); font-size: 10px; color: var(--muted); }
 
-/* Input với suffix currency */
+/* Input với suffix VND */
 .settings__input-wrap { position: relative; display: flex; align-items: center; }
 .settings__input-wrap .popup-input { flex: 1; padding-right: 44px; min-width: 0; }
-.settings__input-suffix { position: absolute; right: 8px; font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: rgba(var(--accent-rgb),.12); color: var(--accent); pointer-events: none; }
-.settings__limit-hint { display: block; margin-top: 4px; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.settings__input-suffix {
+  position: absolute; right: 8px;
+  font-family: var(--mono); font-size: 9px; font-weight: 700;
+  padding: 1px 6px; border-radius: 4px;
+  background: rgba(var(--gold-rgb), 0.12);
+  color: var(--gold);
+  pointer-events: none;
+}
 
 /* Limit bar */
 .settings__lim-wrap { display: flex; align-items: center; gap: 8px; margin: 9px 0 5px; }
-.settings__lim-bar { flex: 1; height: 5px; background: var(--surface2); border-radius: 99px; overflow: hidden; }
+.settings__lim-bar { flex: 1; height: 5px; background: var(--paper-3); border-radius: 99px; overflow: hidden; }
 .settings__lim-fill { height: 100%; border-radius: 99px; transition: width .4s; }
-.settings__lim-fill--safe { background: var(--accent3); }
-.settings__lim-fill--warn { background: var(--accent); }
-.settings__lim-fill--over { background: var(--accent2); }
+.settings__lim-fill--safe { background: var(--jade); }
+.settings__lim-fill--warn { background: var(--gold); }
+.settings__lim-fill--over { background: var(--crimson); }
 
-/* Rules */
-.settings__rule { display: flex; align-items: flex-start; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
-.settings__rule:last-child { border-bottom: none; }
-.settings__rule-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--accent2); margin-top: 5px; flex-shrink: 0; }
-
-/* Currency section divider + labels */
-.settings__cur-section-label { font-family: var(--sans); font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
-.settings__cur-divider { height: 1px; background: var(--border); margin: 14px 0; }
-
-/* Language / Currency selector */
-.settings__lang-list { display: flex; flex-direction: column; gap: 6px; }
-.settings__lang-item { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; cursor: pointer; transition: all .15s; font-family: var(--sans); font-size: 14px; color: var(--text); }
-.settings__lang-item:active { background: rgba(var(--accent-rgb),.08); }
-.settings__lang-item--active { border-color: var(--accent); background: rgba(var(--accent-rgb),.06); }
-.settings__lang-name { font-weight: 500; }
-.settings__lang-check { color: var(--accent); }
-
-/* Danh sách quy tắc có thể scroll khi nhiều items */
-.settings__rules-list { display: flex; flex-direction: column; }
-
-/* Hide zones treeview */
-.settings__hz-tree { display: flex; flex-direction: column; gap: 4px; }
-.settings__hz-group { margin-bottom: 2px; }
-.settings__hz-parent { display: flex; align-items: center; gap: 9px; padding: 8px 12px; background: var(--surface2); border: 1px solid var(--muted); border-radius: 9px; user-select: none; transition: all .15s; }
-.settings__hz-group--expanded .settings__hz-parent { border-radius: 9px 9px 4px 4px; }
-.settings__hz-parent:active { opacity: .8; }
-.settings__hz-parent--checked { border-color: var(--accent); background: rgba(var(--accent-rgb),.04); }
-.settings__hz-parent--partial { border-color: rgba(var(--accent-rgb),.35); background: rgba(var(--accent-rgb),.02); }
-.settings__hz-parent-check { display: flex; align-items: center; cursor: pointer; }
-.settings__hz-toggle { background: none; border: none; padding: 2px 4px; cursor: pointer; color: var(--text); font-size: 13px; line-height: 1; transition: color .15s; }
-.settings__hz-toggle:active { opacity: .7; }
-.settings__hz-arrow { display: inline-block; transition: transform .2s ease; }
-.settings__hz-arrow--open { transform: rotate(90deg); }
-.settings__hz-children { display: flex; flex-direction: column; gap: 0; padding-left: 20px; }
-.settings__hz-child { display: flex; align-items: center; gap: 9px; padding: 6px 12px; background: var(--bg); border: 1px solid var(--border); border-top: none; cursor: pointer; user-select: none; transition: all .15s; }
-.settings__hz-child:last-child { border-radius: 0 0 9px 9px; }
-.settings__hz-child:active { background: var(--surface2); }
-.settings__hz-child--checked { background: rgba(var(--accent-rgb),.03); }
-.settings__hz-child-name { font-size: 11px; color: var(--muted); }
-.settings__hz-child--checked .settings__hz-child-name { color: var(--text); }
-.settings__hz-tree input[type=checkbox] { appearance: none; -webkit-appearance: none; width: 15px; height: 15px; border: 2px solid var(--muted); border-radius: 4px; background: transparent; cursor: pointer; flex-shrink: 0; position: relative; transition: all .15s; }
-.settings__hz-tree input[type=checkbox]:checked { background: var(--accent); border-color: var(--accent); }
-.settings__hz-tree input[type=checkbox]:checked::after { content: '✓'; position: absolute; top: -1px; left: 1.5px; font-size: 10px; font-weight: 700; color: var(--bg); }
-.settings__hz-tree input[type=checkbox]:indeterminate { border-color: var(--accent); background: transparent; }
-.settings__hz-tree input[type=checkbox]:indeterminate::after { content: '—'; position: absolute; top: -2px; left: 2px; font-size: 11px; font-weight: 700; color: var(--accent); }
-.settings__hz-icon { font-size: 14px; flex-shrink: 0; }
-.settings__hz-name { font-size: 12px; font-weight: 600; color: var(--text); }
-
-/* Logout confirm */
-.settings__logout-icon { display: flex; justify-content: center; padding: 12px 0 8px; }
-.settings__logout-msg { text-align: center; font-family: var(--sans); font-size: 14px; font-weight: 700; color: var(--text); margin: 0 0 8px; }
-.settings__logout-hint { text-align: center; font-family: var(--sans); font-size: 12px; color: var(--muted); margin: 0; line-height: 1.5; }
-
-/* Popup modifiers (only used here) */
-.settings__popup-btn--danger { background: rgba(var(--danger-rgb),.2); color: var(--danger); border: 1px solid rgba(var(--danger-rgb),.25); }
-.settings__popup-btn--danger:active { opacity: .8; }
-.settings__popup-actions--gap { flex-direction: row; gap: 10px; }
-.settings__popup-actions--gap .popup-btn { flex: 1; }
-
-/* Push notification */
-.settings__push-badge { font-family: var(--mono); font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 20px; flex-shrink: 0; }
-.settings__push-badge--unknown { background: rgba(var(--muted-rgb, 100,100,120),.15); color: var(--muted); }
-.settings__push-badge--granted { background: rgba(var(--accent3-rgb, 74,239,184),.15); color: var(--accent3, #4aefb8); }
-.settings__push-badge--denied { background: rgba(var(--danger-rgb),.12); color: var(--danger); }
-.settings__push-badge--unsupported { background: rgba(var(--muted-rgb, 100,100,120),.1); color: var(--muted); }
-.settings__push-ios-hint { font-family: var(--sans); font-size: 11px; color: var(--muted); background: var(--surface2); border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; line-height: 1.5; }
-.settings__push-status-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-.settings__push-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.settings__push-dot--granted { background: var(--accent3, #4aefb8); box-shadow: 0 0 5px var(--accent3, #4aefb8); }
-.settings__push-dot--unknown, .settings__push-dot--unsupported { background: var(--muted); }
-.settings__push-dot--denied { background: var(--danger); }
-.settings__push-enable-btn { width: 100%; margin-top: 2px; }
-
-/* Body có thể scroll — dùng cho danh sách dài (hz, rules) */
-.settings__scrollbody { max-height: calc(85vh - 160px); overflow-y: auto; }
-
-/* Phase 7 · danger row (logout) + footer */
-.settings__danger { margin-top: 18px; }
-.settings__danger :deep(.set-ic) {
-  color: var(--crimson);
-  border-color: rgba(var(--crimson-rgb), 0.4);
-}
-.settings__danger :deep(.set-name) { color: var(--crimson); }
-.settings__danger :deep(.set-row:active) { background: rgba(var(--crimson-rgb), 0.06); }
-
+/* Footer */
 .settings__foot {
   text-align: center;
   margin-top: 24px;

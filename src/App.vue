@@ -25,18 +25,14 @@
   <!-- LEVEL UP TOAST -->
   <LevelUpToast :show="lvlUpShow" :level="playerLvl" />
 
-  <!-- DETAIL POPUP -->
+  <!-- DETAIL POPUP · chỉ upcoming variant theo design (PayQuestPopup) -->
   <DetailPopup
     :item="popupItem"
     :availCash="availCash"
     :hide="!!hz('upcoming.amount')"
-    :debtCards="debtCards"
     @close="popupItem = null"
     @toggle-paid="(k: string, a: number, n: string) => { popupItem = null; togglePaid(k, a, n) }"
-    @save-upcoming="handlePopupSaveUpcomingWrapped"
-    @save-tx="handlePopupSaveTxWrapped"
     @delete="handlePopupDelete"
-    @clone-item="handleCopy"
   />
 
   <!-- MAIN · Tru Ma Lục shell ─────────────────────────────────────────── -->
@@ -62,11 +58,10 @@
           <span class="next">{{ playerXp }}/{{ playerXpMax }}</span>
         </div>
 
-        <div v-if="isOver" class="alert over"><Icon name="alert-triangle" :size="14" /> {{ $t('app.alert.over') }}{{ hz('alert') ? '•••' : fCurrFull(todaySpent - dayLimit) }}</div>
-        <div v-else-if="dayLimit > 0" class="alert ok">
-          <Icon name="check" :size="14" />
-          <span class="alert-main">{{ $t('app.alert.okMain', { amount: hz('alert') ? '****' : fCurr(dayLimit - todaySpent), limit: hz('alert') ? '****' : fCurr(dayLimit) }) }}</span>
-          <span v-if="cashDaysLeft !== null && cashDaysLeft < dToSalary" class="alert-badge-warn">{{ hz('alert') ? '•/•' : $t('app.alert.days', { days: cashDaysLeft, salary: dToSalary }) }}</span>
+        <!-- Alert · chỉ hiện khi vượt giới (theo design) -->
+        <div v-if="isOver" class="alert warn">
+          <IconWarn :size="18" class="ic" />
+          <div><b>Phá giới!</b> Linh khí vượt mức {{ fCurr(todaySpent - dayLimit) }} — giảm 1 tu vi.</div>
         </div>
 
         <!-- Tâm Ma · Final boss = totalDebt (tier-aware) -->
@@ -113,6 +108,7 @@
           :icon="IconDemon"
           :title="$t('section.maChuong')"
           :vn="String(allEnemyDebts.length)"
+          act="+ Triệu hồi"
         />
         <EnemyRow
           :cards="allEnemyDebts"
@@ -126,6 +122,7 @@
           :icon="IconTrophy"
           :title="$t('section.tamPhap')"
           vn="achievement"
+          :act="`${items.paymentRecords.value.length}/24`"
         />
         <AchievementList
           :paidCount="items.paymentRecords.value.length"
@@ -151,7 +148,6 @@
         v-if="tab === 'inv'"
         :transactions="sortedTx"
         :hide="hz('transactions')"
-        @open-detail="openDetail($event, 'tx')"
         @delete-tx="(tx: any) => deleteTx(tx)"
         @quick-add="handleQuickAdd"
       />
@@ -185,26 +181,19 @@
         :todaySpent="todaySpent"
         :limPct="limPct"
         :limSt="limSt"
-        :rules="localizedRules"
         :syncMsg="syncMsgText"
         :syncTime="syncTime"
-        :syncing="syncing"
-        :importErr="importErr"
-        :hide="{ cardInfo: hz('settings.cardInfo'), dailyLim: hz('settings.dailyLim'), dropdown: hz('settings.dropdown'), cashInfo: hz('settings.cashInfo') }"
-        :hideZones="hideZones"
         :pushStatus="pushStatus"
         :playerName="playerName"
         :playerRealm="playerRealm"
         :playerLvl="playerLvl"
         :hideFlag="hideAmounts"
         @update-limit="updLimit"
-        @import-json="handleImportJson"
-        @set-hide-zone="({ key, val }: { key: string; val: boolean }) => setHideZone(key, val)"
         @enable-push="handleEnablePush"
-        @save-push-worker="handleSavePushWorker"
         @logout="logout"
         @reload="hardReload"
         @toggle-hide="toggleHide"
+        @export-json="handleExport"
       />
     </div>
 
@@ -258,7 +247,7 @@ import Icon from './components/ui/Icon.vue'
 
 // Phase 10 cleanup: components CashHero/DebtOverview/ProgressSection/UpcomingPayments/AppHeader
 // đã bị xoá sau khi Phase 1+2 thay bằng TutienHeader + BossCard + ManaCards + EnemyRow + QuestList.
-import { IconScroll, IconDemon, IconTrophy } from './components/ui/quest-icons'
+import { IconScroll, IconDemon, IconTrophy, IconWarn } from './components/ui/quest-icons'
 
 // Tu Tiên foundations — useTheme/useDisplayMode singletons khởi tạo qua import
 // (side effect ở module level: theme đồng bộ class body.light)
@@ -297,7 +286,6 @@ const appState = ref<'loading' | 'setup' | 'ready' | 'error'>(isConfigured.value
 /** TabId: 5 tab dưới (BottomTabBar) + 'cfg' (truy cập qua tap avatar) */
 type TabId = 'home' | 'inv' | 'add' | 'cht' | 'map' | 'cfg'
 const tab = ref<TabId>('home')
-const importErr = ref('')
 const settingsRef = ref<InstanceType<typeof SettingsPanel> | null>(null)
 const syncBarRef = ref<InstanceType<typeof SyncBar> | null>(null)
 
@@ -692,46 +680,28 @@ function handleSavePushWorker(url: string): void {
 // ─── Setup composable ─────────────────────────────────────────────────────
 // Payments is wired first so cleanupPastPaid can be passed to useAppSetup
 const payments = usePayments(d, async () => { try { await api.push(d.value); return true } catch { return false } }, toastFn, tStr, findDebtId)
-const { togglePaid, recPay, addOneTime, saveEdit, deleteUpcoming, handlePopupSaveUpcoming } = payments
+const { togglePaid, deleteUpcoming } = payments
+void payments  // recPay/addOneTime/saveEdit/cleanupPastPaid available qua payments object
 
 const { loading, sErr, pushData, pullData, handleSetup, reconnect, hardReload, logout } = useAppSetup(
   d, appState, api, toastFn, () => payments.cleanupPastPaid()
 )
 
 // ─── Transaction composable ───────────────────────────────────────────────
-const { copyTxData, addExp, addInc, deleteTx, handlePopupSaveTx } = useTransactions(d, pushData, toastFn, tStr)
+const { copyTxData, addExp, addInc, deleteTx } = useTransactions(d, pushData, toastFn, tStr)
 
 // ─── Debt action composable ───────────────────────────────────────────────
-const { updateCardDirect, addCash, updLimit, importNewJson } = useDebtActions(d, pushData, toastFn, tStr)
+const { updateCardDirect, updLimit } = useDebtActions(d, pushData, toastFn, tStr)
 
-// ─── Popup state ──────────────────────────────────────────────────────────
+// ─── Popup state · DetailPopup chỉ render upcoming variant theo design ──
 const popupItem = ref<Record<string, unknown> | null>(null)
 function openDetail(item: object, variant: string): void {
   popupItem.value = { ...(item as Record<string, unknown>), _variant: variant }
 }
 
-async function handlePopupSaveUpcomingWrapped(p: Parameters<typeof handlePopupSaveUpcoming>[0]): Promise<void> {
+async function handlePopupDelete(item: object): Promise<void> {
   popupItem.value = null
-  await handlePopupSaveUpcoming(p)
-  // Nếu chỉnh ngày thành hôm nay → reset dedup và gửi lại notification
-  if (p._buf?.date === tStr()) {
-    clearDueDedup()
-    await sendDueNotification(upcoming.value)
-  }
-}
-
-async function handlePopupSaveTxWrapped(item: Parameters<typeof handlePopupSaveTx>[0]): Promise<void> {
-  popupItem.value = null
-  await handlePopupSaveTx(item)
-}
-
-async function handlePopupDelete(item: Record<string, unknown>): Promise<void> {
-  popupItem.value = null
-  if (item._variant === 'upcoming') {
-    await deleteUpcoming(item as Parameters<typeof deleteUpcoming>[0])
-  } else {
-    await deleteTx(item as Parameters<typeof deleteTx>[0])
-  }
+  await deleteUpcoming(item as Parameters<typeof deleteUpcoming>[0])
 }
 
 async function handleQuickAdd(tx: TransactionItem): Promise<void> {
@@ -741,7 +711,7 @@ async function handleQuickAdd(tx: TransactionItem): Promise<void> {
     desc: tx.desc || '',
     amount: tx.amount || 0,
     cat: tx.cat || 'khac',
-    currency: tx.currency ?? undefined,
+    currency: 'VND',
     note: tx.note ?? undefined,
     time: timeStr,
   }
@@ -752,27 +722,47 @@ async function handleQuickAdd(tx: TransactionItem): Promise<void> {
   }
 }
 
-function handleCopy(item: Record<string, unknown>): void {
-  popupItem.value = null
-  // Cả upcoming và transaction đều prefill vào Add tab (Phase 2: bỏ inline upcoming form)
-  // Upcoming clone tạm map sang dạng expense — Phase 7 sẽ phân biệt one-time vs payment.
-  tab.value = 'add'
-  setTimeout(() => {
-    const addEl = document.querySelector('.add-tx')
-    if (addEl) (addEl as HTMLElement).scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }, 50)
-  copyTxData.value = {
-    desc: (item.desc || item.name || '') as string,
-    amount: (item.amount || item.amt || 0) as number,
-    cat: (item.cat || 'an') as string,
-    type: (item.type || 'exp') as 'exp' | 'inc',
+/** Export current data — copy JSON to clipboard hoặc tải CSV. */
+async function handleExport(format: 'json' | 'csv'): Promise<void> {
+  if (format === 'json') {
+    const json = JSON.stringify({ meta: d.value.meta, items: d.value.items }, null, 2)
+    if (navigator.clipboard) await navigator.clipboard.writeText(json)
+    else {
+      const ta = document.createElement('textarea')
+      ta.value = json
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    }
+  } else {
+    // CSV: chỉ expense_log + income_log
+    const items = d.value.items
+    const lines = ['type,date,time,desc,amount,cat,pay_method,currency,note']
+    for (const i of items) {
+      if (i.type !== 'expense_log' && i.type !== 'income_log') continue
+      const row = [
+        i.type === 'expense_log' ? 'exp' : 'inc',
+        i.due_date, i.time ?? '',
+        '"' + (i.name || '').replace(/"/g, '""') + '"',
+        i.amount,
+        i.cat,
+        i.type === 'expense_log' ? (i.pay_method ?? '') : '',
+        i.currency ?? '',
+        '"' + (i.note ?? '').replace(/"/g, '""') + '"',
+      ]
+      lines.push(row.join(','))
+    }
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `chien-ky-${tStr()}.csv`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
-}
-
-// ─── Wrappers that need script-scope refs ─────────────────────────────────
-// importErr is a Ref<string> — auto-unwrapped in template, so pass from script scope
-async function handleImportJson(jsonStr: string): Promise<void> {
-  await importNewJson(jsonStr, importErr)
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────

@@ -196,12 +196,20 @@ textarea.inp-s { height: 130px; resize: none; font-size: 10px; line-height: 1.5;
 }
 .hide-info { display: flex; align-items: center; color: var(--muted); font-family: var(--mono); font-size: 11px; pointer-events: none; }
 
-/* Alert */
-.alert { display: flex; align-items: center; gap: 6px; padding: 9px 13px; border-radius: 9px; margin-bottom: 12px; font-size: 11px; font-family: var(--mono); white-space: nowrap; }
-.alert-main { flex: 1; min-width: 0; }
-.alert-badge-warn { flex-shrink: 0; margin-left: auto; padding: 2px 8px; border-radius: 8px; background: rgba(var(--danger-rgb),.15); color: var(--accent2); font-size: 9px; font-weight: 700; }
-.alert.over { background: rgba(var(--danger-rgb),.1); border: 1px solid rgba(var(--danger-rgb),.3); color: var(--accent2); }
-.alert.ok { background: rgba(var(--accent3-rgb),.07); border: 1px solid rgba(var(--accent3-rgb),.2); color: var(--accent3); }
+/* Alert · port theo design (chỉ .warn khi phá giới linh khí) */
+.alert {
+  margin-top: 12px; margin-bottom: 12px;
+  padding: 11px 13px;
+  display: flex; align-items: center; gap: 10px;
+  border-left: 3px solid; border-radius: 3px;
+  font-family: var(--serif-vn); font-size: 12px; line-height: 1.4;
+}
+.alert.warn {
+  background: rgba(var(--crimson-rgb), 0.1);
+  border-color: var(--crimson); color: var(--text-2);
+}
+.alert.warn b { color: var(--crimson); }
+.alert .ic { flex-shrink: 0; color: var(--crimson); }
 
 
 /* Trend icons */

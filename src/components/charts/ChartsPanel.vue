@@ -1,12 +1,12 @@
 <template>
   <div class="tu-vi">
-    <!-- Chart tabs: Lưu Lượng / Loại / Ma Chướng -->
+    <!-- Chart tabs · scroll anchors (decorative · click sẽ scroll xuống card) -->
     <div class="cht-tabs">
       <button
         v-for="ct in chartTabs"
         :key="ct.id"
         :class="['cht-tab', { active: activeTab === ct.id }]"
-        @click="activeTab = ct.id"
+        @click="scrollToCard(ct.id)"
       >
         <component :is="ct.icon" :size="13" />
         {{ ct.label }}
@@ -14,7 +14,7 @@
     </div>
 
     <!-- ─── Card 1 · Lưu Lượng (bar chart) ─────────────────────────── -->
-    <div v-show="activeTab === 'flow'" class="cht-card">
+    <div ref="flowCardRef" class="cht-card">
       <div class="cht-h">
         <div class="ti">
           <IconChart :size="14" />
@@ -64,7 +64,7 @@
     </div>
 
     <!-- ─── Card 2 · Ma Chướng (debt projection line chart) ──────── -->
-    <div v-show="activeTab === 'debt'" class="cht-card">
+    <div ref="debtCardRef" class="cht-card cht-card--stacked">
       <div class="cht-h">
         <div class="ti">
           <IconSword :size="14" />
@@ -125,7 +125,7 @@
     </div>
 
     <!-- ─── Card 3 · Loại (category allocation bar list) ─────────── -->
-    <div v-show="activeTab === 'cat'" class="cht-card">
+    <div ref="catCardRef" class="cht-card cht-card--stacked">
       <div class="cht-h">
         <div class="ti">
           <IconTarget :size="14" />
@@ -194,9 +194,21 @@ const props = defineProps<{
   hide: { spend: boolean; debtLine: boolean; pie: boolean }
 }>()
 
-// ─── Tabs ─────────────────────────────────────────────────────────────────
+// ─── Tabs · scroll anchors (decorative — all 3 cards render simultaneously) ─
 type ChartTab = 'flow' | 'cat' | 'debt'
 const activeTab = ref<ChartTab>('flow')
+
+const flowCardRef = ref<HTMLElement | null>(null)
+const debtCardRef = ref<HTMLElement | null>(null)
+const catCardRef = ref<HTMLElement | null>(null)
+
+function scrollToCard(id: ChartTab): void {
+  activeTab.value = id
+  const target = id === 'flow' ? flowCardRef.value
+    : id === 'debt' ? debtCardRef.value
+    : catCardRef.value
+  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 
 interface ChartTabDef {
   id: ChartTab
@@ -445,6 +457,9 @@ function fmtShort(n: number): string {
 
 <style scoped>
 .tu-vi { display: flex; flex-direction: column; }
+
+/* Stacked cards · 3 cht-card hiện cùng lúc, gap 12px như design */
+.cht-card--stacked { margin-top: 12px; }
 
 /* ─── CHT TABS · port từ design ─────────────────────────────────────────── */
 .cht-tabs {
