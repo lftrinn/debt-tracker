@@ -170,15 +170,26 @@ textarea.inp-s { height: 130px; resize: none; font-size: 10px; line-height: 1.5;
 .num-flash { animation: numslide .4s cubic-bezier(.4,0,.2,1); }
 @keyframes progload { from { width: 0 !important; } to {} }
 
-/* Shared utilities */
+/* ─── Shared utilities ─────────────────────────────────────────────────── */
+
+/* Tàng số · privacy mask shimmer (taoist coin glyphs ⌘ ⌘ ⌘ ⌘ ⌘) */
 .masked {
-  font-family: var(--mono); letter-spacing: 2px;
-  color: var(--muted);
-  animation: mask-fade-in 0.3s ease-out;
+  font-family: var(--serif), serif;
+  letter-spacing: 0.18em;
+  color: var(--gold-3) !important;
+  font-size: 0.9em;
+  font-weight: 500;
+  display: inline-block;
+  padding: 1px 6px;
+  background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--gold) 8%, transparent));
+  border-radius: 3px;
+  text-shadow: 0 0 6px color-mix(in srgb, var(--gold) 35%, transparent);
+  animation: maskedShimmer 3.5s ease-in-out infinite;
+  vertical-align: baseline;
 }
-@keyframes mask-fade-in {
-  from { opacity: 0; filter: blur(4px); }
-  to { opacity: 1; filter: blur(0); }
+@keyframes maskedShimmer {
+  0%, 100% { opacity: 0.65; filter: blur(0); }
+  50%      { opacity: 1;    filter: blur(0.3px); }
 }
 @media (prefers-reduced-motion: reduce) {
   .masked { animation: none; }
@@ -339,6 +350,112 @@ textarea.inp-s { height: 130px; resize: none; font-size: 10px; line-height: 1.5;
 .popup-hero .amt .cu {
   font-size: 16px;
   color: var(--muted);
+}
+
+/* ─── Tier-aware popup-hero overrides (when --tier-color is set) ──────── */
+.popup-hero[class*="tier-"] {
+  background:
+    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--tier-color) 22%, transparent) 0%, transparent 60%),
+    var(--ink);
+  border: 1px solid var(--tier-color);
+  box-shadow: inset 0 0 30px color-mix(in srgb, var(--tier-color) 12%, transparent);
+}
+.popup-hero[class*="tier-"]::before {
+  background: conic-gradient(from 0deg at 50% 50%,
+    transparent 0deg,
+    color-mix(in srgb, var(--tier-glow) 6%, transparent) 60deg,
+    transparent 120deg,
+    color-mix(in srgb, var(--tier-color) 6%, transparent) 240deg,
+    transparent 360deg);
+}
+.popup-hero[class*="tier-"] .nm {
+  font-family: var(--serif-vn); font-weight: 700;
+  font-size: 18px; color: var(--tier-color);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--tier-glow) 40%, transparent);
+}
+.popup-hero .portrait.tier-portrait {
+  width: 78px; height: 78px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%,
+    color-mix(in srgb, var(--tier-color) 50%, var(--ink)),
+    color-mix(in srgb, var(--tier-color) 8%, var(--ink)) 75%);
+  border: 2px solid var(--tier-color);
+  margin: 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--tier-color);
+  position: relative;
+  box-shadow: 0 0 24px color-mix(in srgb, var(--tier-glow) 60%, transparent);
+}
+.popup-hero .portrait.tier-portrait::before {
+  content: ''; position: absolute; inset: -8px; border-radius: 50%;
+  border: 1px dashed var(--tier-color);
+  animation: spin 18s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) { .popup-hero .portrait.tier-portrait::before { animation: none; } }
+
+/* Tier badge (top of popup hero) */
+.tier-badge {
+  position: relative; z-index: 2;
+  display: inline-block;
+  font-family: var(--serif); font-style: italic; font-weight: 700;
+  font-size: 10px; color: var(--tier-color);
+  letter-spacing: 0.18em; text-transform: uppercase;
+  padding: 4px 10px; margin-bottom: 12px;
+  border: 1px solid color-mix(in srgb, var(--tier-color) 50%, transparent);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--tier-color) 8%, var(--ink));
+  text-shadow: 0 0 6px color-mix(in srgb, var(--tier-glow) 40%, transparent);
+}
+
+/* Realm label (sub-title under portrait) */
+.popup-realm {
+  position: relative; z-index: 2;
+  font-family: var(--mono); font-size: 9.5px; color: var(--muted);
+  letter-spacing: 0.14em; text-transform: uppercase;
+  margin-top: 6px;
+}
+
+/* Danger pips · 9 dots (popup variant centered) */
+.popup-hero .danger-pips,
+.popup-hero .danger-pips.center {
+  display: flex; gap: 2px; z-index: 3;
+  margin: 8px auto 0;
+  max-width: 120px;
+  justify-content: center;
+  position: relative;
+  bottom: auto; left: auto; transform: none;
+}
+.popup-hero .danger-pips span {
+  width: 4px; height: 4px; border-radius: 1px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.popup-hero .danger-pips span.on {
+  background: var(--tier-color);
+  box-shadow: 0 0 5px color-mix(in srgb, var(--tier-glow) 80%, transparent);
+}
+
+/* Real-data block · "▾ Nguồn thật" (lăng kính kế toán) */
+.popup-realdata {
+  margin-top: 12px; padding: 12px 14px;
+  background: linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
+  border: 1px dashed var(--line-2); border-radius: 4px;
+  text-align: left;
+}
+.popup-realdata .lab {
+  font-family: var(--serif); font-style: italic; font-weight: 600;
+  font-size: 9.5px; color: var(--muted);
+  letter-spacing: 0.16em; text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.popup-realdata .rn {
+  font-family: var(--mono); font-weight: 700; font-size: 11px;
+  color: var(--text); letter-spacing: 0.01em;
+  margin-bottom: 4px;
+}
+.popup-realdata .dn {
+  font-family: var(--serif-vn); font-size: 11px;
+  color: var(--text-2); line-height: 1.5;
+  letter-spacing: 0.01em;
 }
 
 /* ─── 4-stat grid · port từ design ─────────────────────────────────────── */

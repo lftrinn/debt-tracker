@@ -23,8 +23,28 @@
 
         <!-- VIEW MODE · Khai Chiến (upcoming) / Chi tiết (tx) -->
         <template v-if="!editing && !reviewStep">
-          <!-- Hero · portrait + name + amt -->
-          <div class="popup-hero" :class="heroVariant">
+          <!-- Hero · tier-aware cho upcoming (PayQuestPopup style), simple cho tx -->
+          <div
+            v-if="upcomingTier"
+            :class="['popup-hero', `tier-${upcomingTier.tier.key}`]"
+            :style="{ '--tier-color': upcomingTier.tier.color, '--tier-glow': upcomingTier.tier.glow }"
+          >
+            <div class="tier-badge">{{ upcomingTier.tier.classn }} · {{ upcomingTier.tier.rank }}</div>
+            <div class="portrait tier-portrait">
+              <component :is="upcomingTier.portrait" :size="44" />
+            </div>
+            <div class="danger-pips center">
+              <span v-for="i in 9" :key="i" :class="{ on: i <= upcomingTier.tier.danger }"></span>
+            </div>
+            <div class="nm">{{ heroName }}</div>
+            <div class="popup-realm">{{ upcomingTier.tier.realm }} · {{ upcomingTier.tier.desc }}</div>
+            <div class="amt">
+              <span class="cu">{{ heroCurrencySym }}</span>
+              <template v-if="hide"><span class="masked">{{ MASK_GLYPHS }}</span></template>
+              <template v-else>{{ fN(heroAmt) }}</template>
+            </div>
+          </div>
+          <div v-else class="popup-hero" :class="heroVariant">
             <div class="portrait">
               <component :is="heroSprite" :size="36" />
             </div>
@@ -32,9 +52,16 @@
             <div v-if="heroSubName" class="real">{{ heroSubName }}</div>
             <div class="amt">
               <span class="cu">{{ heroCurrencySym }}</span>
-              <template v-if="hide">●●●●●●</template>
+              <template v-if="hide"><span class="masked">{{ MASK_GLYPHS }}</span></template>
               <template v-else>{{ fN(heroAmt) }}</template>
             </div>
+          </div>
+
+          <!-- Real-data block (nguồn thật) — chỉ khi useDisplay + có dữ liệu real -->
+          <div v-if="showRealData" class="popup-realdata">
+            <div class="lab">▾ Nguồn thật</div>
+            <div v-if="realDataName" class="rn">{{ realDataName }}</div>
+            <div v-if="realDataDesc" class="dn">{{ realDataDesc }}</div>
           </div>
 
           <!-- 4-stat grid -->
@@ -191,6 +218,9 @@ import { useCurrency } from '../../composables/api/useCurrency'
 import { useAmountColor } from '../../composables/ui/useAmountColor'
 import { useDisplayMode } from '../../composables/ui/useDisplayMode'
 import { categoryFor } from '../../composables/data/useTutienNames'
+import { tierForAmount, nameForBoss } from '../../composables/data/useBossTiers'
+import { TIER_PORTRAITS } from '../../components/ui/quest-bosses'
+import { MASK_GLYPHS, MASK_SHORT } from '../../composables/ui/usePrivacy'
 import { getLocalized } from '../../composables/data/useI18nData'
 import { translateText, ALL_LANGS } from '../../composables/api/useTranslation'
 
@@ -316,6 +346,50 @@ const canCopy = computed(() => {
   return true
 })
 
+// ─── Tier descriptor cho upcoming (PayQuestPopup style) ───────────────────
+/**
+ * Boss tier cho upcoming item dựa trên amt. Returns null cho tx variant
+ * (transactions không có boss semantics).
+ */
+const upcomingTier = computed(() => {
+  const i = props.item
+  if (!i || i._variant !== 'upcoming') return null
+  const amt = (i.amt || i.amount || 0)
+  const tier = tierForAmount(amt)
+  return {
+    tier,
+    portrait: TIER_PORTRAITS[tier.key],
+    name: nameForBoss(tier, i._key || i.name || String(amt)),
+  }
+})
+
+/** Show real-data block khi tutien mode + có nội dung khác display. */
+const showRealData = computed(() => {
+  if (!useTutien.value || !props.item) return false
+  return Boolean(realDataName.value || realDataDesc.value)
+})
+
+/** Tên gốc real (raw `name` field, hoặc real_name nếu có). */
+const realDataName = computed(() => {
+  const i = props.item
+  if (!i) return ''
+  if (i._variant === 'upcoming') {
+    // Hiện raw name khi tutien mode đang dịch tên obligation
+    const localized = getLocalized(i, 'name')
+    return localized !== i.name ? i.name : ''
+  }
+  // tx
+  const localized = getLocalized(i, 'desc', locale.value)
+  return localized !== i.desc ? i.desc : ''
+})
+
+/** Mô tả real (note / desc_real). */
+const realDataDesc = computed(() => {
+  const i = props.item
+  if (!i) return ''
+  return i.note || ''
+})
+
 // ─── Phase 8 · Hero + stats computed (Khai Chiến / Chi tiết popup) ────────
 /** Header icon · Sword cho upcoming, Scroll cho tx. */
 const hdrIcon = computed(() => {
@@ -402,7 +476,7 @@ const heroStats = computed(() => {
     return [
       {
         label: t('detail.statDamage'),
-        value: props.hide ? '●●●' : '−' + fmtShort(i.amt || 0),
+        value: props.hide ? MASK_SHORT : '−' + fmtShort(i.amt || 0),
         cls: 'hp',
       },
       {
@@ -413,7 +487,7 @@ const heroStats = computed(() => {
       {
         label: t('detail.statShortfall'),
         value: props.hide
-          ? '●●●'
+          ? MASK_SHORT
           : (props.availCash >= (i.amt || 0)
               ? t('detail.statSufficient')
               : '−' + fmtShort((i.amt || 0) - props.availCash)),

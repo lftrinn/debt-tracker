@@ -1,10 +1,20 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { ref } from 'vue'
+import {
+  isAccount,
+  isDebt,
+  isExpenseLog,
+  isOneTimeExpense,
+  isPaymentRecord,
+  mkOneTimeExpense,
+  mkPaymentRecord,
+  mkExpenseLog,
+} from '@/types/data'
 import { usePayments } from '../actions/usePayments'
-import { makeData, VISA1, mockPush, mockToast, mockTStr, mockFindDebtId } from './helpers'
+import { makeData, VISA1, mockPush, mockToast, mockTStr, mockFindDebtId, mkLoan } from './helpers'
 
-function setup(dataOverrides = {}) {
-  const d = ref(makeData(dataOverrides))
+function setup(items?: Parameters<typeof makeData>[0]) {
+  const d = ref(makeData(items))
   const push = mockPush()
   const toast = mockToast()
   const tStr = mockTStr()
@@ -13,137 +23,148 @@ function setup(dataOverrides = {}) {
   return { d, push, toast, ...pay }
 }
 
+const account = (d: { value: { items: ReturnType<typeof makeData>['items'] } }) =>
+  d.value.items.find(isAccount)
+const debt = (d: { value: { items: ReturnType<typeof makeData>['items'] } }, id: string) =>
+  d.value.items.find((i) => isDebt(i) && i.id === id)
+const paymentRecords = (d: { value: { items: ReturnType<typeof makeData>['items'] } }) =>
+  d.value.items.filter(isPaymentRecord)
+const expenseLogs = (d: { value: { items: ReturnType<typeof makeData>['items'] } }) =>
+  d.value.items.filter(isExpenseLog)
+const oteList = (d: { value: { items: ReturnType<typeof makeData>['items'] } }) =>
+  d.value.items.filter(isOneTimeExpense)
+
 describe('usePayments', () => {
   afterEach(() => vi.useRealTimers())
 
-  // ─── togglePaid ───────────────────────────────────────────────────────
-
-  describe('togglePaid', () => {
-    it('đánh dấu paid → thêm vào paid_obligations', async () => {
-      const { d, togglePaid } = setup({
-        current_cash: { balance: 1_000_000, reserved: 0, as_of: '2026-03-01' },
-      })
+  describe('togglePaid (mark)', () => {
+    it('đánh dấu paid → tạo payment_record', async () => {
+      const { d, togglePaid } = setup()
       await togglePaid('2026-03-29:Trả Visa', 500_000, 'Trả Visa')
-      expect(d.value.paid_obligations).toContain('2026-03-29:Trả Visa')
+      const pr = paymentRecords(d).find((p) => p.key === '2026-03-29:Trả Visa')
+      expect(pr).toBeDefined()
+      expect(pr?.amount).toBe(500_000)
     })
 
     it('đánh dấu paid → trừ tiền mặt', async () => {
-      const { d, togglePaid } = setup({
-        current_cash: { balance: 1_000_000, reserved: 0, as_of: '2026-03-01' },
-      })
+      const { d, togglePaid } = setup()
+      const before = account(d)?.amount ?? 0
       await togglePaid('2026-03-29:Trả Visa', 500_000)
-      expect(d.value.current_cash.balance).toBe(500_000)
+      expect(account(d)?.amount).toBe(before - 500_000)
     })
 
-    it('đánh dấu paid → thêm expense với _obTag', async () => {
-      const { d, togglePaid } = setup({
-        current_cash: { balance: 1_000_000, reserved: 0, as_of: '2026-03-01' },
-      })
+    it('đánh dấu paid → thêm expense_log với ref_id', async () => {
+      const { d, togglePaid } = setup()
       await togglePaid('2026-03-29:Trả Visa', 500_000, 'Trả Visa')
-      const taggedExp = d.value.expenses.find((e) => e._obTag === 'ob:2026-03-29:Trả Visa')
-      expect(taggedExp).toBeDefined()
-      expect(taggedExp?.amount).toBe(500_000)
+      const tagged = expenseLogs(d).find((e) => e.ref_id === 'ob:2026-03-29:Trả Visa')
+      expect(tagged).toBeDefined()
+      expect(tagged?.amount).toBe(500_000)
+      expect(tagged?.cat).toBe('thanhToan')
     })
 
-    it('đánh dấu paid khi có debtRef cc → giảm balance thẻ', async () => {
-      const d = ref(makeData({
-        current_cash: { balance: 1_000_000, reserved: 0, as_of: '2026-03-01' },
-        debts: { credit_cards: [{ ...VISA1, balance: 5_000_000 }], small_loans: [] },
-      }))
+    it('đánh dấu paid khi findDebtId trả về id → giảm DebtItem.amount', async () => {
+      const d = ref(makeData({ items: [...makeData().items, { ...VISA1, amount: 5_000_000 }] }))
       const push = mockPush()
       const toast = mockToast()
-      const findDebtId = vi.fn().mockReturnValue({ type: 'cc', id: 'visa1' })
+      const findDebtId = vi.fn().mockReturnValue('visa1')
       const { togglePaid } = usePayments(d, push, toast, mockTStr(), findDebtId)
 
       await togglePaid('2026-03-29:Visa 1 min', 500_000, 'Visa 1 min')
-      const card = d.value.debts.credit_cards.find((c) => c.id === 'visa1')
-      expect(card?.balance).toBe(4_500_000)
+      const card = debt(d, 'visa1')
+      expect(card && isDebt(card) ? card.amount : 0).toBe(4_500_000)
     })
+  })
 
-    it('hoàn tác paid → xoá khỏi paid_obligations', async () => {
+  describe('togglePaid (un-mark)', () => {
+    it('hoàn tác paid → xoá payment_record', async () => {
       const { d, togglePaid } = setup({
-        current_cash: { balance: 500_000, reserved: 0, as_of: '2026-03-01' },
-        paid_obligations: ['2026-03-29:Trả Visa'],
-        expenses: [{
-          id: 999, desc: 'Trả Visa', amount: 500_000, cat: 'thanhToan',
-          date: '2026-03-29', _obTag: 'ob:2026-03-29:Trả Visa',
-        }],
+        items: [
+          ...makeData().items,
+          mkPaymentRecord('pay_1', 'Trả Visa', {
+            amount: 500_000, due_date: '2026-03-29', key: '2026-03-29:Trả Visa',
+            ref_id: null, ref_type: null,
+          }),
+          mkExpenseLog('tx_e_1', 'Trả Visa', {
+            amount: 500_000, cat: 'thanhToan', due_date: '2026-03-29',
+            ref_id: 'ob:2026-03-29:Trả Visa',
+          }),
+        ],
       })
       await togglePaid('2026-03-29:Trả Visa', 500_000)
-      expect(d.value.paid_obligations).not.toContain('2026-03-29:Trả Visa')
+      expect(paymentRecords(d).find((p) => p.key === '2026-03-29:Trả Visa')).toBeUndefined()
     })
 
     it('hoàn tác paid → hoàn trả tiền mặt', async () => {
       const { d, togglePaid } = setup({
-        current_cash: { balance: 500_000, reserved: 0, as_of: '2026-03-01' },
-        paid_obligations: ['2026-03-29:Trả Visa'],
-        expenses: [{
-          id: 999, desc: 'Trả Visa', amount: 500_000, cat: 'thanhToan',
-          date: '2026-03-29', _obTag: 'ob:2026-03-29:Trả Visa',
-        }],
+        items: [
+          ...makeData().items,
+          mkPaymentRecord('pay_1', 'Trả Visa', {
+            amount: 500_000, due_date: '2026-03-29', key: '2026-03-29:Trả Visa',
+            ref_id: null, ref_type: null,
+          }),
+        ],
       })
+      const before = account(d)?.amount ?? 0
       await togglePaid('2026-03-29:Trả Visa', 500_000)
-      expect(d.value.current_cash.balance).toBe(1_000_000) // 500_000 + 500_000
+      expect(account(d)?.amount).toBe(before + 500_000)
     })
 
-    it('hoàn tác paid → xoá expense có _obTag', async () => {
+    it('hoàn tác paid → xoá expense_log có ref_id', async () => {
       const { d, togglePaid } = setup({
-        current_cash: { balance: 500_000, reserved: 0, as_of: '2026-03-01' },
-        paid_obligations: ['2026-03-29:Trả Visa'],
-        expenses: [{
-          id: 999, desc: 'Trả Visa', amount: 500_000, cat: 'thanhToan',
-          date: '2026-03-29', _obTag: 'ob:2026-03-29:Trả Visa',
-        }],
+        items: [
+          ...makeData().items,
+          mkPaymentRecord('pay_1', 'Trả Visa', {
+            amount: 500_000, due_date: '2026-03-29', key: '2026-03-29:Trả Visa',
+            ref_id: null, ref_type: null,
+          }),
+          mkExpenseLog('tx_e_1', 'Trả Visa', {
+            amount: 500_000, cat: 'thanhToan', due_date: '2026-03-29',
+            ref_id: 'ob:2026-03-29:Trả Visa',
+          }),
+        ],
       })
       await togglePaid('2026-03-29:Trả Visa', 500_000)
-      expect(d.value.expenses.find((e) => e._obTag === 'ob:2026-03-29:Trả Visa')).toBeUndefined()
+      expect(expenseLogs(d).find((e) => e.ref_id === 'ob:2026-03-29:Trả Visa')).toBeUndefined()
     })
 
-    it('toast sau togglePaid', async () => {
-      const { toast, togglePaid } = setup({
-        current_cash: { balance: 1_000_000, reserved: 0, as_of: '2026-03-01' },
-      })
+    it('toast paid khi mark', async () => {
+      const { toast, togglePaid } = setup()
       await togglePaid('2026-03-29:X', 100_000)
       expect(toast).toHaveBeenCalledWith('toast.paid')
     })
   })
 
-  // ─── recPay ───────────────────────────────────────────────────────────
-
   describe('recPay', () => {
-    it('ghi nhận trả nợ cc → giảm balance thẻ', async () => {
+    it('ghi nhận trả nợ cc → giảm amount thẻ', async () => {
       const { d, recPay } = setup({
-        debts: { credit_cards: [{ ...VISA1, balance: 5_000_000 }], small_loans: [] },
+        items: [...makeData().items, { ...VISA1, amount: 5_000_000 }],
       })
       await recPay({ target: 'cc:visa1', amount: 1_000_000 })
-      const card = d.value.debts.credit_cards.find((c) => c.id === 'visa1')
-      expect(card?.balance).toBe(4_000_000)
+      const card = debt(d, 'visa1')
+      expect(card && isDebt(card) ? card.amount : 0).toBe(4_000_000)
     })
 
-    it('trả hơn số nợ → balance tối thiểu 0', async () => {
+    it('trả hơn số nợ → amount tối thiểu 0', async () => {
       const { d, recPay } = setup({
-        debts: { credit_cards: [{ ...VISA1, balance: 500_000 }], small_loans: [] },
+        items: [...makeData().items, { ...VISA1, amount: 500_000 }],
       })
       await recPay({ target: 'cc:visa1', amount: 1_000_000 })
-      const card = d.value.debts.credit_cards.find((c) => c.id === 'visa1')
-      expect(card?.balance).toBe(0)
+      const card = debt(d, 'visa1')
+      expect(card && isDebt(card) ? card.amount : 0).toBe(0)
     })
 
-    it('ghi nhận trả nợ sl → giảm remaining_balance', async () => {
+    it('ghi nhận trả nợ small loan → giảm amount', async () => {
       const { d, recPay } = setup({
-        debts: {
-          credit_cards: [],
-          small_loans: [{ id: 'sl1', name: 'Vay A', remaining_balance: 2_000_000 }],
-        },
+        items: [...makeData().items, mkLoan('sl1', 'Vay A', 2_000_000)],
       })
       await recPay({ target: 'sl:sl1', amount: 500_000 })
-      const loan = d.value.debts.small_loans.find((l) => l.id === 'sl1')
-      expect(loan?.remaining_balance).toBe(1_500_000)
+      const loan = debt(d, 'sl1')
+      expect(loan && isDebt(loan) ? loan.amount : 0).toBe(1_500_000)
     })
 
     it('amount = 0 → không làm gì', async () => {
-      const { d, push, recPay } = setup({
-        debts: { credit_cards: [{ ...VISA1, balance: 5_000_000 }], small_loans: [] },
+      const { push, recPay } = setup({
+        items: [...makeData().items, { ...VISA1, amount: 5_000_000 }],
       })
       await recPay({ target: 'cc:visa1', amount: 0 })
       expect(push).not.toHaveBeenCalled()
@@ -151,38 +172,34 @@ describe('usePayments', () => {
 
     it('toast thành công', async () => {
       const { toast, recPay } = setup({
-        debts: { credit_cards: [{ ...VISA1, balance: 1_000_000 }], small_loans: [] },
+        items: [...makeData().items, { ...VISA1, amount: 1_000_000 }],
       })
       await recPay({ target: 'cc:visa1', amount: 500_000 })
       expect(toast).toHaveBeenCalledWith('toast.debtPaid')
     })
   })
 
-  // ─── addOneTime ───────────────────────────────────────────────────────
-
   describe('addOneTime', () => {
-    it('thêm khoản chi một lần', async () => {
+    it('thêm one_time_expense item', async () => {
       const { d, addOneTime } = setup()
       await addOneTime({ name: 'Trả thẻ', date: '2026-04-15', amount: 500_000 })
-      expect(d.value.one_time_expenses).toHaveLength(1)
-      expect(d.value.one_time_expenses![0]).toMatchObject({
-        name: 'Trả thẻ',
-        date: '2026-04-15',
-        amount: 500_000,
-      })
+      const ote = oteList(d).find((o) => o.name === 'Trả thẻ')
+      expect(ote).toBeDefined()
+      expect(ote?.due_date).toBe('2026-04-15')
+      expect(ote?.amount).toBe(500_000)
     })
 
     it('thiếu name → không thêm', async () => {
       const { d, push, addOneTime } = setup()
       await addOneTime({ name: '', date: '2026-04-15', amount: 500_000 })
-      expect(d.value.one_time_expenses ?? []).toHaveLength(0)
+      expect(oteList(d)).toHaveLength(0)
       expect(push).not.toHaveBeenCalled()
     })
 
     it('amount = 0 → không thêm', async () => {
       const { d, push, addOneTime } = setup()
       await addOneTime({ name: 'Trả thẻ', date: '2026-04-15', amount: 0 })
-      expect(d.value.one_time_expenses ?? []).toHaveLength(0)
+      expect(oteList(d)).toHaveLength(0)
       expect(push).not.toHaveBeenCalled()
     })
 
@@ -193,52 +210,58 @@ describe('usePayments', () => {
     })
   })
 
-  // ─── cleanupPastPaid ──────────────────────────────────────────────────
-
   describe('cleanupPastPaid', () => {
-    it('không có paid_obligations → không làm gì', async () => {
-      const { d, push, cleanupPastPaid } = setup()
+    it('không có payment_record → không làm gì', async () => {
+      const { push, cleanupPastPaid } = setup()
       await cleanupPastPaid()
       expect(push).not.toHaveBeenCalled()
     })
 
-    it('xoá paid_obligations trong quá khứ', async () => {
+    it('xoá payment_record + linked one_time_expense trong quá khứ', async () => {
       const { d, cleanupPastPaid } = setup({
-        paid_obligations: ['2026-03-01:Cũ', '2026-04-01:Mới'],
-      })
-      // tStr = '2026-03-29', nên '2026-03-01' < '2026-03-29' → bị xoá
-      await cleanupPastPaid()
-      expect(d.value.paid_obligations).not.toContain('2026-03-01:Cũ')
-    })
-
-    it('giữ lại paid_obligations trong tương lai', async () => {
-      const { d, cleanupPastPaid } = setup({
-        paid_obligations: ['2026-03-01:Cũ', '2026-04-01:Mới'],
-      })
-      await cleanupPastPaid()
-      expect(d.value.paid_obligations).toContain('2026-04-01:Mới')
-    })
-
-    it('xoá one_time_expenses đã paid trong quá khứ', async () => {
-      const { d, cleanupPastPaid } = setup({
-        paid_obligations: ['2026-03-01:Trả thẻ'],
-        one_time_expenses: [{ id: 1, name: 'Trả thẻ', date: '2026-03-01', amount: 500_000 }],
-      })
-      await cleanupPastPaid()
-      expect(d.value.one_time_expenses).toHaveLength(0)
-    })
-
-    it('giữ lại one_time_expenses chưa paid', async () => {
-      const { d, cleanupPastPaid } = setup({
-        paid_obligations: ['2026-03-01:Trả thẻ cũ'],
-        one_time_expenses: [
-          { id: 1, name: 'Trả thẻ cũ', date: '2026-03-01', amount: 500_000 },
-          { id: 2, name: 'Trả thẻ mới', date: '2026-04-15', amount: 500_000 },
+        items: [
+          ...makeData().items,
+          mkOneTimeExpense('ote_1', 'Trả thẻ', { amount: 500_000, due_date: '2026-03-01' }),
+          mkPaymentRecord('pay_1', 'Trả thẻ', {
+            amount: 500_000, due_date: '2026-03-01',
+            key: '2026-03-01:Trả thẻ', ref_id: 'ote_1', ref_type: 'one_time_expense',
+          }),
         ],
       })
       await cleanupPastPaid()
-      expect(d.value.one_time_expenses).toHaveLength(1)
-      expect(d.value.one_time_expenses![0].name).toBe('Trả thẻ mới')
+      expect(paymentRecords(d).find((p) => p.key === '2026-03-01:Trả thẻ')).toBeUndefined()
+      expect(oteList(d).find((o) => o.name === 'Trả thẻ')).toBeUndefined()
+    })
+
+    it('giữ lại payment_record trong tương lai', async () => {
+      const { d, cleanupPastPaid } = setup({
+        items: [
+          ...makeData().items,
+          mkPaymentRecord('pay_2', 'Mới', {
+            amount: 100_000, due_date: '2026-04-01',
+            key: '2026-04-01:Mới', ref_id: null, ref_type: null,
+          }),
+        ],
+      })
+      await cleanupPastPaid()
+      expect(paymentRecords(d).find((p) => p.key === '2026-04-01:Mới')).toBeDefined()
+    })
+
+    it('giữ lại one_time_expense chưa paid', async () => {
+      const { d, cleanupPastPaid } = setup({
+        items: [
+          ...makeData().items,
+          mkOneTimeExpense('ote_old', 'Trả thẻ cũ', { amount: 500_000, due_date: '2026-03-01' }),
+          mkOneTimeExpense('ote_new', 'Trả thẻ mới', { amount: 500_000, due_date: '2026-04-15' }),
+          mkPaymentRecord('pay_old', 'Trả thẻ cũ', {
+            amount: 500_000, due_date: '2026-03-01',
+            key: '2026-03-01:Trả thẻ cũ', ref_id: 'ote_old', ref_type: 'one_time_expense',
+          }),
+        ],
+      })
+      await cleanupPastPaid()
+      expect(oteList(d).find((o) => o.name === 'Trả thẻ mới')).toBeDefined()
+      expect(oteList(d).find((o) => o.name === 'Trả thẻ cũ')).toBeUndefined()
     })
   })
 })

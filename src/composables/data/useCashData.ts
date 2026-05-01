@@ -1,6 +1,7 @@
 import { computed } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
 import type { AppData } from '@/types/data'
+import { useItems } from './useItems'
 
 export interface CashDataResult {
   spentSinceSnapshot: ComputedRef<number>
@@ -11,83 +12,80 @@ export interface CashDataResult {
 }
 
 /**
- * Tính toán số dư tiền mặt khả dụng, chi tiêu kể từ snapshot, và số ngày tiền mặt còn đủ dùng.
- * @param d - Reactive ref chứa toàn bộ dữ liệu ứng dụng
- * @param dayLimit - Hạn mức chi tiêu mỗi ngày (computed từ useDailyLimit)
- * @param actualPayDate - Hàm tính ngày lương thực tế (đã điều chỉnh cuối tuần)
- * @returns spentSinceSnapshot, availCash, unpaidObsToPayday, unpaidObsAmounts, cashDaysLeft
+ * Tính số dư tiền mặt khả dụng, chi tiêu kể từ snapshot, và số ngày tiền mặt còn đủ.
+ * Đọc trực tiếp từ items[]:
+ *   - account[primary] cho balance + as_of
+ *   - expense_log với cat !== 'thanhToan' và pay_method ∈ {null, 'cash'} cho spentSinceSnapshot
+ *   - fixed_expense + one_time_expense - payment_record cho unpaid obligations
  */
 export function useCashData(
   d: Ref<AppData>,
   dayLimit: ComputedRef<number>,
   actualPayDate: (year: number, month: number, nominalDay: number) => Date,
 ): CashDataResult {
-  // Chỉ tính chi tiêu tiền mặt (loại trừ thanh toán nghĩa vụ _obTag và giao dịch qua thẻ)
+  const {
+    primaryAccount,
+    primaryIncome,
+    expenseLogs,
+    fixedExpenses,
+    oneTimeExpenses,
+    paidKeys,
+  } = useItems(d)
+
   const spentSinceSnapshot = computed((): number => {
-    const asOf = d.value.current_cash?.as_of
+    const asOf = primaryAccount.value?.as_of
     if (!asOf) return 0
-    return (d.value.expenses || [])
-      .filter((e) => e.date >= asOf && !e._obTag && (!e.payMethod || e.payMethod === 'cash'))
+    return expenseLogs.value
+      .filter((e) =>
+        e.due_date >= asOf &&
+        !e.ref_id &&
+        (!e.pay_method || e.pay_method === 'cash')
+      )
       .reduce((s, e) => s + e.amount, 0)
   })
 
-  /**
-   * Tiền mặt thực sự có thể dùng = số dư - dự trữ - đã chi kể từ snapshot.
-   */
   const availCash = computed((): number => {
-    const c = d.value.current_cash
-    if (!c) return 0
-    return (c.balance || 0) - (c.reserved || 0) - spentSinceSnapshot.value
+    const acc = primaryAccount.value
+    if (!acc) return 0
+    return (acc.amount || 0) - (acc.reserved || 0) - spentSinceSnapshot.value
   })
 
-  /**
-   * Danh sách số tiền từng nghĩa vụ chưa thanh toán từ hôm nay đến ngày lương tiếp theo.
-   * Dùng để smart daily limit tính greedy khi tiền không đủ trang trải tất cả.
-   */
   const unpaidObsItems = computed((): number[] => {
-    const paid = new Set(d.value.paid_obligations || [])
+    const paid = paidKeys.value
     const now = new Date()
     const todayStr = now.toISOString().slice(0, 10)
-    const pd = d.value.income?.pay_date || 5
+    const pd = primaryIncome.value?.due_day_of_month ?? 5
     let nextPay = actualPayDate(now.getFullYear(), now.getMonth(), pd)
     if (nextPay <= now) nextPay = actualPayDate(now.getFullYear(), now.getMonth() + 1, pd)
     const payStr = nextPay.toISOString().slice(0, 10)
 
     const amounts: number[] = []
-    const plans = d.value.monthly_plans || {}
-    Object.values(plans).forEach((plan) => {
-      ;(plan.obligations || []).forEach((ob) => {
-        if (ob.monthly) return
-        const dateStr = ob.date || ob['date ']
-        if (!dateStr) return
-        const key = dateStr + ':' + ob.name
-        if (paid.has(key)) return
-        if (dateStr >= todayStr && dateStr < payStr) amounts.push(ob.amount || 0)
-      })
-    })
-    ;(d.value.one_time_expenses || []).forEach((ev) => {
-      const key = ev.date + ':' + ev.name
-      if (paid.has(key)) return
-      if (ev.date >= todayStr && ev.date < payStr) amounts.push(ev.amount || 0)
-    })
+
+    // Fixed expense: chỉ tính item có due_date cụ thể trong [today, payStr)
+    for (const fe of fixedExpenses.value) {
+      const dateStr = fe.due_date
+      if (!dateStr) continue
+      const key = dateStr + ':' + fe.name
+      if (paid.has(key)) continue
+      if (dateStr >= todayStr && dateStr < payStr) amounts.push(fe.amount || 0)
+    }
+
+    // One-time expense
+    for (const ote of oneTimeExpenses.value) {
+      const key = ote.due_date + ':' + ote.name
+      if (paid.has(key)) continue
+      if (ote.due_date >= todayStr && ote.due_date < payStr) amounts.push(ote.amount || 0)
+    }
+
     return amounts
   })
 
-  /**
-   * Tổng các nghĩa vụ chưa thanh toán từ hôm nay đến ngày lương tiếp theo.
-   * Dùng để ước tính tiền cần giữ lại, không nên tiêu vào.
-   */
   const unpaidObsToPayday = computed((): number =>
     unpaidObsItems.value.reduce((s, a) => s + a, 0)
   )
 
-  /** Danh sách từng khoản nghĩa vụ (dùng cho smart limit greedy). */
-  const unpaidObsAmounts: ComputedRef<number[]> = unpaidObsItems
+  const unpaidObsAmounts = unpaidObsItems
 
-  /**
-   * Ước tính số ngày tiền mặt còn đủ dùng dựa trên hạn mức chi tiêu ngày.
-   * Trả về null nếu hạn mức chưa được cài đặt.
-   */
   const cashDaysLeft = computed((): number | null => {
     const lim = dayLimit.value
     if (lim <= 0) return null

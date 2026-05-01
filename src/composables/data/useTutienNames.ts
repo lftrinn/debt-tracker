@@ -10,7 +10,6 @@
  *   /home/trin/Personal/debt-tracker-design/Pages/ds-content.jsx
  */
 
-import type { CreditCard, SmallLoan } from '@/types/data'
 import type { FunctionalComponent } from 'vue'
 import { SPRITE, type IconProps } from '@/components/ui/quest-icons'
 
@@ -106,70 +105,6 @@ export function spriteFor(cat: string | null | undefined): FunctionalComponent<I
   return SPRITE[categoryFor(cat).sp]
 }
 
-// ═══ BOSS · credit cards & loans → tâm ma ════════════════════════════════
-
-export type BossSprite = 'hac' | 'huyet' | 'tumau' | 'tamma'
-
-export interface BossInfo {
-  display: string
-  sp: BossSprite
-  realm: Realm
-}
-
-/** Hardcoded mapping cho card đã biết · ưu tiên trên heuristic. */
-const BOSS_BY_ID: Readonly<Record<string, { display: string; sp: BossSprite }>> = {
-  visa1: { display: 'Hắc Sát Tà Vương', sp: 'hac' },
-  visa2: { display: 'Huyết Thiền Lão Quái', sp: 'huyet' },
-  mc: { display: 'Huyết Thiền Lão Quái', sp: 'huyet' },
-  visa: { display: 'Hắc Sát Tà Vương', sp: 'hac' },
-}
-
-/** Pool fallback khi không match · luân phiên theo index. */
-const BOSS_FALLBACK_POOL: ReadonlyArray<{ display: string; sp: BossSprite }> = [
-  { display: 'Hắc Sát Tà Vương', sp: 'hac' },
-  { display: 'Huyết Thiền Lão Quái', sp: 'huyet' },
-  { display: 'Bạch Cốt Sát Tinh', sp: 'hac' },
-  { display: 'Tử Mệnh Quỷ Vương', sp: 'huyet' },
-]
-
-/**
- * Resolve boss info cho 1 credit card.
- * - Lookup theo id trước
- * - Heuristic theo name (visa/master/mc)
- * - Fallback theo index
- */
-export function bossFor(card: CreditCard, index = 0): BossInfo {
-  const byId = BOSS_BY_ID[card.id.toLowerCase()]
-  if (byId) {
-    return { ...byId, realm: realmForDebt(card.balance) }
-  }
-
-  const n = card.name.toLowerCase()
-  if (/master|\bmc\b/.test(n)) {
-    return { display: 'Huyết Thiền Lão Quái', sp: 'huyet', realm: realmForDebt(card.balance) }
-  }
-  if (/visa/.test(n)) {
-    const pick = BOSS_FALLBACK_POOL[index % BOSS_FALLBACK_POOL.length]
-    return { ...pick, realm: realmForDebt(card.balance) }
-  }
-  const pick = BOSS_FALLBACK_POOL[index % BOSS_FALLBACK_POOL.length]
-  return { ...pick, realm: realmForDebt(card.balance) }
-}
-
-/** Boss info cho khoản vay nhỏ · luôn là Từ Mẫu Khế Ước (khế ước tâm linh). */
-export function loanBossFor(loan: SmallLoan): BossInfo {
-  return {
-    display: 'Từ Mẫu Khế Ước',
-    sp: 'tumau',
-    realm: realmForDebt(loan.remaining_balance),
-  }
-}
-
-/** Boss tổng (final boss) = tổng nợ · luôn là Tâm Ma Tổng. */
-export function finalBossFor(totalDebt: number): BossInfo {
-  return {
-    display: 'Tâm Ma Tổng',
-    sp: 'tamma',
-    realm: realmForDebt(totalDebt),
-  }
-}
+// Boss visuals đã được rút sang `useBossTiers.ts` (tier-based) +
+// `quest-bosses.ts` (per-tier portrait). Dùng `bossForAmount(vnd, seedKey)`
+// thay cho legacy `bossFor()/finalBossFor()/loanBossFor()`.

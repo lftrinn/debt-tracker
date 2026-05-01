@@ -1,16 +1,18 @@
 import { computed } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
-import type { AppData, DebtCard, DebtRef, TrendDirection } from '@/types/data'
+import type { AppData, DebtCard, DebtItem, TrendDirection } from '@/types/data'
 import { i18n } from '../../i18n'
 import { useFormatters } from '../ui/useFormatters'
 import { useColors } from '../ui/useColors'
 import { getLocalized } from './useI18nData'
+import { useItems } from './useItems'
 
 export interface DebtCardsResult {
-  findDebtId: (name: string) => DebtRef | null
+  /** Tìm debt id từ tên obligation (heuristic name match). Trả null nếu không match. */
+  findDebtId: (name: string) => string | null
   minPaidByCard: ComputedRef<Record<string, boolean>>
   debtCards: ComputedRef<DebtCard[]>
-  smallLoans: ComputedRef<AppData['debts']['small_loans']>
+  smallLoans: ComputedRef<DebtItem[]>
   totalDebt: ComputedRef<number>
   origDebt: ComputedRef<number>
   repayPct: ComputedRef<number>
@@ -18,70 +20,77 @@ export interface DebtCardsResult {
   debtTrend: ComputedRef<TrendDirection>
 }
 
-/**
- * Tính toán dữ liệu thẻ tín dụng, khoản vay nhỏ, tổng nợ và trạng thái thanh toán tối thiểu.
- * @param d - Reactive ref chứa toàn bộ dữ liệu ứng dụng
- * @returns Các computed values và hàm tiện ích liên quan đến nợ
- */
+/** Default origDebt fallback nếu meta không cấu hình. */
+const DEFAULT_ORIG_DEBT = 91_721_251
+
 export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
   const { dDiff, isTM } = useFormatters()
   const { palette } = useColors()
+  const {
+    debts: debtItems,
+    creditCards: creditCardItems,
+    smallLoans: smallLoanItems,
+    fixedExpenses,
+    oneTimeExpenses,
+    expenseLogs,
+    paymentRecords,
+    paidKeys,
+  } = useItems(d)
 
-  /**
-   * Khớp tên nghĩa vụ với ID nợ tương ứng để tự động cập nhật số dư khi đánh dấu đã thanh toán.
-   * @param name - Tên nghĩa vụ cần tìm kiếm
-   * @returns DebtRef chứa type và id, hoặc null nếu không tìm thấy
-   */
-  function findDebtId(name: string): DebtRef | null {
+  /** Heuristic match obligation name → debt id. */
+  function findDebtId(name: string): string | null {
     const n = name.toLowerCase()
-    const cards = d.value.debts?.credit_cards || []
-    for (const c of cards) {
+    for (const c of creditCardItems.value) {
       const cn = c.name.toLowerCase()
       const shortName = cn.split(' — ')[0].trim()
-      if (shortName && n.includes(shortName)) return { type: 'cc', id: c.id }
-      if (c.id && n.includes(c.id)) return { type: 'cc', id: c.id }
+      if (shortName && n.includes(shortName)) return c.id
+      if (c.id && n.includes(c.id.toLowerCase())) return c.id
     }
-    const loans = d.value.debts?.small_loans || []
-    for (const l of loans) {
+    for (const l of smallLoanItems.value) {
       const ln = l.name.toLowerCase().split(' ').slice(0, 2).join(' ')
       if (n.includes(ln) || ln.split(' ').every((w) => w.length > 2 && n.includes(w))) {
-        return { type: 'sl', id: l.id }
+        return l.id
       }
     }
     return null
   }
 
   /**
-   * Kiểm tra xem tất cả nghĩa vụ thanh toán tối thiểu của từng thẻ đã được đánh dấu thanh toán chưa.
-   * Xét trong phạm vi tháng hiện tại và 2 tháng tới để bao phủ các kỳ sắp đến.
+   * Per credit card · đã trả minimum cho chu kỳ hiện tại?
+   * Match obligation name (lowercase, strip "— Techcombank") với cardShort, scope 3 tháng.
    */
   const minPaidByCard = computed((): Record<string, boolean> => {
-    const paid = new Set(d.value.paid_obligations || [])
-    const plans = d.value.monthly_plans || {}
+    const paid = paidKeys.value
     const now = new Date()
     const months = [0, 1, 2].map((i) => {
       const dt = new Date(now.getFullYear(), now.getMonth() + i, 1)
       return dt.toISOString().slice(0, 7)
     })
-    const allObs: Array<{ name: string; date?: string; 'date '?: string; amount: number; category: string | null }> = []
-    months.forEach((mo) => {
-      const plan = plans[mo]
-      if (plan?.obligations) {
-        plan.obligations.forEach((ob) => allObs.push({ ...ob, category: ob.category ?? null }))
-      }
-    })
-    ;(d.value.one_time_expenses || []).forEach((ev) => {
-      const evMonth = (ev.date || '').slice(0, 7)
-      if (months.includes(evMonth)) {
-        allObs.push({ name: ev.name, date: ev.date, amount: ev.amount, category: null })
-      }
-    })
+
+    const allObs: Array<{ name: string; date: string; amount: number; category: string | null }> = []
+    for (const fe of fixedExpenses.value) {
+      const dateStr = fe.due_date
+      if (!dateStr) continue
+      if (!months.includes(dateStr.slice(0, 7))) continue
+      allObs.push({ name: fe.name, date: dateStr, amount: fe.amount, category: fe.cat ?? null })
+    }
+    for (const ote of oneTimeExpenses.value) {
+      if (!months.includes(ote.due_date.slice(0, 7))) continue
+      allObs.push({ name: ote.name, date: ote.due_date, amount: ote.amount, category: null })
+    }
+    // Synth từ debt items (replicate legacy debt_minimum)
+    for (const dt of debtItems.value) {
+      if (!dt.due_date || !dt.minimum_payment) continue
+      if (!months.includes(dt.due_date.slice(0, 7))) continue
+      allObs.push({ name: dt.name + ' minimum', date: dt.due_date, amount: dt.minimum_payment, category: 'debt_minimum' })
+    }
+
     if (allObs.length === 0) return {}
+
     const result: Record<string, boolean> = {}
-    const cards = d.value.debts?.credit_cards || []
-    cards.forEach((c) => {
+    for (const c of creditCardItems.value) {
       const shortName = c.name.replace(' — Techcombank', '').replace(' — ', '').toLowerCase().trim()
-      const dueDate = c.min_due_date || ''
+      const dueDate = c.due_date || ''
       const cardObs = allObs.filter((ob) => {
         const obName = (ob.name || '').toLowerCase()
         const matchesCard = obName.includes(shortName)
@@ -93,31 +102,22 @@ export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
           obName.includes('tối thiểu') ||
           obName.includes('minimum')
         if (!isCcPayment) return false
-        const obDate = ob.date || ob['date ']
-        if (dueDate && obDate) return obDate <= dueDate
+        if (dueDate && ob.date) return ob.date <= dueDate
         return true
       })
       if (cardObs.length === 0) {
         result[c.id] = false
       } else {
-        result[c.id] = cardObs.every((ob) => {
-          const dateStr = ob.date || ob['date ']
-          const key = dateStr + ':' + ob.name
-          return paid.has(key)
-        })
+        result[c.id] = cardObs.every((ob) => paid.has(ob.date + ':' + ob.name))
       }
-    })
+    }
     return result
   })
 
-  /**
-   * Danh sách thẻ tín dụng đã được enrich với trạng thái khẩn cấp thanh toán và khoản thanh toán theo kế hoạch.
-   */
   const debtCards = computed((): DebtCard[] => {
-    // Đọc locale ở đây để Vue track dependency → recompute khi đổi ngôn ngữ
     const locale = (i18n.global.locale as { value: string }).value
-    return (d.value.debts?.credit_cards || []).map((c): DebtCard => {
-      const dueDate = c.min_due_date || ''
+    return creditCardItems.value.map((c): DebtCard => {
+      const dueDate = c.due_date || ''
       const daysLeft = dueDate ? dDiff(dueDate) : null
       const paid = minPaidByCard.value[c.id] || false
       let minUrg: DebtCard['minUrg'] = 'normal'
@@ -134,52 +134,49 @@ export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
         dt.setMonth(dt.getMonth() + 1)
         return dt.toISOString().slice(0, 7)
       })()
+
       let plannedPayment: DebtCard['plannedPayment'] = null
-      for (const ev of d.value.one_time_expenses || []) {
+      // Search ote
+      for (const ev of oneTimeExpenses.value) {
         const evName = (ev.name || '').toLowerCase()
         if (!evName.includes(cardShort)) continue
-        const evMonth = (ev.date || '').slice(0, 7)
+        const evMonth = ev.due_date.slice(0, 7)
         if (evMonth === nowMonth || evMonth === nextMonth) {
-          plannedPayment = { amount: ev.amount, isMin: evName.includes('minimum'), name: ev.name, date: ev.date }
+          plannedPayment = { amount: ev.amount, isMin: evName.includes('minimum'), name: ev.name, date: ev.due_date }
           break
         }
       }
+      // Search fixed_expense
       if (!plannedPayment) {
-        const plans = d.value.monthly_plans || {}
-        outer: for (const mo of [nowMonth, nextMonth]) {
-          const obs = plans[mo]?.obligations || []
-          for (const ob of obs) {
-            if (ob.monthly) continue
-            const obName = (ob.name || '').toLowerCase()
-            if (!obName.includes(cardShort)) continue
-            if (ob.category && ob.category !== 'debt_minimum') continue
-            plannedPayment = { amount: ob.amount, isMin: obName.includes('minimum'), name: ob.name, date: ob.date || '' }
-            break outer
-          }
+        for (const fe of fixedExpenses.value) {
+          if (!fe.due_date) continue
+          const obName = (fe.name || '').toLowerCase()
+          if (!obName.includes(cardShort)) continue
+          if (fe.cat && fe.cat !== 'debt_minimum') continue
+          const mo = fe.due_date.slice(0, 7)
+          if (mo !== nowMonth && mo !== nextMonth) continue
+          plannedPayment = { amount: fe.amount, isMin: obName.includes('minimum'), name: fe.name, date: fe.due_date }
+          break
         }
       }
-      const thisMonthExpenses = (d.value.expenses || []).filter(
-        (e) => isTM(e.date) && e.payMethod === c.id
+
+      const thisMonthExpenses = expenseLogs.value.filter(
+        (e) => isTM(e.due_date) && e.pay_method === c.id
       )
       const thisMonthSpent = thisMonthExpenses.reduce((s, e) => s + e.amount, 0)
       const thisMonthSpentCount = thisMonthExpenses.length
 
-      // Đếm paid_obligations khớp thẻ này trong tháng hiện tại
-      // Format key: "YYYY-MM-DD:ObligationName"
-      const thisMonthPaymentCount = (d.value.paid_obligations || []).filter((key) => {
-        const colonIdx = key.indexOf(':')
-        if (colonIdx === -1) return false
-        const datePart = key.slice(0, colonIdx)
-        const namePart = key.slice(colonIdx + 1).toLowerCase()
-        return datePart.slice(0, 7) === nowMonth && namePart.includes(cardShort)
+      const thisMonthPaymentCount = paymentRecords.value.filter((p) => {
+        if (p.due_date.slice(0, 7) !== nowMonth) return false
+        return p.key.toLowerCase().includes(cardShort)
       }).length
 
       return {
         id: c.id,
-        name: getLocalized(c, 'name', locale).replace(' — Techcombank', '').replace(' — ', ''),
-        balance: c.balance,
-        limit: c.credit_limit,
-        rate: Math.round(c.interest_rate_annual * 100),
+        name: getLocalized({ name: c.name, nameI18n: c.nameI18n }, 'name', locale).replace(' — Techcombank', '').replace(' — ', ''),
+        balance: c.amount,
+        limit: c.credit_limit ?? 0,
+        rate: Math.round((c.apr || 0) * 100),
         min: c.minimum_payment,
         minDueDate: dueDate,
         minDaysLeft: daysLeft,
@@ -194,92 +191,58 @@ export function useDebtCards(d: Ref<AppData>): DebtCardsResult {
     })
   })
 
-  /** Chỉ lấy các khoản vay nhỏ còn dư nợ (lọc bỏ đã trả hết). */
   const smallLoans = computed(() =>
-    (d.value.debts?.small_loans || []).filter((l) => (l.remaining_balance || 0) > 0)
+    smallLoanItems.value.filter((l) => (l.amount || 0) > 0)
   )
 
-  /** Tổng nợ hiện tại = tổng dư nợ thẻ tín dụng + tổng khoản vay nhỏ còn lại. */
   const totalDebt = computed((): number => {
-    const cc = (d.value.debts?.credit_cards || []).reduce((s, c) => s + (c.balance || 0), 0)
-    const sl = (d.value.debts?.small_loans || []).reduce((s, l) => s + (l.remaining_balance || 0), 0)
-    return Math.max(0, cc + sl)
+    return Math.max(0, debtItems.value.reduce((s, dt) => s + (dt.amount || 0), 0))
   })
 
-  /** Tổng nợ ban đầu lấy từ debts.summary.total, dùng làm mốc tính % tiến độ trả nợ. */
-  const origDebt = computed((): number => d.value.debts?.summary?.total || 91721251)
+  const origDebt = computed((): number => d.value.meta?.debt_summary_total || DEFAULT_ORIG_DEBT)
 
-  /** Phần trăm nợ đã trả so với tổng nợ ban đầu (0–100). */
   const repayPct = computed((): number =>
     Math.min(100, Math.max(0, Math.round((1 - totalDebt.value / origDebt.value) * 100)))
   )
 
-  /** Dữ liệu phân tích nợ theo từng thẻ/khoản vay, gán màu từ palette để hiển thị trên biểu đồ tròn. */
   const debtBreakdown = computed(() => {
-    // Đọc locale ở đây để Vue track dependency → recompute khi đổi ngôn ngữ
     const locale = (i18n.global.locale as { value: string }).value
-    const cc = (d.value.debts?.credit_cards || []).map((c, i) => ({
-      name: getLocalized(c, 'name', locale).replace(' — Techcombank', ''),
-      val: c.balance,
+    const cc = creditCardItems.value.map((c, i) => ({
+      name: getLocalized({ name: c.name, nameI18n: c.nameI18n }, 'name', locale).replace(' — Techcombank', ''),
+      val: c.amount,
       color: palette[i % palette.length],
     }))
-    const sl = (d.value.debts?.small_loans || [])
-      .filter((l) => (l.remaining_balance || 0) > 0)
+    const sl = smallLoanItems.value
+      .filter((l) => (l.amount || 0) > 0)
       .map((l, i) => {
-        const n = getLocalized(l, 'name', locale)
+        const n = getLocalized({ name: l.name, nameI18n: l.nameI18n }, 'name', locale)
         return {
           name: n.length > 24 ? n.slice(0, 24) + '…' : n,
-          val: l.remaining_balance,
+          val: l.amount,
           color: palette[(cc.length + i) % palette.length],
         }
       })
     return [...cc, ...sl]
   })
 
-  /**
-   * Chiều hướng nợ tổng hợp — so sánh TỔNG SỐ TIỀN trong tháng hiện tại:
-   * - 'down' khi totalPaymentAmount > totalSpendingAmount (đang trả nhiều hơn chi)
-   * - 'up' khi totalSpendingAmount >= totalPaymentAmount và có hoạt động (chi nhiều hơn trả)
-   * - 'neutral' khi không có hoạt động nào
-   * Arrow direction (up/down) trong UI tuỳ thuộc vào progressMode — được xử lý ở template.
-   */
   const debtTrend = computed((): TrendDirection => {
     const nowMonth = new Date().toISOString().slice(0, 7)
-    const cards = d.value.debts?.credit_cards || []
-    const cardIds = new Set(cards.map((c) => c.id))
+    const ccIds = new Set(creditCardItems.value.map((c) => c.id))
 
-    // Tổng chi tiêu bằng thẻ tín dụng trong tháng (expenses[].payMethod === cardId)
-    const totalSpendingAmount = (d.value.expenses || [])
-      .filter((e) => isTM(e.date) && e.payMethod != null && cardIds.has(e.payMethod as string))
+    const totalSpendingAmount = expenseLogs.value
+      .filter((e) => isTM(e.due_date) && e.pay_method != null && ccIds.has(e.pay_method))
       .reduce((s, e) => s + e.amount, 0)
 
-    // Xây map key → amount từ monthly_plans + one_time_expenses để tra amount cho paid_obligations
-    const obAmtMap = new Map<string, number>()
-    const plans = d.value.monthly_plans || {}
-    Object.values(plans).forEach((plan) => {
-      ;(plan.obligations || []).forEach((ob) => {
-        const dateStr = ob.date || ob['date '] || ''
-        if (dateStr) obAmtMap.set(dateStr + ':' + ob.name, ob.amount)
-      })
-    })
-    ;(d.value.one_time_expenses || []).forEach((ev) => {
-      obAmtMap.set((ev.date || '') + ':' + ev.name, ev.amount)
-    })
-
-    // Tổng thanh toán nợ CC trong tháng (paid_obligations khớp tên thẻ + tháng hiện tại)
-    const totalPaymentAmount = (d.value.paid_obligations || [])
-      .filter((key) => {
-        const colonIdx = key.indexOf(':')
-        if (colonIdx === -1) return false
-        const datePart = key.slice(0, colonIdx)
-        if (datePart.slice(0, 7) !== nowMonth) return false
-        const namePart = key.slice(colonIdx + 1).toLowerCase()
-        return cards.some((c) => {
+    const totalPaymentAmount = paymentRecords.value
+      .filter((p) => {
+        if (p.due_date.slice(0, 7) !== nowMonth) return false
+        const namePart = p.key.split(':').slice(1).join(':').toLowerCase()
+        return creditCardItems.value.some((c) => {
           const cardShort = c.name.replace(' — Techcombank', '').replace(' — ', '').toLowerCase()
           return namePart.includes(cardShort)
         })
       })
-      .reduce((s, key) => s + (obAmtMap.get(key) || 0), 0)
+      .reduce((s, p) => s + (p.amount || 0), 0)
 
     if (totalPaymentAmount === 0 && totalSpendingAmount === 0) return 'neutral'
     return totalPaymentAmount > totalSpendingAmount ? 'down' : 'up'

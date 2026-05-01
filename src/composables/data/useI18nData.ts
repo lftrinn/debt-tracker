@@ -5,7 +5,6 @@
 
 import { i18n } from '../../i18n'
 import type { AppLang } from '../api/useTranslation'
-import type { RuleItem } from '../../types/data'
 
 /** Kiểu tối thiểu cho bất kỳ record có thể có bản dịch */
 export interface LocalizableRecord {
@@ -16,6 +15,13 @@ export interface LocalizableRecord {
   event?: string
   eventI18n?: Partial<Record<AppLang, string>>
   text?: string
+  textI18n?: Partial<Record<AppLang, string>>
+}
+
+/** Legacy rule shape (chuỗi hoặc object có textI18n). */
+export interface LegacyRuleText {
+  text: string
+  textLang?: AppLang
   textI18n?: Partial<Record<AppLang, string>>
 }
 
@@ -39,13 +45,10 @@ export function getLocalized(
 }
 
 /**
- * Trả về text đã bản địa hoá từ một rule item (string cũ hoặc object mới có i18n).
- * @param rule - String đơn giản hoặc RuleItem có textI18n
- * @param locale - Locale cần lấy; mặc định dùng locale hiện tại của app
- * @returns Text đã bản địa hoá
+ * Trả về text đã bản địa hoá từ một rule item.
  */
 export function getRuleText(
-  rule: string | RuleItem,
+  rule: string | LegacyRuleText,
   locale?: string,
 ): string {
   if (typeof rule === 'string') return rule

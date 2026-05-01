@@ -122,8 +122,8 @@ import {
 import SectionHeader from '@/components/cards/SectionHeader.vue'
 import { useCurrency, CURRENCIES, type Currency } from '@/composables/api/useCurrency'
 import { useDisplayMode } from '@/composables/ui/useDisplayMode'
-import { bossFor } from '@/composables/data/useTutienNames'
-import type { CreditCard, Expense, Income } from '@/types/data'
+import { bossForAmount } from '@/composables/data/useBossTiers'
+import type { DebtItem } from '@/types/data'
 
 const { t } = useI18n()
 const { displayCurrency } = useCurrency()
@@ -165,9 +165,7 @@ interface PrefillData {
 
 const props = defineProps<{
   syncing?: boolean
-  expenses?: Expense[]
-  incomes?: Income[]
-  creditCards?: CreditCard[]
+  creditCards?: DebtItem[]
   prefill?: PrefillData | null
 }>()
 
@@ -314,9 +312,9 @@ const payMethodOpts = computed(() => {
   const list: Array<{ key: string; label: string }> = [
     { key: 'cash', label: t('add.payMethod.cash') },
   ]
-  ;(props.creditCards || []).forEach((c, idx) => {
-    const boss = bossFor(c, idx)
-    const display = useTutien.value ? `${boss.display} · ${c.name}` : c.name
+  ;(props.creditCards || []).forEach((c) => {
+    const boss = bossForAmount(c.amount, c.id || c.name)
+    const display = useTutien.value ? `${boss.name} · ${c.name}` : c.name
     list.push({ key: c.id, label: display })
   })
   return list

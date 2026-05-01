@@ -1,12 +1,16 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { ref } from 'vue'
+import {
+  mkDebt,
+  mkOneTimeExpense,
+  mkFixedExpense,
+  mkPaymentRecord,
+} from '@/types/data'
 import { useDebtCards } from '../data/useDebtCards'
-import { makeData, VISA1, VISA2 } from './helpers'
+import { makeData, VISA1, VISA2, mkLoan } from './helpers'
 
 describe('useDebtCards', () => {
   afterEach(() => vi.useRealTimers())
-
-  // ─── totalDebt ────────────────────────────────────────────────────────
 
   describe('totalDebt', () => {
     it('không có nợ → 0', () => {
@@ -15,40 +19,38 @@ describe('useDebtCards', () => {
       expect(totalDebt.value).toBe(0)
     })
 
-    it('tính tổng cc balance + sl remaining_balance', () => {
+    it('tính tổng credit card + small loan', () => {
       const d = ref(makeData({
-        debts: {
-          credit_cards: [{ ...VISA1, balance: 3_000_000 }],
-          small_loans: [{ id: 'sl1', name: 'Vay A', remaining_balance: 500_000 }],
-        },
+        items: [
+          { ...VISA1, amount: 3_000_000 },
+          mkLoan('sl1', 'Vay A', 500_000),
+        ],
       }))
       const { totalDebt } = useDebtCards(d)
       expect(totalDebt.value).toBe(3_500_000)
     })
 
-    it('sl remaining_balance = 0 → không tính vào tổng', () => {
+    it('small loan amount = 0 → vẫn cộng (nhưng smallLoans filter)', () => {
       const d = ref(makeData({
-        debts: {
-          credit_cards: [{ ...VISA1, balance: 2_000_000 }],
-          small_loans: [{ id: 'sl1', name: 'Vay A', remaining_balance: 0 }],
-        },
+        items: [
+          { ...VISA1, amount: 2_000_000 },
+          mkLoan('sl1', 'Vay A', 0),
+        ],
       }))
       const { totalDebt } = useDebtCards(d)
       expect(totalDebt.value).toBe(2_000_000)
     })
 
-    it('phản ứng khi balance thẻ thay đổi', () => {
+    it('phản ứng khi amount thẻ thay đổi', () => {
       const d = ref(makeData({
-        debts: { credit_cards: [{ ...VISA1, balance: 1_000_000 }], small_loans: [] },
+        items: [{ ...VISA1, amount: 1_000_000 }],
       }))
       const { totalDebt } = useDebtCards(d)
       expect(totalDebt.value).toBe(1_000_000)
-      d.value = { ...d.value, debts: { ...d.value.debts, credit_cards: [{ ...VISA1, balance: 2_000_000 }] } }
+      d.value = { ...d.value, items: [{ ...VISA1, amount: 2_000_000 }] }
       expect(totalDebt.value).toBe(2_000_000)
     })
   })
-
-  // ─── findDebtId ───────────────────────────────────────────────────────
 
   describe('findDebtId', () => {
     it('không có debts → null', () => {
@@ -58,39 +60,29 @@ describe('useDebtCards', () => {
     })
 
     it('khớp theo tên ngắn của thẻ', () => {
-      const d = ref(makeData({
-        debts: { credit_cards: [VISA1], small_loans: [] },
-      }))
+      const d = ref(makeData({ items: [VISA1] }))
       const { findDebtId } = useDebtCards(d)
-      expect(findDebtId('visa 1 minimum')).toEqual({ type: 'cc', id: 'visa1' })
+      expect(findDebtId('visa 1 minimum')).toBe('visa1')
     })
 
     it('khớp theo card id trong tên', () => {
-      const d = ref(makeData({
-        debts: { credit_cards: [VISA1], small_loans: [] },
-      }))
+      const d = ref(makeData({ items: [VISA1] }))
       const { findDebtId } = useDebtCards(d)
-      expect(findDebtId('thanh toán visa1')).toEqual({ type: 'cc', id: 'visa1' })
+      expect(findDebtId('thanh toán visa1')).toBe('visa1')
     })
 
     it('nhiều thẻ → khớp đúng thẻ', () => {
-      const d = ref(makeData({
-        debts: { credit_cards: [VISA1, VISA2], small_loans: [] },
-      }))
+      const d = ref(makeData({ items: [VISA1, VISA2] }))
       const { findDebtId } = useDebtCards(d)
-      expect(findDebtId('visa 2 minimum')).toEqual({ type: 'cc', id: 'visa2' })
+      expect(findDebtId('visa 2 minimum')).toBe('visa2')
     })
 
     it('không khớp → null', () => {
-      const d = ref(makeData({
-        debts: { credit_cards: [VISA1], small_loans: [] },
-      }))
+      const d = ref(makeData({ items: [VISA1] }))
       const { findDebtId } = useDebtCards(d)
       expect(findDebtId('Mastercard payment')).toBeNull()
     })
   })
-
-  // ─── debtCards minUrg ─────────────────────────────────────────────────
 
   describe('debtCards minUrg', () => {
     it('không có thẻ → mảng rỗng', () => {
@@ -101,10 +93,16 @@ describe('useDebtCards', () => {
 
     it('đã paid → ok', () => {
       vi.setSystemTime(new Date('2026-03-03T12:00:00'))
+      // Synthesized obligation `<name> minimum` từ DebtItem.due_date được match
+      // với PaymentRecord.key cùng format → minPaid=true.
       const d = ref(makeData({
-        debts: { credit_cards: [{ ...VISA1, min_due_date: '2026-03-10' }], small_loans: [] },
-        one_time_expenses: [{ id: 1, name: 'visa 1 minimum', date: '2026-03-10', amount: 500_000 }],
-        paid_obligations: ['2026-03-10:visa 1 minimum'],
+        items: [
+          mkDebt('visa1', 'Visa 1', { ...VISA1, due_date: '2026-03-10' }),
+          mkPaymentRecord('pay_1', 'Visa 1 minimum', {
+            amount: 500_000, due_date: '2026-03-10',
+            key: '2026-03-10:Visa 1 minimum', ref_id: 'visa1', ref_type: 'debt',
+          }),
+        ],
       }))
       const { debtCards } = useDebtCards(d)
       expect(debtCards.value[0].minUrg).toBe('ok')
@@ -114,25 +112,25 @@ describe('useDebtCards', () => {
     it('đã quá hạn (daysLeft <= 0) → overdue', () => {
       vi.setSystemTime(new Date('2026-03-15T12:00:00'))
       const d = ref(makeData({
-        debts: { credit_cards: [{ ...VISA1, min_due_date: '2026-03-10' }], small_loans: [] },
+        items: [mkDebt('visa1', 'Visa 1', { ...VISA1, due_date: '2026-03-10' })],
       }))
       const { debtCards } = useDebtCards(d)
       expect(debtCards.value[0].minUrg).toBe('overdue')
     })
 
-    it('còn 2 ngày (daysLeft <= 3) → urgent', () => {
+    it('còn 2 ngày → urgent', () => {
       vi.setSystemTime(new Date('2026-03-08T12:00:00'))
       const d = ref(makeData({
-        debts: { credit_cards: [{ ...VISA1, min_due_date: '2026-03-10' }], small_loans: [] },
+        items: [mkDebt('visa1', 'Visa 1', { ...VISA1, due_date: '2026-03-10' })],
       }))
       const { debtCards } = useDebtCards(d)
       expect(debtCards.value[0].minUrg).toBe('urgent')
     })
 
-    it('còn 5 ngày (daysLeft <= 7) → soon', () => {
+    it('còn 5 ngày → soon', () => {
       vi.setSystemTime(new Date('2026-03-05T12:00:00'))
       const d = ref(makeData({
-        debts: { credit_cards: [{ ...VISA1, min_due_date: '2026-03-10' }], small_loans: [] },
+        items: [mkDebt('visa1', 'Visa 1', { ...VISA1, due_date: '2026-03-10' })],
       }))
       const { debtCards } = useDebtCards(d)
       expect(debtCards.value[0].minUrg).toBe('soon')
@@ -141,15 +139,15 @@ describe('useDebtCards', () => {
     it('còn 20 ngày → normal', () => {
       vi.setSystemTime(new Date('2026-03-01T12:00:00'))
       const d = ref(makeData({
-        debts: { credit_cards: [{ ...VISA1, min_due_date: '2026-03-21' }], small_loans: [] },
+        items: [mkDebt('visa1', 'Visa 1', { ...VISA1, due_date: '2026-03-21' })],
       }))
       const { debtCards } = useDebtCards(d)
       expect(debtCards.value[0].minUrg).toBe('normal')
     })
 
-    it('không có min_due_date → normal', () => {
+    it('không có due_date → normal', () => {
       const d = ref(makeData({
-        debts: { credit_cards: [{ ...VISA1, min_due_date: undefined }], small_loans: [] },
+        items: [mkDebt('visa1', 'Visa 1', { ...VISA1, due_date: null })],
       }))
       const { debtCards } = useDebtCards(d)
       expect(debtCards.value[0].minUrg).toBe('normal')
@@ -157,14 +155,14 @@ describe('useDebtCards', () => {
     })
   })
 
-  // ─── debtCards plannedPayment ─────────────────────────────────────────
-
   describe('debtCards plannedPayment', () => {
     it('có one_time_expense khớp → plannedPayment', () => {
       vi.setSystemTime(new Date('2026-03-03T12:00:00'))
       const d = ref(makeData({
-        debts: { credit_cards: [{ ...VISA1, name: 'Visa 1' }], small_loans: [] },
-        one_time_expenses: [{ id: 1, name: 'Visa 1 minimum', date: '2026-03-15', amount: 500_000 }],
+        items: [
+          mkDebt('visa1', 'Visa 1', { ...VISA1 }),
+          mkOneTimeExpense('ote_1', 'Visa 1 minimum', { amount: 500_000, due_date: '2026-03-15' }),
+        ],
       }))
       const { debtCards } = useDebtCards(d)
       expect(debtCards.value[0].plannedPayment).not.toBeNull()
@@ -172,26 +170,16 @@ describe('useDebtCards', () => {
     })
 
     it('không có planned → null', () => {
-      const d = ref(makeData({
-        debts: { credit_cards: [VISA1], small_loans: [] },
-      }))
+      const d = ref(makeData({ items: [VISA1] }))
       const { debtCards } = useDebtCards(d)
       expect(debtCards.value[0].plannedPayment).toBeNull()
     })
   })
 
-  // ─── smallLoans ───────────────────────────────────────────────────────
-
   describe('smallLoans', () => {
-    it('lọc khoản vay đã trả hết (remaining_balance = 0)', () => {
+    it('lọc khoản vay đã trả hết (amount = 0)', () => {
       const d = ref(makeData({
-        debts: {
-          credit_cards: [],
-          small_loans: [
-            { id: 'sl1', name: 'Vay A', remaining_balance: 500_000 },
-            { id: 'sl2', name: 'Vay B', remaining_balance: 0 },
-          ],
-        },
+        items: [mkLoan('sl1', 'Vay A', 500_000), mkLoan('sl2', 'Vay B', 0)],
       }))
       const { smallLoans } = useDebtCards(d)
       expect(smallLoans.value).toHaveLength(1)
@@ -205,8 +193,6 @@ describe('useDebtCards', () => {
     })
   })
 
-  // ─── debtTrend ────────────────────────────────────────────────────────
-
   describe('debtTrend', () => {
     it('không có thanh toán → neutral', () => {
       const d = ref(makeData())
@@ -214,17 +200,18 @@ describe('useDebtCards', () => {
       expect(debtTrend.value).toBe('neutral')
     })
 
-    it('có paid_obligations tháng này, không có card spending → down', () => {
+    it('có payment_record tháng này, không có card spending → down', () => {
       vi.useFakeTimers()
       vi.setSystemTime(new Date('2026-03-15'))
       const d = ref(makeData({
-        debts: { credit_cards: [VISA1], small_loans: [] },
-        monthly_plans: {
-          '2026-03': {
-            obligations: [{ name: 'Visa 1', date: '2026-03-15', amount: 500_000 }],
-          },
-        },
-        paid_obligations: ['2026-03-15:Visa 1'],
+        items: [
+          VISA1,
+          mkFixedExpense('fe_1', 'Visa 1', { amount: 500_000, per_period: 500_000, frequency: 'monthly', due_date: '2026-03-15' }),
+          mkPaymentRecord('pay_1', 'Visa 1', {
+            amount: 500_000, due_date: '2026-03-15',
+            key: '2026-03-15:Visa 1', ref_id: 'visa1', ref_type: 'debt',
+          }),
+        ],
       }))
       const { debtTrend } = useDebtCards(d)
       expect(debtTrend.value).toBe('down')

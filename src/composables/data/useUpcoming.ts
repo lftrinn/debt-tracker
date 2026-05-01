@@ -3,19 +3,23 @@ import type { Ref, ComputedRef } from 'vue'
 import type { AppData, UpcomingItem } from '@/types/data'
 import { i18n } from '../../i18n'
 import { useFormatters } from '../ui/useFormatters'
+import { useItems } from './useItems'
 
 /**
- * Tổng hợp danh sách các khoản thanh toán sắp đến hạn từ kế hoạch tháng và chi tiêu một lần.
- * @param d - Reactive ref chứa toàn bộ dữ liệu ứng dụng
- * @returns upcomingLabel (nhãn tháng hiện tại), upcoming (danh sách tối đa 10 khoản sắp đến)
+ * Tổng hợp danh sách các khoản thanh toán sắp đến hạn.
+ * Sources:
+ *   - fixed_expense items có `due_date` (kỳ cụ thể, không phải template)
+ *   - one_time_expense items
+ *   - debt items có `minimum_payment` + `due_date` (phát sinh "<name> minimum")
+ * Cap 30 ngày trễ, cắt 10 items, sort ngày tăng dần.
  */
 export function useUpcoming(d: Ref<AppData>): {
   upcomingLabel: ComputedRef<string>
   upcoming: ComputedRef<UpcomingItem[]>
 } {
   const { dDiff } = useFormatters()
+  const { fixedExpenses, oneTimeExpenses, debts, paidKeys } = useItems(d)
 
-  /** Nhãn hiển thị tháng/năm hiện tại theo locale (T3/2026, Mar/2026, 3月/2026). */
   const upcomingLabel = computed((): string => {
     const now = new Date()
     const m = now.getMonth() + 1
@@ -29,83 +33,100 @@ export function useUpcoming(d: Ref<AppData>): {
     return 'T' + m + '/' + y
   })
 
-  /**
-   * Danh sách khoản thanh toán sắp đến, bao gồm cả đã quá hạn trong vòng 30 ngày.
-   * Gộp từ monthly_plans (3 tháng hiện tại và tới) và one_time_expenses, sắp xếp theo ngày tăng dần.
-   */
   const upcoming = computed((): UpcomingItem[] => {
-    const plans = d.value.monthly_plans || {}
-    const paid = new Set(d.value.paid_obligations || [])
+    const paid = paidKeys.value
     const now = new Date()
     const todayStr = now.toISOString().slice(0, 10)
-    const months = [0, 1, 2].map((i) => {
-      const dt = new Date(now.getFullYear(), now.getMonth() + i, 1)
-      return dt.toISOString().slice(0, 7)
-    })
     const items: UpcomingItem[] = []
 
-    months.forEach((mo) => {
-      const plan = plans[mo]
-      if (!plan?.obligations) return
-      plan.obligations.forEach((ob) => {
-        if (ob.monthly) return
-        const dateStr = ob.date || ob['date ']
-        if (!dateStr) return
-        const diff = dDiff(dateStr)
-        const key = dateStr + ':' + ob.name
-        const isPaid = paid.has(key)
-        if (isPaid && dateStr < todayStr) return
-        if (!isPaid && diff < -30) return
-        const d2 = new Date(dateStr)
-        const overdueDays = dateStr < todayStr ? Math.abs(diff) : 0
-        items.push({
-          _key: key,
-          day: String(d2.getDate()).padStart(2, '0'),
-          mo: String(d2.getMonth() + 1).padStart(2, '0'),
-          name: ob.name,
-          nameI18n: ob.nameI18n,
-          nameI18nMeta: ob.nameI18nMeta,
-          sub: overdueDays > 0
-            ? i18n.global.t('upcoming.overdueDays', { n: overdueDays })
-            : ob.category === 'debt_minimum' ? i18n.global.t('upcoming.minPayLabel') : null,
-          amt: ob.amount,
-          paid: isPaid,
-          urg: isPaid ? 'ok' : overdueDays > 0 ? 'overdue' : diff <= 5 ? 'urgent' : diff <= 10 ? 'soon' : 'ok',
-          _date: dateStr,
-          source: 'monthly_plan',
-          _category: ob.category || null,
-          _isLastPeriod: ob.category === 'installment' && (ob.name || '').includes('kỳ cuối'),
-          _mo: mo,
-          overdueDays,
-        })
-      })
-    })
-
-    ;(d.value.one_time_expenses || []).forEach((ev) => {
-      const diff = dDiff(ev.date)
-      const key = ev.date + ':' + ev.name
+    /** Helper · build UpcomingItem từ thông tin chung. */
+    function makeItem(opts: {
+      itemId: string
+      itemName: string
+      dateStr: string
+      amount: number
+      source: UpcomingItem['source']
+      category?: string | null
+      isLastPeriod?: boolean
+      nameI18n?: UpcomingItem['nameI18n']
+      nameI18nMeta?: UpcomingItem['nameI18nMeta']
+    }): UpcomingItem | null {
+      const diff = dDiff(opts.dateStr)
+      const key = opts.dateStr + ':' + opts.itemName
       const isPaid = paid.has(key)
-      if (isPaid && ev.date < todayStr) return
-      if (!isPaid && diff < -30) return
-      const d2 = new Date(ev.date)
-      const overdueDays = ev.date < todayStr ? Math.abs(diff) : 0
-      items.push({
+      if (isPaid && opts.dateStr < todayStr) return null
+      if (!isPaid && diff < -30) return null
+      const d2 = new Date(opts.dateStr)
+      const overdueDays = opts.dateStr < todayStr ? Math.abs(diff) : 0
+      return {
         _key: key,
         day: String(d2.getDate()).padStart(2, '0'),
         mo: String(d2.getMonth() + 1).padStart(2, '0'),
-        name: ev.name,
-        nameI18n: ev.nameI18n,
-        nameI18nMeta: ev.nameI18nMeta,
-        sub: overdueDays > 0 ? i18n.global.t('upcoming.overdueDays', { n: overdueDays }) : null,
-        amt: ev.amount,
+        name: opts.itemName,
+        nameI18n: opts.nameI18n,
+        nameI18nMeta: opts.nameI18nMeta,
+        sub: overdueDays > 0
+          ? i18n.global.t('upcoming.overdueDays', { n: overdueDays })
+          : opts.category === 'debt_minimum' ? i18n.global.t('upcoming.minPayLabel') : null,
+        amt: opts.amount,
         paid: isPaid,
         urg: isPaid ? 'ok' : overdueDays > 0 ? 'overdue' : diff <= 5 ? 'urgent' : diff <= 10 ? 'soon' : 'ok',
-        _date: ev.date,
-        source: 'one_time',
-        _id: ev.id,
+        _date: opts.dateStr,
+        source: opts.source,
+        _id: opts.itemId,
+        _category: opts.category ?? null,
+        _isLastPeriod: opts.isLastPeriod ?? false,
         overdueDays,
+      }
+    }
+
+    // Fixed expense: chỉ kỳ cụ thể (có due_date), không phải template recurring
+    for (const fe of fixedExpenses.value) {
+      if (!fe.due_date) continue
+      const ui = makeItem({
+        itemId: fe.id,
+        itemName: fe.name,
+        dateStr: fe.due_date,
+        amount: fe.amount,
+        source: 'fixed_expense',
+        category: fe.cat,
+        nameI18n: fe.nameI18n,
+        nameI18nMeta: fe.nameI18nMeta,
       })
-    })
+      if (ui) items.push(ui)
+    }
+
+    // One-time expense
+    for (const ote of oneTimeExpenses.value) {
+      const ui = makeItem({
+        itemId: ote.id,
+        itemName: ote.name,
+        dateStr: ote.due_date,
+        amount: ote.amount,
+        source: 'one_time_expense',
+        category: ote.cat,
+        nameI18n: ote.nameI18n,
+        nameI18nMeta: ote.nameI18nMeta,
+      })
+      if (ui) items.push(ui)
+    }
+
+    // Debt minimum payments (phát sinh từ debt items)
+    for (const dt of debts.value) {
+      if (!dt.due_date || !dt.minimum_payment) continue
+      const obName = dt.name + ' minimum'
+      const ui = makeItem({
+        itemId: dt.id,
+        itemName: obName,
+        dateStr: dt.due_date,
+        amount: dt.minimum_payment,
+        source: 'debt_minimum',
+        category: 'debt_minimum',
+        nameI18n: dt.nameI18n,
+        nameI18nMeta: dt.nameI18nMeta,
+      })
+      if (ui) items.push(ui)
+    }
 
     return items.sort((a, b) => a._date.localeCompare(b._date)).slice(0, 10)
   })

@@ -166,7 +166,7 @@ import { useCurrency } from '@/composables/api/useCurrency'
 import { useDisplayMode } from '@/composables/ui/useDisplayMode'
 import { categoryFor } from '@/composables/data/useTutienNames'
 import { useCategories } from '@/composables/data/useCategories'
-import type { Expense, Income } from '@/types/data'
+import type { TransactionItem } from '@/types/data'
 
 const { t } = useI18n()
 const { fCurr } = useCurrency()
@@ -185,8 +185,10 @@ interface DebtBreakdown {
 }
 
 const props = defineProps<{
-  expenses: Expense[]
-  incomes: Income[]
+  /** Expense transactions (UI shape · `date` field). */
+  expenses: TransactionItem[]
+  /** Income transactions (UI shape · `date` field). */
+  incomes: TransactionItem[]
   debtBreakdown: DebtBreakdown[]
   projectedDebt: ProjectedPoint[]
   hide: { spend: boolean; debtLine: boolean; pie: boolean }

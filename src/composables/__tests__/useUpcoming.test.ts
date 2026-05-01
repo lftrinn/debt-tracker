@@ -1,12 +1,11 @@
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { ref } from 'vue'
+import { mkOneTimeExpense, mkFixedExpense, mkPaymentRecord } from '@/types/data'
 import { useUpcoming } from '../data/useUpcoming'
 import { makeData } from './helpers'
 
 describe('useUpcoming', () => {
   afterEach(() => vi.useRealTimers())
-
-  // ─── upcomingLabel ────────────────────────────────────────────────────
 
   describe('upcomingLabel', () => {
     it('trả về nhãn tháng hiện tại', () => {
@@ -24,10 +23,8 @@ describe('useUpcoming', () => {
     })
   })
 
-  // ─── upcoming — nguồn one_time ────────────────────────────────────────
-
-  describe('upcoming từ one_time_expenses', () => {
-    it('không có expenses → mảng rỗng', () => {
+  describe('upcoming từ one_time_expense', () => {
+    it('không có expense → mảng rỗng', () => {
       vi.setSystemTime(new Date('2026-03-03T12:00:00'))
       const d = ref(makeData())
       const { upcoming } = useUpcoming(d)
@@ -37,20 +34,25 @@ describe('useUpcoming', () => {
     it('expense trong tương lai → xuất hiện', () => {
       vi.setSystemTime(new Date('2026-03-03T12:00:00'))
       const d = ref(makeData({
-        one_time_expenses: [{ id: 1, name: 'Trả nợ', date: '2026-03-10', amount: 300_000 }],
+        items: [mkOneTimeExpense('ote_1', 'Trả nợ', { amount: 300_000, due_date: '2026-03-10' })],
       }))
       const { upcoming } = useUpcoming(d)
       expect(upcoming.value).toHaveLength(1)
       expect(upcoming.value[0].name).toBe('Trả nợ')
       expect(upcoming.value[0].amt).toBe(300_000)
-      expect(upcoming.value[0].source).toBe('one_time')
+      expect(upcoming.value[0].source).toBe('one_time_expense')
     })
 
     it('expense đã paid trong quá khứ → bỏ qua', () => {
       vi.setSystemTime(new Date('2026-03-10T12:00:00'))
       const d = ref(makeData({
-        one_time_expenses: [{ id: 1, name: 'Trả nợ', date: '2026-03-05', amount: 300_000 }],
-        paid_obligations: ['2026-03-05:Trả nợ'],
+        items: [
+          mkOneTimeExpense('ote_1', 'Trả nợ', { amount: 300_000, due_date: '2026-03-05' }),
+          mkPaymentRecord('pay_1', 'Trả nợ', {
+            amount: 300_000, due_date: '2026-03-05',
+            key: '2026-03-05:Trả nợ', ref_id: 'ote_1', ref_type: 'one_time_expense',
+          }),
+        ],
       }))
       const { upcoming } = useUpcoming(d)
       expect(upcoming.value).toHaveLength(0)
@@ -59,7 +61,7 @@ describe('useUpcoming', () => {
     it('expense chưa paid quá hạn > 30 ngày → bỏ qua', () => {
       vi.setSystemTime(new Date('2026-03-10T12:00:00'))
       const d = ref(makeData({
-        one_time_expenses: [{ id: 1, name: 'Cũ', date: '2026-01-01', amount: 100_000 }],
+        items: [mkOneTimeExpense('ote_1', 'Cũ', { amount: 100_000, due_date: '2026-01-01' })],
       }))
       const { upcoming } = useUpcoming(d)
       expect(upcoming.value).toHaveLength(0)
@@ -68,7 +70,7 @@ describe('useUpcoming', () => {
     it('expense chưa paid quá hạn ≤ 30 ngày → vẫn hiển thị', () => {
       vi.setSystemTime(new Date('2026-03-10T12:00:00'))
       const d = ref(makeData({
-        one_time_expenses: [{ id: 1, name: 'Trễ', date: '2026-03-05', amount: 100_000 }],
+        items: [mkOneTimeExpense('ote_1', 'Trễ', { amount: 100_000, due_date: '2026-03-05' })],
       }))
       const { upcoming } = useUpcoming(d)
       expect(upcoming.value).toHaveLength(1)
@@ -77,13 +79,11 @@ describe('useUpcoming', () => {
     })
   })
 
-  // ─── upcoming — urgency ───────────────────────────────────────────────
-
   describe('urgency', () => {
     it('còn 3 ngày (≤ 5) → urgent', () => {
       vi.setSystemTime(new Date('2026-03-03T12:00:00'))
       const d = ref(makeData({
-        one_time_expenses: [{ id: 1, name: 'Sắp đến', date: '2026-03-06', amount: 100_000 }],
+        items: [mkOneTimeExpense('ote_1', 'Sắp đến', { amount: 100_000, due_date: '2026-03-06' })],
       }))
       const { upcoming } = useUpcoming(d)
       expect(upcoming.value[0].urg).toBe('urgent')
@@ -92,7 +92,7 @@ describe('useUpcoming', () => {
     it('còn 8 ngày (≤ 10) → soon', () => {
       vi.setSystemTime(new Date('2026-03-03T12:00:00'))
       const d = ref(makeData({
-        one_time_expenses: [{ id: 1, name: 'Sắp tới', date: '2026-03-11', amount: 100_000 }],
+        items: [mkOneTimeExpense('ote_1', 'Sắp tới', { amount: 100_000, due_date: '2026-03-11' })],
       }))
       const { upcoming } = useUpcoming(d)
       expect(upcoming.value[0].urg).toBe('soon')
@@ -101,7 +101,7 @@ describe('useUpcoming', () => {
     it('còn 15 ngày → ok', () => {
       vi.setSystemTime(new Date('2026-03-03T12:00:00'))
       const d = ref(makeData({
-        one_time_expenses: [{ id: 1, name: 'Xa', date: '2026-03-18', amount: 100_000 }],
+        items: [mkOneTimeExpense('ote_1', 'Xa', { amount: 100_000, due_date: '2026-03-18' })],
       }))
       const { upcoming } = useUpcoming(d)
       expect(upcoming.value[0].urg).toBe('ok')
@@ -110,8 +110,13 @@ describe('useUpcoming', () => {
     it('đã paid và chưa đến hạn → ok', () => {
       vi.setSystemTime(new Date('2026-03-03T12:00:00'))
       const d = ref(makeData({
-        one_time_expenses: [{ id: 1, name: 'Đã trả', date: '2026-03-10', amount: 100_000 }],
-        paid_obligations: ['2026-03-10:Đã trả'],
+        items: [
+          mkOneTimeExpense('ote_1', 'Đã trả', { amount: 100_000, due_date: '2026-03-10' }),
+          mkPaymentRecord('pay_1', 'Đã trả', {
+            amount: 100_000, due_date: '2026-03-10',
+            key: '2026-03-10:Đã trả', ref_id: 'ote_1', ref_type: 'one_time_expense',
+          }),
+        ],
       }))
       const { upcoming } = useUpcoming(d)
       expect(upcoming.value[0].paid).toBe(true)
@@ -119,62 +124,46 @@ describe('useUpcoming', () => {
     })
   })
 
-  // ─── upcoming — monthly_plan ──────────────────────────────────────────
-
-  describe('upcoming từ monthly_plans', () => {
-    it('obligation trong monthly_plan → xuất hiện', () => {
+  describe('upcoming từ fixed_expense', () => {
+    it('fixed_expense có due_date → xuất hiện', () => {
       vi.setSystemTime(new Date('2026-03-03T12:00:00'))
       const d = ref(makeData({
-        monthly_plans: {
-          '2026-03': {
-            obligations: [{ name: 'Visa 1 min', amount: 500_000, date: '2026-03-15', category: 'debt_minimum' }],
-          },
-        },
+        items: [
+          mkFixedExpense('fe_1', 'Visa 1 min', {
+            amount: 500_000, per_period: 500_000, frequency: 'monthly',
+            due_date: '2026-03-15', cat: 'debt_minimum',
+          }),
+        ],
       }))
       const { upcoming } = useUpcoming(d)
       const item = upcoming.value.find((x) => x.name === 'Visa 1 min')
       expect(item).toBeDefined()
-      expect(item?.source).toBe('monthly_plan')
-      expect(item?.sub).toBe('Thanh toán tối thiểu')
+      expect(item?.source).toBe('fixed_expense')
     })
 
-    it('obligation monthly = true → bỏ qua', () => {
+    it('fixed_expense không có due_date → bỏ qua', () => {
       vi.setSystemTime(new Date('2026-03-03T12:00:00'))
       const d = ref(makeData({
-        monthly_plans: {
-          '2026-03': {
-            obligations: [{ name: 'Thuê nhà', amount: 2_000_000, date: '2026-03-05', monthly: true }],
-          },
-        },
-      }))
-      const { upcoming } = useUpcoming(d)
-      expect(upcoming.value).toHaveLength(0)
-    })
-
-    it('obligation không có date → bỏ qua', () => {
-      vi.setSystemTime(new Date('2026-03-03T12:00:00'))
-      const d = ref(makeData({
-        monthly_plans: {
-          '2026-03': {
-            obligations: [{ name: 'Không có ngày', amount: 100_000 }],
-          },
-        },
+        items: [
+          mkFixedExpense('fe_1', 'Thuê nhà', {
+            amount: 2_000_000, per_period: 2_000_000, frequency: 'monthly',
+            due_day_of_month: 5,
+          }),
+        ],
       }))
       const { upcoming } = useUpcoming(d)
       expect(upcoming.value).toHaveLength(0)
     })
   })
 
-  // ─── sắp xếp ──────────────────────────────────────────────────────────
-
   describe('sort', () => {
     it('sắp xếp theo ngày tăng dần', () => {
       vi.setSystemTime(new Date('2026-03-01T12:00:00'))
       const d = ref(makeData({
-        one_time_expenses: [
-          { id: 1, name: 'Muộn', date: '2026-03-20', amount: 100_000 },
-          { id: 2, name: 'Sớm', date: '2026-03-05', amount: 200_000 },
-          { id: 3, name: 'Giữa', date: '2026-03-10', amount: 150_000 },
+        items: [
+          mkOneTimeExpense('a', 'Muộn', { amount: 100_000, due_date: '2026-03-20' }),
+          mkOneTimeExpense('b', 'Sớm', { amount: 200_000, due_date: '2026-03-05' }),
+          mkOneTimeExpense('c', 'Giữa', { amount: 150_000, due_date: '2026-03-10' }),
         ],
       }))
       const { upcoming } = useUpcoming(d)
@@ -185,13 +174,13 @@ describe('useUpcoming', () => {
 
     it('giới hạn 10 items', () => {
       vi.setSystemTime(new Date('2026-03-01T12:00:00'))
-      const expenses = Array.from({ length: 15 }, (_, i) => ({
-        id: i + 1,
-        name: `Item ${i + 1}`,
-        date: `2026-03-${String(i + 2).padStart(2, '0')}`,
-        amount: 100_000,
-      }))
-      const d = ref(makeData({ one_time_expenses: expenses }))
+      const items = Array.from({ length: 15 }, (_, i) =>
+        mkOneTimeExpense('ote_' + (i + 1), 'Item ' + (i + 1), {
+          amount: 100_000,
+          due_date: `2026-03-${String(i + 2).padStart(2, '0')}`,
+        })
+      )
+      const d = ref(makeData({ items }))
       const { upcoming } = useUpcoming(d)
       expect(upcoming.value).toHaveLength(10)
     })

@@ -1,47 +1,74 @@
 import { vi } from 'vitest'
-import type { AppData } from '@/types/data'
+import {
+  type AppData,
+  type Item,
+  type DebtItem,
+  mkAccount,
+  mkIncomeRecurring,
+  mkDebt,
+} from '@/types/data'
 
-/** Build a minimal valid AppData for tests. Override any field as needed. */
-export function makeData(overrides: Partial<AppData> = {}): AppData {
+/**
+ * Build a minimal valid v2 AppData for tests. Override `items` array and/or merge meta fields.
+ * Returns a fresh `{ meta, items }` object — no legacy fields.
+ */
+export function makeData(opts: { items?: Item[]; meta?: Partial<AppData['meta']> } = {}): AppData {
+  const baseItems: Item[] = [
+    mkAccount('cash', 'Cash', { amount: 1_000_000, as_of: '2026-03-01' }),
+    mkIncomeRecurring('salary', 'Salary', {
+      amount: 22_923_000,
+      per_period: 22_923_000,
+      frequency: 'monthly',
+      due_day_of_month: 5,
+    }),
+  ]
   return {
-    expenses: [],
-    incomes: [],
-    extra_paid: 0,
-    custom_daily_limit: 0,
-    current_cash: { balance: 1_000_000, reserved: 0, as_of: '2026-03-01' },
-    debts: { credit_cards: [], small_loans: [] },
-    income: { monthly_net: 22_923_000, pay_date: 5 },
-    rules: { daily_limit: { until_salary: 70_000, after_salary: 100_000 }, must_not: [] },
-    payoff_timeline: { projected_debt_by_month: [] },
-    ...overrides,
+    meta: {
+      owner: 'Test',
+      currency: 'VND',
+      generated_at: '2026-03-01',
+      as_of_month: '2026-03',
+      strategy: 'avalanche_modified',
+      strategy_note: '',
+      debt_free_target: '',
+      schema_note: 'v2 test fixture',
+      daily_limit: { until_salary: 70_000, after_salary: 100_000 },
+      custom_daily_limit: 0,
+      extra_paid: 0,
+      projected_debt_by_month: [],
+      debt_summary_total: 0,
+      ...(opts.meta ?? {}),
+    },
+    items: opts.items ?? baseItems,
   }
 }
 
-/** A credit card stub for tests */
-export const VISA1 = {
-  id: 'visa1',
-  name: 'Visa 1',
+/** A credit card stub for tests (v2 DebtItem). */
+export const VISA1: DebtItem = mkDebt('visa1', 'Visa 1', {
+  amount: 5_000_000,
   credit_limit: 10_000_000,
-  balance: 5_000_000,
-  interest_rate_annual: 0.328,
+  available_credit: 5_000_000,
+  apr: 0.328,
+  monthly_rate: 0.328 / 12,
   minimum_payment: 500_000,
-  min_due_date: '2026-04-15',
-}
+  due_date: '2026-04-15',
+})
 
-export const VISA2 = {
-  id: 'visa2',
-  name: 'Visa 2',
+export const VISA2: DebtItem = mkDebt('visa2', 'Visa 2', {
+  amount: 8_000_000,
   credit_limit: 20_000_000,
-  balance: 8_000_000,
-  interest_rate_annual: 0.358,
+  available_credit: 12_000_000,
+  apr: 0.358,
+  monthly_rate: 0.358 / 12,
   minimum_payment: 800_000,
+})
+
+/** Build a small loan DebtItem for tests. */
+export function mkLoan(id: string, name: string, balance: number): DebtItem {
+  return mkDebt(id, name, { amount: balance, credit_limit: null })
 }
 
-/** Mock pushData that always succeeds */
 export const mockPush = () => vi.fn().mockResolvedValue(true)
-/** Mock toast spy */
 export const mockToast = () => vi.fn()
-/** Mock tStr returning a fixed date */
 export const mockTStr = (date = '2026-03-29') => () => date
-/** Mock findDebtId returning null */
 export const mockFindDebtId = () => vi.fn().mockReturnValue(null)

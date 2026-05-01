@@ -8,12 +8,12 @@
 
 | Thành phần | Công nghệ |
 |---|---|
-| Framework | Vue 3 (Composition API, `<script setup>`) |
-| Language | TypeScript 5 |
+| Framework | Vue 3.5 (Composition API, `<script setup>`) |
+| Language | TypeScript 6 |
 | Build tool | Vite 6 |
-| Charts | Chart.js 4 |
-| i18n | vue-i18n 9 |
-| Unit tests | Vitest + @vue/test-utils |
+| Charts | Tự render — HTML bars + SVG line (không dùng Chart.js) |
+| i18n | vue-i18n 11 |
+| Unit tests | Vitest 4 + @vue/test-utils |
 | E2E tests | Playwright |
 | Backend | JSONBin.io v3 API (free tier) |
 | Storage | localStorage cho credentials (`dt_k`, `dt_b`), JSONBin cho data |
@@ -92,6 +92,7 @@ src/
       TransactionList.vue        # Chiến Ký · 3-stat row + chip filter + day-grouped tx items
   composables/
     data/
+      useItems.ts                # Type-narrow accessors cho items[] · accounts/debts/expenseLogs/...
       useCashData.ts             # Tính toán tiền mặt khả dụng, chi tiêu ngày/tháng
       useDebtCards.ts            # Dữ liệu thẻ tín dụng: số dư, lãi suất, tiến độ
       useUpcoming.ts             # Các khoản sắp đến hạn + tình trạng thiếu hụt
@@ -100,6 +101,7 @@ src/
       useDebtData.ts             # Aggregator: gọi tất cả data composables
       useCategories.ts           # Danh mục chi tiêu/thu nhập + icon/label
       useTutienNames.ts          # REALMS, realmOf, CATEGORIES_TUTIEN, LEGACY_CAT_MAP, bossFor, finalBossFor
+      useI18nData.ts             # getLocalized(item, field, locale) + getRuleText helper
     ui/
       useToast.ts                # Toast notification state và trigger
       useHideZones.ts            # Quản lý hide zones (ẩn số tiền theo vùng)
@@ -136,27 +138,66 @@ App.vue (state: d = ref<AppData>)
   └── useAppSetup(d)        → initialization, credentials
 ```
 
-### Data Schema (JSON on JSONBin)
+### Data Schema (V2 native — discriminated union)
+
+**Single source of truth** trên disk + in-memory: `{ meta, items[] }`. Không còn adapter / legacy derived views — composables thao tác trực tiếp trên `items[]` qua `useItems()` helper với type guards.
 
 ```json
 {
-  "expenses": [{ "id": 123, "desc": "...", "amount": 50000, "cat": "an", "date": "2026-03-27", "payMethod": "cash" }],
-  "incomes": [{ "id": 124, "desc": "...", "amount": 100000, "cat": "luong", "date": "..." }],
-  "current_cash": { "balance": 865000, "reserved": 500000, "as_of": "2026-03-27" },
-  "debts": {
-    "credit_cards": [{ "id": "visa1", "name": "Visa 1", "credit_limit": 37000000, "balance": 34946713, "interest_rate_annual": 0.328, "minimum_payment": 2663422 }],
-    "small_loans": [{ "id": "...", "name": "...", "remaining_balance": 0 }]
+  "meta": {
+    "owner": "...",
+    "currency": "VND",
+    "generated_at": "2026-05-01",
+    "as_of_month": "2026-05",
+    "strategy": "avalanche_modified",
+    "strategy_note": "...",
+    "debt_free_target": "2027-02",
+    "schema_note": "v2 unified items[]",
+    "daily_limit": { "until_salary": 70000, "after_salary": 100000 },
+    "custom_daily_limit": 0,
+    "extra_paid": 0,
+    "projected_debt_by_month": [],
+    "debt_summary_total": 91721251
   },
-  "income": { "monthly_net": 22923000, "pay_date": 5 },
-  "rules": { "daily_limit": { "until_salary": 70000, "after_salary": 100000 }, "must_not": [] },
-  "payoff_timeline": { "projected_debt_by_month": [] },
-  "monthly_plans": { "2026-03": { "obligations": [] } },
-  "one_time_expenses": [{ "id": 123, "name": "...", "date": "...", "amount": 500000 }],
-  "paid_obligations": ["2026-03-15:Visa 1"],
-  "extra_paid": 0,
-  "custom_daily_limit": 0
+  "items": [
+    { "id": "vcb_checking", "type": "account", "name": "VCB", "amount": 865000, "as_of": "2026-05-01" },
+    { "id": "salary", "type": "income", "name": "Lương", "amount": 22923000, "per_period": 22923000, "frequency": "monthly", "due_day_of_month": 5 },
+    { "id": "rent_may", "type": "fixed_expense", "name": "Tiền nhà", "amount": 4500000, "per_period": 4500000, "frequency": "monthly", "due_date": "2026-05-05" },
+    { "id": "tuition", "type": "one_time_expense", "name": "Học phí", "amount": 500000, "due_date": "2026-06-15", "frequency": "one_time" },
+    { "id": "visa1", "type": "debt", "name": "Visa 1", "amount": 34946713, "credit_limit": 37000000, "minimum_payment": 2663422, "apr": 0.328, "monthly_rate": 0.0274, "frequency": "monthly", "due_date": "2026-05-15", "children": [] },
+    { "id": "tx_e_1701234", "type": "expense_log", "name": "Cơm", "amount": 50000, "cat": "an", "due_date": "2026-04-27", "pay_method": "cash" },
+    { "id": "tx_i_1701235", "type": "income_log", "name": "Lương", "amount": 100000, "cat": "luong", "due_date": "2026-04-27" },
+    { "id": "pay_1701236", "type": "payment_record", "name": "Visa 1 minimum", "amount": 2663422, "due_date": "2026-05-15", "key": "2026-05-15:Visa 1 minimum", "ref_id": "visa1", "ref_type": "debt" },
+    { "id": "rule_no_lend", "type": "rule", "name": "Không cho vay", "severity": "high" },
+    { "id": "ms_debtfree", "type": "milestone", "name": "Debt-free", "due_date": "2027-02-28" }
+  ]
 }
 ```
+
+**`ItemType`** discriminator (12 subtypes): `account` · `income` · `fixed_expense` · `one_time_expense` · `debt` · `hidden_installment` (BNPL/subscription nested trong `DebtItem.children[]`) · `rule` · `risk` · `milestone` · `expense_log` · `income_log` · `payment_record`.
+
+**Per-type interfaces** trong `src/types/data.ts`: mỗi subtype có shape rõ ràng, không có `null` placeholders. Type guards (`isAccount`, `isDebt`, `isCreditCard`, `isExpenseLog`, ...) narrow `Item → SubItem` cho composables.
+
+**Factory helpers**: `mkAccount()`, `mkDebt()`, `mkExpenseLog()`, ... — luôn trả về subtype với required fields filled.
+
+**Discriminator pattern**:
+- `isCreditCard(i)` = `isDebt(i) && i.credit_limit != null` (có credit limit)
+- `isSmallLoan(i)` = `isDebt(i) && i.credit_limit == null` (loan không có credit limit)
+- `expense_log.ref_id` = `'ob:<key>'` khi là payment (để match payment_record)
+- `payment_record.key` = `"YYYY-MM-DD:Name"` (dedup theo ngày + tên obligation)
+
+**i18n**: `ItemBase` cung cấp `nameLang`, `nameI18n`, `nameI18nMeta` (manual/auto), `note`, `noteI18n` cho mọi item.
+
+**`useItems(d)` accessors** (read-path):
+```ts
+const { accounts, primaryAccount, primaryIncome,
+        debts, creditCards, smallLoans,
+        fixedExpenses, oneTimeExpenses,
+        expenseLogs, incomeLogs, paymentRecords, paidKeys,
+        rules, risks, milestones } = useItems(d)
+```
+
+**Mutation pattern** (write-path actions): `d.value = { ...d.value, items: fn(d.value.items) }` — immutable update để Vue reactivity hoạt động.
 
 ## Coding Conventions
 

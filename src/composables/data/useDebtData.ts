@@ -1,6 +1,6 @@
 import { computed } from 'vue'
 import type { Ref, ComputedRef } from 'vue'
-import type { AppData, LimitStatus, TrendDirection } from '@/types/data'
+import type { AppData, LimitStatus, TrendDirection, TransactionItem } from '@/types/data'
 import { i18n } from '../../i18n'
 import { useFormatters } from '../ui/useFormatters'
 import { useDailyLimit } from './useDailyLimit'
@@ -8,46 +8,74 @@ import { useCashData } from './useCashData'
 import { useDebtCards } from './useDebtCards'
 import { useUpcoming } from './useUpcoming'
 import { useTimeline } from './useTimeline'
+import { useItems } from './useItems'
 
 /**
- * Composable gốc — tổng hợp toàn bộ dữ liệu tài chính/nợ cho ứng dụng.
- * App.vue dùng composable này duy nhất; các sub-composable xử lý từng mảng chức năng riêng.
- * @param d - Reactive ref chứa toàn bộ dữ liệu ứng dụng
- * @returns Tất cả computed values và helpers cần thiết cho UI
+ * Aggregator — tổng hợp toàn bộ dữ liệu tài chính/nợ cho ứng dụng.
+ * App.vue dùng composable này duy nhất; các sub-composable xử lý từng mảng riêng.
  */
 export function useDebtData(d: Ref<AppData>) {
   const { isT, isTM } = useFormatters()
+  const { expenseLogs, incomeLogs } = useItems(d)
 
-  // ─── Sub-composables ──────────────────────────────────────────────────
   const { actualPayDate, dToSalary, afterSalary, dayLimit } = useDailyLimit(d)
   const { spentSinceSnapshot, availCash, unpaidObsToPayday, unpaidObsAmounts, cashDaysLeft } = useCashData(d, dayLimit, actualPayDate)
   const { findDebtId, minPaidByCard, debtCards, smallLoans, totalDebt, origDebt, repayPct, debtBreakdown, debtTrend } = useDebtCards(d)
   const { upcomingLabel, upcoming } = useUpcoming(d)
   const { milestones } = useTimeline(d)
 
-  /** Tháng hoàn thành trả nợ, lấy từ projected_debt_by_month (tháng đầu tiên total_debt = 0). */
+  /** Tháng hoàn thành trả nợ — đầu tiên total_debt = 0 trong projected. */
   const freeMonthStr = computed((): string => {
-    const pts = d.value.payoff_timeline?.projected_debt_by_month || []
+    const pts = d.value.meta?.projected_debt_by_month ?? []
     const zero = pts.find((p) => p.total_debt === 0)
     if (zero) return zero.month
-    const raws = d.value.payoff_timeline?.milestones || []
-    if (raws.length) return raws[raws.length - 1].month
+    if (pts.length) return pts[pts.length - 1].month
     return ''
   })
 
-  // ─── Base transaction lists ───────────────────────────────────────────
-  const expenses = computed(() => d.value.expenses || [])
-  const incomes = computed(() => d.value.incomes || [])
+  /** Map ExpenseLogItem → TransactionItem (UI shape, dùng `date` thay vì `due_date`). */
+  const expenses = computed((): TransactionItem[] =>
+    expenseLogs.value.map((e): TransactionItem => ({
+      id: e.id,
+      type: 'exp',
+      desc: e.name,
+      amount: e.amount,
+      cat: e.cat,
+      date: e.due_date,
+      pay_method: e.pay_method ?? null,
+      currency: e.currency ?? null,
+      time: e.time ?? null,
+      note: e.note ?? null,
+      ref_id: e.ref_id ?? null,
+      descLang: e.nameLang,
+      descI18n: e.nameI18n,
+      descI18nMeta: e.nameI18nMeta,
+    }))
+  )
 
-  /**
-   * Gộp và sắp xếp tất cả giao dịch (chi tiêu + thu nhập) theo ngày mới nhất lên đầu.
-   * Dùng id để phân biệt thứ tự khi cùng ngày.
-   */
-  const sortedTx = computed(() =>
-    [
-      ...expenses.value.map((e) => ({ ...e, type: 'exp' as const })),
-      ...incomes.value.map((e) => ({ ...e, type: 'inc' as const })),
-    ].sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id)
+  const incomes = computed((): TransactionItem[] =>
+    incomeLogs.value.map((i): TransactionItem => ({
+      id: i.id,
+      type: 'inc',
+      desc: i.name,
+      amount: i.amount,
+      cat: i.cat,
+      date: i.due_date,
+      pay_method: null,
+      currency: i.currency ?? null,
+      time: i.time ?? null,
+      note: i.note ?? null,
+      ref_id: null,
+      descLang: i.nameLang,
+      descI18n: i.nameI18n,
+      descI18nMeta: i.nameI18nMeta,
+    }))
+  )
+
+  const sortedTx = computed((): TransactionItem[] =>
+    [...expenses.value, ...incomes.value].sort(
+      (a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)
+    )
   )
 
   const today = computed((): string => {
@@ -58,29 +86,27 @@ export function useDebtData(d: Ref<AppData>) {
     return now.toLocaleDateString('vi-VN', { weekday: 'narrow', day: '2-digit', month: '2-digit', year: 'numeric' })
   })
 
-  // ─── Daily / monthly spending ─────────────────────────────────────────
-  // Loại trừ _obTag để không tính kép thanh toán nghĩa vụ vào chi tiêu hàng ngày/tháng
+  // Loại trừ ref_id (= payment) khỏi tính daily/monthly spending
   const todaySpent = computed((): number =>
-    expenses.value.filter((e) => isT(e.date) && !e._obTag).reduce((s, e) => s + e.amount, 0)
+    expenseLogs.value.filter((e) => isT(e.due_date) && !e.ref_id).reduce((s, e) => s + e.amount, 0)
   )
 
   const monthSpent = computed((): number =>
-    expenses.value.filter((e) => isTM(e.date)).reduce((s, e) => s + e.amount, 0)
+    expenseLogs.value.filter((e) => isTM(e.due_date)).reduce((s, e) => s + e.amount, 0)
   )
 
   const todayOutflow = computed((): number =>
-    expenses.value.filter((e) => isT(e.date)).reduce((s, e) => s + e.amount, 0)
+    expenseLogs.value.filter((e) => isT(e.due_date)).reduce((s, e) => s + e.amount, 0)
   )
 
   const todayIncome = computed((): number =>
-    incomes.value.filter((e) => isT(e.date)).reduce((s, e) => s + e.amount, 0)
+    incomeLogs.value.filter((i) => isT(i.due_date)).reduce((s, i) => s + i.amount, 0)
   )
 
   const monthIncome = computed((): number =>
-    incomes.value.filter((e) => isTM(e.date)).reduce((s, e) => s + e.amount, 0)
+    incomeLogs.value.filter((i) => isTM(i.due_date)).reduce((s, i) => s + i.amount, 0)
   )
 
-  // ─── Limit status (depends on todaySpent + dayLimit) ─────────────────
   const isOver: ComputedRef<boolean> = computed(() => dayLimit.value > 0 && todaySpent.value > dayLimit.value)
 
   const limPct: ComputedRef<number> = computed(() =>
@@ -91,11 +117,6 @@ export function useDebtData(d: Ref<AppData>) {
     limPct.value >= 100 ? 'over' : limPct.value >= 75 ? 'warn' : 'safe'
   )
 
-  // ─── Trend directions ─────────────────────────────────────────────────
-  /**
-   * Chiều hướng tiền mặt trong tháng: 'up' nếu thu > chi, 'down' nếu ngược lại, 'neutral' nếu không có giao dịch.
-   * Reset khi sang tháng mới (dùng isTM), không reset hàng ngày.
-   */
   const cashTrend: ComputedRef<TrendDirection> = computed(() => {
     if (monthSpent.value === 0 && monthIncome.value === 0) return 'neutral'
     return monthIncome.value > monthSpent.value ? 'up' : 'down'
@@ -103,19 +124,13 @@ export function useDebtData(d: Ref<AppData>) {
 
   const txTrend: ComputedRef<TrendDirection> = computed(() => cashTrend.value)
 
-  // ─── Smart daily limit ────────────────────────────────────────────────
-  /**
-   * Hạn mức chi tiêu thực tế = min(baseDayLimit, tiền mặt còn sau nghĩa vụ).
-   * Nếu tiền không đủ trang trải tất cả nghĩa vụ: chọn greedy (nhỏ trước) và lấy phần dư.
-   * custom_daily_limit > 0 bỏ qua logic này.
-   */
+  /** Hạn mức thực tế = min(baseDayLimit, tiền mặt còn sau nghĩa vụ). */
   const effectiveDayLimit: ComputedRef<number> = computed((): number => {
     const baseLimit = dayLimit.value
-    if (d.value.custom_daily_limit > 0) return baseLimit
+    if ((d.value.meta?.custom_daily_limit ?? 0) > 0) return baseLimit
     const cash = availCash.value
     const cashAfterObs = cash - unpaidObsToPayday.value
     if (cashAfterObs >= 0) return Math.min(baseLimit, cashAfterObs)
-    // Không đủ trả tất cả: greedy chọn khoản nhỏ nhất trước
     const amounts = unpaidObsAmounts.value.slice().sort((a, b) => a - b)
     let remaining = cash
     for (const amt of amounts) {
@@ -125,19 +140,13 @@ export function useDebtData(d: Ref<AppData>) {
     return Math.min(baseLimit, Math.max(0, remaining))
   })
 
-  /**
-   * Số ngày còn đủ tiền mặt dựa trên effectiveDayLimit.
-   */
   const smartCashDaysLeft: ComputedRef<number | null> = computed((): number | null => {
     const lim = effectiveDayLimit.value
     if (lim <= 0) return 0
     const cash = availCash.value
     const obsTotal = unpaidObsToPayday.value
     const cashAfterObs = cash - obsTotal
-    if (cashAfterObs >= 0) {
-      return Math.floor(cashAfterObs / lim)
-    }
-    // Greedy: tính lại phần dư sau khi trả các khoản nhỏ nhất
+    if (cashAfterObs >= 0) return Math.floor(cashAfterObs / lim)
     const amounts = unpaidObsAmounts.value.slice().sort((a, b) => a - b)
     let remaining = cash
     for (const amt of amounts) {
@@ -174,6 +183,7 @@ export function useDebtData(d: Ref<AppData>) {
     repayPct,
     debtBreakdown,
     findDebtId,
+    minPaidByCard,
     cashTrend,
     debtTrend,
     txTrend,

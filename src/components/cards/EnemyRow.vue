@@ -3,27 +3,32 @@
     <div
       v-for="e in enemies"
       :key="e.id"
-      :class="['enemy', e._color]"
+      :class="['enemy', `tier-${e._tier.key}`]"
+      :style="enemyStyle(e)"
       @click="openEdit(e)"
     >
+      <!-- Tier rank badge corner -->
+      <div class="tier-rank">{{ e._tier.rank.split(' · ')[0] }}</div>
       <div class="enemy-portrait">
-        <component :is="e._sprite" :size="26" />
+        <component :is="e._portrait" :size="30" />
       </div>
       <div class="enemy-name">{{ e._display }}</div>
       <div v-if="useDisplay" class="enemy-real">{{ e.name }}</div>
       <div class="enemy-hp">
-        <template v-if="hide.hp">●●●</template>
-        <template v-else>{{ fmtShort(e.balance) }}đ</template>
+        <template v-if="hide.hp"><span class="masked">{{ MASK_SHORT }}</span></template>
+        <template v-else>{{ fmtShort(e.amount) }}đ</template>
       </div>
       <div class="enemy-bar"><span :style="{ width: e._pct + '%' }"></span></div>
       <div class="enemy-foot">
-        <span>{{ e._pct }}% HP</span>
+        <span class="danger-mini">
+          <i v-for="i in e._tier.danger" :key="i"></i>
+        </span>
         <span :class="['due', { urg: e._urg }]">{{ e._dueShort }}</span>
       </div>
     </div>
   </div>
 
-  <!-- Hồ sơ ma chướng popup · port design popup-hero + stats trên cùng + edit form -->
+  <!-- Hồ sơ ma chướng popup -->
   <Transition name="popup">
     <div v-if="editCard" class="popup-overlay" @click.self="closeEdit">
       <div class="popup-sheet">
@@ -38,39 +43,51 @@
           </button>
         </div>
 
-        <!-- Hero · boss portrait + name + balance -->
-        <div class="popup-hero" v-if="editCardEnriched">
-          <div class="portrait">
-            <component :is="editCardEnriched.sprite" :size="40" />
+        <!-- Hero · tier-aware portrait + name + balance -->
+        <div
+          v-if="editEnriched"
+          :class="['popup-hero', `tier-${editEnriched.tier.key}`]"
+          :style="{ '--tier-color': editEnriched.tier.color, '--tier-glow': editEnriched.tier.glow }"
+        >
+          <div class="tier-badge">{{ editEnriched.tier.classn }} · {{ editEnriched.tier.rank }}</div>
+          <div class="portrait tier-portrait">
+            <component :is="editEnriched.portrait" :size="48" />
           </div>
-          <div class="nm">{{ editCardEnriched.display }}</div>
-          <div v-if="useDisplay" class="real">
-            {{ editCard.name }} · {{ editCardEnriched.realm }}
+          <div class="danger-pips center">
+            <span v-for="i in 9" :key="i" :class="{ on: i <= editEnriched.tier.danger }"></span>
           </div>
+          <div class="nm">{{ editEnriched.display }}</div>
+          <div class="popup-realm">{{ editEnriched.tier.realm }} · {{ editEnriched.tier.desc }}</div>
           <div class="amt">
             <span class="cu">đ</span>
-            <template v-if="hide.amounts">●●●●●●</template>
-            <template v-else>{{ fN(editCard.balance) }}</template>
+            <template v-if="hide.amounts"><span class="masked">{{ MASK_GLYPHS }}</span></template>
+            <template v-else>{{ fN(editCard.amount) }}</template>
           </div>
         </div>
 
-        <!-- 4-stat grid · HP max / Due / %HP / Đã hạ -->
-        <div class="popup-stats" v-if="editCardEnriched">
+        <div v-if="useDisplay && editCard" class="popup-realdata">
+          <div class="lab">▾ Nguồn thật</div>
+          <div class="rn">{{ editCard.name }}</div>
+          <div v-if="editCard.note" class="dn">{{ editCard.note }}</div>
+        </div>
+
+        <!-- 4-stat grid -->
+        <div class="popup-stats" v-if="editEnriched">
           <div class="popup-stat">
             <div class="l">{{ $t('enemy.statHpMax') }}</div>
-            <div class="v">{{ hide.amounts ? '●●●' : fmtShort(editCard.credit_limit) }}đ</div>
+            <div class="v">{{ hide.amounts ? MASK_SHORT : fmtShort(editCard.credit_limit) }}đ</div>
           </div>
           <div class="popup-stat">
             <div class="l">{{ $t('enemy.statDue') }}</div>
-            <div class="v gd">{{ editCardEnriched.dueShort || '—' }}</div>
+            <div class="v gd">{{ editEnriched.dueShort || '—' }}</div>
           </div>
           <div class="popup-stat">
             <div class="l">{{ $t('enemy.statPctHp') }}</div>
-            <div class="v hp">{{ editCardEnriched.pct }}%</div>
+            <div class="v hp">{{ editEnriched.pct }}%</div>
           </div>
           <div class="popup-stat">
             <div class="l">{{ $t('enemy.statSlain') }}</div>
-            <div class="v gn">{{ 100 - editCardEnriched.pct }}%</div>
+            <div class="v gn">{{ 100 - editEnriched.pct }}%</div>
           </div>
         </div>
 
@@ -85,17 +102,17 @@
             </div>
             <div v-else-if="useDisplayCur && !ratesLoading" class="enemy__dual-inputs">
               <div class="enemy__input-wrap">
-                <input class="popup-input" v-model.number="editBal" type="number" inputmode="numeric" :placeholder="String(editCard.balance)" @input="onEditBalInput" />
+                <input class="popup-input" v-model.number="editBal" type="number" inputmode="numeric" :placeholder="String(editCard.amount)" @input="onEditBalInput" />
                 <span class="enemy__input-suffix">VND</span>
               </div>
               <span class="enemy__dual-sep">≈</span>
               <div class="enemy__input-wrap">
-                <input class="popup-input" v-model.number="editBalDisplay" type="number" inputmode="numeric" :placeholder="String(displayVal(editCard.balance) ?? '')" @input="onEditBalDisplayInput" />
+                <input class="popup-input" v-model.number="editBalDisplay" type="number" inputmode="numeric" :placeholder="String(displayVal(editCard.amount) ?? '')" @input="onEditBalDisplayInput" />
                 <span class="enemy__input-suffix">{{ currSymbol }}</span>
               </div>
             </div>
             <div v-else class="enemy__input-wrap">
-              <input class="popup-input" v-model.number="editBal" type="number" inputmode="numeric" :placeholder="String(editCard.balance)" />
+              <input class="popup-input" v-model.number="editBal" type="number" inputmode="numeric" :placeholder="String(editCard.amount)" />
               <span class="enemy__input-suffix">{{ currSymbol }}</span>
             </div>
           </div>
@@ -133,7 +150,7 @@
               v-model="editDueDate"
               type="date"
               :disabled="hide.amounts"
-              :placeholder="editCard.min_due_date || $t('debt.dueDatePlaceholder')"
+              :placeholder="editCard.due_date || $t('debt.dueDatePlaceholder')"
             />
           </div>
         </div>
@@ -150,18 +167,20 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, type FunctionalComponent } from 'vue'
 import Icon from '@/components/ui/Icon.vue'
-import { IconDemon, SPRITE, type IconProps } from '@/components/ui/quest-icons'
+import { IconDemon } from '@/components/ui/quest-icons'
 import { useCurrency } from '@/composables/api/useCurrency'
 import { useFormatters } from '@/composables/ui/useFormatters'
-import { bossFor } from '@/composables/data/useTutienNames'
-import type { CreditCard } from '@/types/data'
+import { MASK_GLYPHS, MASK_SHORT } from '@/composables/ui/usePrivacy'
+import { tierForAmount, nameForBoss, type BossTier } from '@/composables/data/useBossTiers'
+import { TIER_PORTRAITS, type BossPortraitProps } from '@/components/ui/quest-bosses'
+import type { DebtItem } from '@/types/data'
+
+/** EnemyDebt = DebtItem có credit_limit non-null (small loan đã được fill từ App.vue allEnemyDebts). */
+type EnemyDebt = DebtItem & { credit_limit: number }
 
 const props = defineProps<{
-  /** Mảng credit card từ d.value.debts.credit_cards */
-  cards: CreditCard[]
-  /** Privacy: hp ẩn HP enemy, amounts ẩn input edit */
+  cards: EnemyDebt[]
   hide: { hp: boolean; amounts: boolean }
-  /** Hiện real_name dưới display name */
   useDisplay: boolean
 }>()
 
@@ -174,16 +193,15 @@ const emit = defineEmits<{
 const { fCurr, displayCurrency, convertBetween, toVnd, ratesLoading } = useCurrency()
 const { fN } = useFormatters()
 
-interface EnrichedEnemy extends CreditCard {
+interface EnrichedEnemy extends EnemyDebt {
   _display: string
-  _sprite: FunctionalComponent<IconProps>
-  _color: 'crimson' | 'violet' | 'gold-stop'
+  _portrait: FunctionalComponent<BossPortraitProps>
+  _tier: BossTier
   _pct: number
   _urg: boolean
   _dueShort: string
 }
 
-/** Format ngắn "1.2M" / "500K" / "1.234" */
 function fmtShort(n: number): string {
   const a = Math.abs(n)
   if (a >= 1e9) return (a / 1e9).toFixed(1).replace(/\.0$/, '') + 'B'
@@ -192,57 +210,62 @@ function fmtShort(n: number): string {
   return String(Math.round(a))
 }
 
-function fmtDueShort(dateStr: string | undefined): string {
+function fmtDueShort(dateStr: string | undefined | null): string {
   if (!dateStr) return ''
   const d = new Date(dateStr)
   if (isNaN(d.getTime())) return dateStr
   return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
-/** % "HP còn lại" của enemy = balance / limit · utilization */
-function utilizationPct(card: CreditCard): number {
+/** Bar fill %: amount / credit_limit. Cap 0-100. */
+function utilizationPct(card: EnemyDebt): number {
   if (!card.credit_limit) return 0
-  return Math.max(0, Math.min(100, Math.round((card.balance / card.credit_limit) * 100)))
+  return Math.max(0, Math.min(100, Math.round((card.amount / card.credit_limit) * 100)))
 }
 
 const enemies = computed<EnrichedEnemy[]>(() =>
-  props.cards.map((card, idx) => {
-    const boss = bossFor(card, idx)
-    const dueShort = fmtDueShort(card.min_due_date)
+  props.cards.map((card) => {
+    const tier = tierForAmount(card.amount)
     return {
       ...card,
-      _display: boss.display,
-      _sprite: SPRITE[boss.sp],
-      _color: 'crimson',
+      _display: nameForBoss(tier, card.id || card.name),
+      _portrait: TIER_PORTRAITS[tier.key],
+      _tier: tier,
       _pct: utilizationPct(card),
-      _urg: false, // sẽ tính sau dựa trên dueDate
-      _dueShort: dueShort,
-    } as EnrichedEnemy
+      _urg: false,
+      _dueShort: fmtDueShort(card.due_date),
+    } satisfies EnrichedEnemy
   }),
 )
 
-/** Grid columns adapt theo số enemy (max 3 mỗi hàng theo design). */
+/** Per-card style: tier color CSS vars. */
+function enemyStyle(e: EnrichedEnemy): Record<string, string> {
+  return {
+    '--tier-color': e._tier.color,
+    '--tier-glow': e._tier.glow,
+  }
+}
+
 const gridStyle = computed(() => {
   const n = Math.min(3, enemies.value.length || 1)
   return { gridTemplateColumns: `repeat(${n}, 1fr)` }
 })
 
-// ─── EDIT POPUP STATE · port từ DebtOverview ────────────────────────────
-const editCard = ref<CreditCard | null>(null)
+// ─── EDIT POPUP STATE ──────────────────────────────────────────────────
+const editCard = ref<EnemyDebt | null>(null)
 
-/** Enrich editCard với boss display + sprite + pct + dueShort cho hero/stats. */
-const editCardEnriched = computed(() => {
+const editEnriched = computed(() => {
   if (!editCard.value) return null
-  const idx = props.cards.findIndex((c) => c.id === editCard.value!.id)
-  const boss = bossFor(editCard.value, idx)
+  const tier = tierForAmount(editCard.value.amount)
   return {
-    display: boss.display,
-    sprite: SPRITE[boss.sp],
-    realm: boss.realm,
+    tier,
+    portrait: TIER_PORTRAITS[tier.key],
+    display: nameForBoss(tier, editCard.value.id || editCard.value.name),
     pct: utilizationPct(editCard.value),
-    dueShort: fmtDueShort(editCard.value.min_due_date),
+    dueShort: fmtDueShort(editCard.value.due_date),
   }
 })
+
 const editBal = ref<number | null>(null)
 const editMin = ref<number | null>(null)
 const editDueDate = ref('')
@@ -280,7 +303,6 @@ function onEditMinDisplayInput(): void {
 }
 
 function openEdit(e: EnrichedEnemy): void {
-  // Lấy raw card (không có _display/_sprite/etc)
   const raw = props.cards.find((c) => c.id === e.id)
   if (!raw) return
   editCard.value = raw
@@ -288,7 +310,7 @@ function openEdit(e: EnrichedEnemy): void {
   editMin.value = null
   editBalDisplay.value = null
   editMinDisplay.value = null
-  editDueDate.value = raw.min_due_date || ''
+  editDueDate.value = raw.due_date || ''
 }
 
 function closeEdit(): void {
@@ -307,27 +329,24 @@ function saveEdit(): void {
   editCard.value = null
 }
 
-/** Body overflow lock khi popup mở. */
 watch(editCard, (v) => {
   if (typeof document !== 'undefined') {
     document.body.style.overflow = v ? 'hidden' : ''
   }
 })
 
-/** % balance trên tổng cc debt (cho hidden display). */
-const totalCcDebt = computed(() => props.cards.reduce((s, c) => s + (c.balance || 0), 0))
-function balPct(c: CreditCard): number {
-  return totalCcDebt.value > 0 ? Math.round(c.balance / totalCcDebt.value * 100) : 0
+const totalCcDebt = computed(() => props.cards.reduce((s, c) => s + (c.amount || 0), 0))
+function balPct(c: EnemyDebt): number {
+  return totalCcDebt.value > 0 ? Math.round(c.amount / totalCcDebt.value * 100) : 0
 }
-function minPct(c: CreditCard): string {
-  return c.balance > 0 ? ((c.minimum_payment / c.balance) * 100).toFixed(1) : '0'
+function minPct(c: EnemyDebt): string {
+  return c.amount > 0 ? ((c.minimum_payment / c.amount) * 100).toFixed(1) : '0'
 }
-// expose cho template
 defineExpose({ fCurr })
 </script>
 
 <style scoped>
-/* ─── ENEMY ROW · port 1:1 từ design ────────────────────────────────────── */
+/* ─── ENEMY ROW · tier-aware port từ design ─────────────────────────── */
 .enemy-row {
   display: grid; gap: 7px;
 }
@@ -336,49 +355,56 @@ defineExpose({ fCurr })
   position: relative;
   padding: 12px 8px 10px;
   background: linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
-  border: 1px solid var(--line);
+  border: 1px solid color-mix(in srgb, var(--tier-color, var(--gold)) 35%, var(--paper));
   border-radius: 5px;
   cursor: pointer;
   display: flex; flex-direction: column; align-items: center;
   gap: 6px;
   min-height: 145px;
-  transition: transform 0.15s, border-color 0.2s;
+  transition: all 0.15s;
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
 }
 .enemy::before {
   content: ''; position: absolute;
   top: 0; left: 0; right: 0; height: 2px;
-  background: var(--gold);
+  background: var(--tier-color, var(--gold));
 }
-.enemy.crimson::before { background: var(--crimson); }
-.enemy.violet::before { background: var(--violet); }
+.enemy:hover {
+  border-color: var(--tier-color, var(--gold));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--tier-glow, var(--gold)) 30%, transparent);
+}
 .enemy:active { transform: translateY(1px); }
 
-/* Portrait · vòng radial với sprite mask */
+/* Tier rank badge — top right corner */
+.tier-rank {
+  position: absolute; top: 4px; right: 6px; z-index: 2;
+  font-family: var(--serif); font-style: italic; font-weight: 700;
+  font-size: 9px; color: var(--tier-color);
+  letter-spacing: 0.1em; opacity: 0.85;
+}
+
+/* Danger mini · tiny dots in foot */
+.danger-mini { display: inline-flex; gap: 1.5px; align-items: center; }
+.danger-mini i {
+  display: block; width: 3px; height: 3px; border-radius: 50%;
+  background: var(--tier-color);
+  box-shadow: 0 0 3px color-mix(in srgb, var(--tier-glow) 70%, transparent);
+}
+
+/* Portrait · tier radial */
 .enemy-portrait {
   width: 42px; height: 42px;
   border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%,
+    color-mix(in srgb, var(--tier-color) 45%, var(--ink)),
+    color-mix(in srgb, var(--tier-color) 10%, var(--ink)) 75%);
+  border: 1px solid var(--tier-color);
   display: flex; align-items: center; justify-content: center;
+  color: var(--tier-color);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--tier-glow) 30%, transparent);
+  margin-bottom: 4px;
   position: relative;
-}
-.enemy.crimson .enemy-portrait {
-  background: radial-gradient(circle at 30% 30%, #6a2540, #2a0e18);
-  border: 1px solid var(--crimson);
-  color: var(--crimson);
-  box-shadow: 0 0 10px rgba(var(--crimson-rgb), 0.3);
-}
-.enemy.gold-stop .enemy-portrait {
-  background: radial-gradient(circle at 30% 30%, #5a4220, #2a1e08);
-  border: 1px solid var(--gold);
-  color: var(--gold);
-  box-shadow: 0 0 10px rgba(var(--gold-rgb), 0.3);
-}
-.enemy.violet .enemy-portrait {
-  background: radial-gradient(circle at 30% 30%, #4a2570, #1a0838);
-  border: 1px solid var(--violet);
-  color: var(--violet);
-  box-shadow: 0 0 10px rgba(var(--violet-rgb), 0.3);
 }
 .enemy-portrait::before {
   content: ''; position: absolute; inset: -3px;
@@ -397,12 +423,10 @@ defineExpose({ fCurr })
   font-family: var(--serif); font-style: italic; font-weight: 700;
   font-size: 11px; text-align: center; line-height: 1.15;
   letter-spacing: 0.02em;
+  color: var(--tier-color, var(--text));
   overflow: hidden; text-overflow: ellipsis;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
 }
-.enemy.crimson .enemy-name { color: var(--crimson); }
-.enemy.gold-stop .enemy-name { color: var(--gold); }
-.enemy.violet .enemy-name { color: var(--violet); }
 
 .enemy-real {
   font-family: var(--mono); font-size: 8.5px;
@@ -417,10 +441,8 @@ defineExpose({ fCurr })
   font-family: var(--mono); font-weight: 700;
   font-size: 12px; line-height: 1;
   letter-spacing: -0.02em;
+  color: var(--tier-color, var(--text));
 }
-.enemy.crimson .enemy-hp { color: var(--crimson); }
-.enemy.gold-stop .enemy-hp { color: var(--gold-2); }
-.enemy.violet .enemy-hp { color: var(--violet); }
 
 .enemy-bar {
   width: 100%; height: 4px;
@@ -431,15 +453,10 @@ defineExpose({ fCurr })
 .enemy-bar > span {
   display: block; height: 100%;
   border-radius: 2px;
-}
-.enemy.crimson .enemy-bar > span {
-  background: linear-gradient(90deg, var(--crimson-deep), var(--crimson));
-}
-.enemy.gold-stop .enemy-bar > span {
-  background: linear-gradient(90deg, var(--gold-3), var(--gold));
-}
-.enemy.violet .enemy-bar > span {
-  background: linear-gradient(90deg, #5a3580, var(--violet));
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--tier-color) 60%, var(--ink)),
+    var(--tier-color));
+  box-shadow: 0 0 6px color-mix(in srgb, var(--tier-glow) 50%, transparent);
 }
 
 .enemy-foot {
@@ -452,7 +469,119 @@ defineExpose({ fCurr })
 .enemy-foot .due { color: var(--gold); font-weight: 600; }
 .enemy-foot .due.urg { color: var(--crimson); }
 
-/* ─── EDIT POPUP · dual-input wrap (riêng cho enemy edit) ───────────────── */
+/* ─── EDIT POPUP · tier-aware hero ──────────────────────────────────── */
+.popup-hero {
+  margin-top: 16px; padding: 22px 14px;
+  background:
+    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--tier-color, var(--crimson)) 22%, transparent) 0%, transparent 60%),
+    var(--ink);
+  border: 1px solid var(--tier-color, var(--line-2));
+  border-radius: 6px;
+  text-align: center; position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 30px color-mix(in srgb, var(--tier-color, transparent) 12%, transparent);
+}
+.popup-hero::before {
+  content: ''; position: absolute;
+  top: -50%; left: -50%; width: 200%; height: 200%;
+  background: conic-gradient(from 0deg at 50% 50%,
+    transparent 0deg,
+    color-mix(in srgb, var(--tier-glow, var(--gold)) 6%, transparent) 60deg,
+    transparent 120deg,
+    color-mix(in srgb, var(--tier-color, var(--crimson)) 6%, transparent) 240deg,
+    transparent 360deg);
+  animation: spin 14s linear infinite;
+  pointer-events: none;
+}
+.tier-badge {
+  position: relative; z-index: 2;
+  display: inline-block;
+  font-family: var(--serif); font-style: italic; font-weight: 700;
+  font-size: 10px; color: var(--tier-color);
+  letter-spacing: 0.18em; text-transform: uppercase;
+  padding: 4px 10px; margin-bottom: 12px;
+  border: 1px solid color-mix(in srgb, var(--tier-color) 50%, transparent);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--tier-color) 8%, var(--ink));
+  text-shadow: 0 0 6px color-mix(in srgb, var(--tier-glow) 40%, transparent);
+}
+.popup-hero .portrait.tier-portrait {
+  width: 78px; height: 78px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%,
+    color-mix(in srgb, var(--tier-color) 50%, var(--ink)),
+    color-mix(in srgb, var(--tier-color) 8%, var(--ink)) 75%);
+  border: 2px solid var(--tier-color);
+  margin: 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--tier-color);
+  position: relative;
+  box-shadow: 0 0 24px color-mix(in srgb, var(--tier-glow) 60%, transparent);
+}
+.popup-hero .portrait.tier-portrait::before {
+  content: ''; position: absolute; inset: -8px; border-radius: 50%;
+  border: 1px dashed var(--tier-color);
+  animation: spin 18s linear infinite;
+}
+.danger-pips {
+  display: flex; gap: 2px; z-index: 3;
+  margin: 8px auto 0;
+  max-width: 120px;
+  justify-content: center;
+}
+.danger-pips span {
+  width: 4px; height: 4px; border-radius: 1px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.danger-pips span.on {
+  background: var(--tier-color);
+  box-shadow: 0 0 5px color-mix(in srgb, var(--tier-glow) 80%, transparent);
+}
+.popup-realm {
+  position: relative; z-index: 2;
+  font-family: var(--mono); font-size: 9.5px; color: var(--muted);
+  letter-spacing: 0.14em; text-transform: uppercase;
+  margin-top: 6px;
+}
+.popup-hero .nm {
+  font-family: var(--serif-vn); font-weight: 700;
+  font-size: 18px; color: var(--tier-color, var(--crimson));
+  margin-top: 12px;
+  letter-spacing: 0.02em; position: relative; z-index: 2;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--tier-glow, transparent) 40%, transparent);
+}
+.popup-hero .amt {
+  font-family: var(--mono); font-weight: 700; font-size: 32px;
+  color: var(--text); margin-top: 14px; letter-spacing: -0.04em;
+  position: relative; z-index: 2;
+}
+.popup-hero .amt .cu { font-size: 16px; color: var(--muted); }
+
+/* Popup real-data block (lăng kính kế toán) */
+.popup-realdata {
+  margin-top: 12px; padding: 12px 14px;
+  background: linear-gradient(180deg, var(--paper) 0%, var(--paper-2) 100%);
+  border: 1px dashed var(--line-2); border-radius: 4px;
+  text-align: left;
+}
+.popup-realdata .lab {
+  font-family: var(--serif); font-style: italic; font-weight: 600;
+  font-size: 9.5px; color: var(--muted);
+  letter-spacing: 0.16em; text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.popup-realdata .rn {
+  font-family: var(--mono); font-weight: 700; font-size: 11px;
+  color: var(--text); letter-spacing: 0.01em;
+  margin-bottom: 4px;
+}
+.popup-realdata .dn {
+  font-family: var(--serif-vn); font-size: 11px;
+  color: var(--text-2); line-height: 1.5;
+  letter-spacing: 0.01em;
+}
+
+/* ─── EDIT POPUP · dual-input wrap ──────────────────────────────────── */
 .enemy__input-wrap {
   position: relative; display: flex; align-items: center;
 }
