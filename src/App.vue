@@ -25,13 +25,16 @@
   <!-- LEVEL UP TOAST -->
   <LevelUpToast :show="lvlUpShow" :level="playerLvl" />
 
+  <!-- STRIKE TOAST · sword/heal kiếm chiêu animation -->
+  <StrikeToast :descriptor="strikeToast" />
+
   <!-- DETAIL POPUP · chỉ upcoming variant theo design (PayQuestPopup) -->
   <DetailPopup
     :item="popupItem"
     :availCash="availCash"
     :hide="!!hz('upcoming.amount')"
     @close="popupItem = null"
-    @toggle-paid="(k: string, a: number, n: string) => { popupItem = null; togglePaid(k, a, n) }"
+    @toggle-paid="handlePopupTogglePaid"
     @delete="handlePopupDelete"
   />
 
@@ -138,8 +141,8 @@
         :syncing="syncing"
         :creditCards="items.creditCards.value"
         :prefill="copyTxData"
-        @add-expense="addExp"
-        @add-income="addInc"
+        @add-expense="handleAddExp"
+        @add-income="handleAddInc"
         @prefill-consumed="copyTxData = null"
       />
 
@@ -224,6 +227,8 @@ import { useDebtActions } from './composables/actions/useDebtActions'
 import { usePushNotifications } from './composables/ui/usePushNotifications'
 
 import LoadingScreen from './components/ui/LoadingScreen.vue'
+import StrikeToast from './components/ui/StrikeToast.vue'
+import { descriptorForExpense, descriptorForIncome, type StrikeDescriptor } from './composables/data/useSwordHeal'
 import ErrorPopup from './components/ui/ErrorPopup.vue'
 import SetupScreen from './components/forms/SetupScreen.vue'
 import TutienHeader from './components/layout/TutienHeader.vue'
@@ -605,6 +610,21 @@ const manaPctUsed = computed(() => {
   return Math.min(100, (todaySpent.value / dayLimit.value) * 100)
 })
 
+// ─── Strike toast · kiếm chiêu / hồi phục animation 1.6s ─────────────────
+const strikeToast = ref<StrikeDescriptor | null>(null)
+
+/** Trigger strike toast cho expense → sword tier. */
+function showSwordStrike(amount: number, seed: string): void {
+  if (amount <= 0) return
+  strikeToast.value = descriptorForExpense(amount, seed)
+}
+
+/** Trigger strike toast cho income → heal tier. */
+function showHealStrike(amount: number, seed: string): void {
+  if (amount <= 0) return
+  strikeToast.value = descriptorForIncome(amount, seed)
+}
+
 // ─── LevelUpToast trigger · watch playerLvl, pop toast 2.6s khi đột phá ─
 const lvlUpShow = ref(false)
 let lvlUpTimer: ReturnType<typeof setTimeout> | null = null
@@ -702,6 +722,25 @@ function openDetail(item: object, variant: string): void {
 async function handlePopupDelete(item: object): Promise<void> {
   popupItem.value = null
   await deleteUpcoming(item as Parameters<typeof deleteUpcoming>[0])
+}
+
+/** Wrapper: addExp + show sword strike toast. */
+async function handleAddExp(payload: Parameters<typeof addExp>[0]): Promise<void> {
+  await addExp(payload)
+  showSwordStrike(payload.amount, payload.desc)
+}
+
+/** Wrapper: addInc + show heal strike toast. */
+async function handleAddInc(payload: Parameters<typeof addInc>[0]): Promise<void> {
+  await addInc(payload)
+  showHealStrike(payload.amount, payload.desc)
+}
+
+/** Wrapper: togglePaid + show sword strike (Trảm Ma Chướng). */
+async function handlePopupTogglePaid(key: string, amt: number, name: string): Promise<void> {
+  popupItem.value = null
+  await togglePaid(key, amt, name)
+  showSwordStrike(amt, name)
 }
 
 async function handleQuickAdd(tx: TransactionItem): Promise<void> {
